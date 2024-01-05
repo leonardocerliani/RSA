@@ -1,4 +1,5 @@
-data_prep/
+raw_data/
+prep_data/
 testing/
 dogit.sh
-raw_data/
+
