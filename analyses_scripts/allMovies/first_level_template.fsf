@@ -33,10 +33,10 @@ set fmri(sscleanup_yn) 0
 set fmri(outputdir) ""
 
 # TR(s)
-set fmri(tr) 1.816679
+set fmri(tr) __TR__
 
 # Total volumes
-set fmri(npts) 275
+set fmri(npts) __TOTALVOLUMES__
 
 # Delete volumes
 set fmri(ndelete) 0
@@ -245,7 +245,7 @@ set fmri(regstandard_yn) 1
 set fmri(alternateReference_yn) 0
 
 # Standard image
-set fmri(regstandard) "/data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain"
+set fmri(regstandard) "__MNITEMPLATE__"
 
 # Search space for registration to standard space
 # 0   : No search
@@ -266,23 +266,23 @@ set fmri(regstandard_nonlinear_warpres) 10
 set fmri(paradigm_hp) 60
 
 # Total voxels
-set fmri(totalVoxels) 495616000
+set fmri(totalVoxels) __TOTALNUMBAVOXELS__
 
 
 # Number of lower-level copes feeding into higher-level analysis
 set fmri(ncopeinputs) 0
 
 # 4D AVW data or FEAT directory (1)
-set feat_files(1) "/data00/leonardo/RSA/prep_data/sub-02/fmri/sub-02_run-1_preproc_reg.feat"
+set feat_files(1) "__FEATDIR__"
 
 # Add confound EVs text file
 set fmri(confoundevs) 0
 
 # Subject's structural image for analysis 1
-set highres_files(1) "/data00/leonardo/RSA/prep_data/sub-02/anat/sub-02_T1w_brain"
+set highres_files(1) "__ANATBRAINIMAGE__"
 
 # EV 1 title
-set fmri(evtitle1) "allMovies"
+set fmri(evtitle1) "__NAME_EV_1__"
 
 # Basic waveform shape (EV 1)
 # 0 : Square
@@ -314,7 +314,7 @@ set fmri(tempfilt_yn1) 1
 set fmri(deriv_yn1) 1
 
 # Custom EV file (EV 1)
-set fmri(custom1) "/data00/leonardo/RSA/prep_data/sub-02/fmri_EVs/initial_GLMs/allMovies/sub-02_run-1.mat"
+set fmri(custom1) "__EV_1__"
 
 # Gamma sigma (EV 1)
 set fmri(gammasigma1) 3
@@ -338,7 +338,7 @@ set fmri(con_mode) orig
 set fmri(conpic_real.1) 1
 
 # Title for contrast_real 1
-set fmri(conname_real.1) "allMovies"
+set fmri(conname_real.1) "__NAME_CON_REAL_1__"
 
 # Real contrast_real vector 1 element 1
 set fmri(con_real1.1) 1
@@ -350,7 +350,7 @@ set fmri(con_real1.2) 0
 set fmri(conpic_orig.1) 1
 
 # Title for contrast_orig 1
-set fmri(conname_orig.1) "allMovies"
+set fmri(conname_orig.1) "__NAME_CON_ORIG_1__"
 
 # Real contrast_orig vector 1 element 1
 set fmri(con_orig1.1) 1

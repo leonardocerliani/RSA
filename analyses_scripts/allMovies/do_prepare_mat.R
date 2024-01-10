@@ -1,10 +1,12 @@
----
-title: "Prepare .mat for allMovies GLM"
-output: html_notebook
----
+
+# Reads the onsets.csv file in the raw_data folder and writes
+# the prep_data/sub-{sub}/fmri/{model}/sub-{sub}_run-{run}.mat file
+# which will be used in the first-level feat.
+# It cycles through all subs and all runs for each sub
+# run with Rscript do_prepare_mat.R
 
 # Load library and define initial variables
-```{r, message=F}
+
 library(tidyverse)
 
 subs_file <- "/data00/leonardo/RSA/sub_list.txt"
@@ -14,18 +16,16 @@ model="allMovies"
 
 nRuns = 8
 runs <- as.character(1:nRuns)
-```
 
 
 # Function that reads the onsets.csv file and writes the .mat files
-```{r}
 read_onsets_write_mat <- function(sub, run, dest) {
   # Read the onset file for that run
   sub_onsets_file <- paste0(orig_csv_root,
-         "/sub-", sub,
-         "/onsets/sub-", sub,"_Ins_onsets_allmovies_run-", run, ".csv")
+                            "/sub-", sub,
+                            "/onsets/sub-", sub,"_Ins_onsets_allmovies_run-", run, ".csv")
   
-  df <- read_csv(sub_onsets_file, progress = F)
+  df <- read_csv(sub_onsets_file, progress = F) %>% suppressMessages()
   colnames(df) = c("movie_number", "onset_sec", "duration", "movie_code")
   
   # Write a three column .mat file for feat
@@ -45,13 +45,11 @@ read_onsets_write_mat <- function(sub, run, dest) {
 
 # # example: write all .mat files (one for each run) for one sub
 # as.character(1:8) %>% map(~ read_onsets_write_mat(sub, run = .x, dest = dest))
-```
 
 
 
 # Loops across subs and runs
-I use a `for` construct for subjects since two nested `map` can be difficult to read 
-```{r, message=F}
+# I use a `for` construct for subjects since two nested `map` can be difficult to read 
 
 for (sub in subs) {
   
@@ -66,29 +64,4 @@ for (sub in subs) {
   # write all .mat files (one for each run) for that sub
   runs %>% walk(~ read_onsets_write_mat(sub = sub, run = .x, dest = dest))
 }
-
-```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
