@@ -9,12 +9,13 @@ The 1st and 2nd level analyses are carried out in the `prep_data` dir.
 
 The `.gfeat` of the 2nd level analysis is written in this dir, where the group-level analysis is carried out
 
-Each model's analyses is isolated in its own dir which is named according to the model. In the present case, `allMovies`. All the scripts for all the levels are kept in this folder.
+This procedure and structure have been devised to keep separated the raw data, the preprocessed data, and the analysis folder - with the group-level results.
+
+Also, each model's analysis is isolated in its own dir which is named according to the model - e.g.`allMovies` in the present case. All the scripts for all the levels are kept in this folder.
 
 
 
 ## First level stats
-
 The following is an example of the structure for one sub at the end of first-level stats. The steps to create this file is explained below.
 
 ```
@@ -29,6 +30,9 @@ prep_data/sub-02/fmri/
         sub-02_run-{1..8}.mat
         design_sub-02_run-{1..8}.fsf
         sub-02_run-{1..8}_stats.feat
+
+raw_data/sub-02/onsets/
+    sub-02_Ins_onsets_allmovies_run-{1..8}.csv
 ```
 
 
