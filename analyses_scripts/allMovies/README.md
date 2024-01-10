@@ -66,9 +66,16 @@ It is necessary to cp the preproc_reg into the underlying `allMovies` dir since 
 The `first_level_template.fsf` is also developed while writing this script.
 
 
-**NB:** : in a first version of this script I also replaced the name of EVs and contrasts. This is likely _not_ necessary since these names do not change - and actually _need_ to be the same - across subs and runs. The .mat files change, but not the name of the EVs to which they are assigned.
+**NB1:** : in a first version of this script I also replaced the name of EVs and contrasts. This is likely _not_ necessary since these names do not change - and actually _need_ to be the same - across subs and runs. The .mat files change, but not the name of the EVs to which they are assigned.
 
 At the end of the procedure, it might be appropriate to move all the .feat folders inside `fmri/allMovies` (as well as those from other models) into `/data01` to reduce the space used on `/data00`
+
+**NB2:** : for cleannes, the .mat and .fsf files can also be deleted at the end of the first-level stats, since they are copied inside the .feat dir:
+
+```
+sub-02_run-1.mat  =  .feat/custom_timing_files/ev1.txt
+design_sub-02_run-1.fsf  =  .feat/design.fsf
+```
 
 
 ## Second level - within sub - stats
