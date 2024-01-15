@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# run with ./do_first_level_stats.sh $sub
+# where $sub is NOT zeropadded (see below)
+
 sub=$(printf "%02d" $1)
 
 model="allMovies"
