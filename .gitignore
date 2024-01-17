@@ -2,5 +2,6 @@ raw_data/
 prep_data/
 analyses_data/
 testing/
+ratings_check/
 dogit.sh
 

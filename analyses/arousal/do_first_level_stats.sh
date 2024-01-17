@@ -5,7 +5,7 @@
 
 sub=$(printf "%02d" $1)
 
-model="allMovies"
+model="arousal"
 
 RSA_dir="/data00/leonardo/RSA"
 sub_fmri_dir="${RSA_dir}/prep_data/sub-${sub}/fmri"
