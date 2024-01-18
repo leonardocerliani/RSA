@@ -1,10 +1,24 @@
 #!/bin/bash
 
-sub_list="/data00/leonardo/RSA/sub_list.txt"
-# cat $sub_list  | xargs -I{} printf "%02d\n" {}
+# NB: currently the script is running only if we use the 26 subjects
+# of the original sub_list.txt.
+# I will modify it later to accept a new list of subs
 
-model="allMovies"
-MNI_template="/data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain"
+export model="allMovies"
+
+export nruns=8  # input how many runs to process, e.g. 5 for runs 1..5
+
+export sub_list="/data00/leonardo/RSA/sub_list.txt"
+
+# ---------- DO NOT MODIFY ANYTHING BELOW THIS LINE ------------------------
+
+export RSA_dir="/data00/leonardo/RSA"
+export analyses_dir=${RSA_dir}/analyses/${model}
+
+export fsf_template_2nd_level="${analyses_dir}/second_level_template.fsf"
+
+export MNI_template="/data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain"
+
 
 sub_list="/data00/leonardo/RSA/sub_list.txt"
 # cat $sub_list  | xargs -I{} printf "%02d\n" {}
@@ -13,22 +27,10 @@ run_sub_2nd_level() {
 
     sub=$(printf "%02d" $1)
 
-    model="allMovies"
-
-    # input how many runs to process, e.g. 5 for runs 1..5
-    nruns=8
-
-    RSA_dir="/data00/leonardo/RSA"
-    analyses_dir=${RSA_dir}/analyses/${model}
-
-    fsf_template_2nd_level="${analyses_dir}/second_level_template.fsf"
-
-    fsf_sub_2nd_level=${analyses_dir}/data/2nd_level/fsf_sub_2nd_level_sub-${sub}.fsf
-    gfeat_targetdir=${analyses_dir}/data/2nd_level/sub-${sub}_allMovies.gfeat
+    fsf_sub_2nd_level=${analyses_dir}/results/2nd_level/fsf_sub_2nd_level_sub-${sub}.fsf
+    gfeat_targetdir=${analyses_dir}/results/2nd_level/sub-${sub}_${model}.gfeat
 
     preproc_dir="${RSA_dir}/prep_data/sub-${sub}/fmri/${model}"
-
-    MNI_template="/data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain"
 
     # remove previous analysis and create 
     [ -d ${analyses_dir}/data ] && rm -rf ${gfeat_targetdir}
@@ -91,8 +93,8 @@ analyses_dir=${RSA_dir}/analyses/${model}
 
 fsf_grouplevel_template="${analyses_dir}/grouplevel_template.fsf"
 
-fsf_grouplevel_model="${analyses_dir}/data/grouplevel_${model}.fsf"
-group_outputdir="${analyses_dir}/data/grouplevel_${model}.gfeat"
+fsf_grouplevel_model="${analyses_dir}/results/grouplevel_${model}.fsf"
+group_outputdir="${analyses_dir}/results/grouplevel_${model}.gfeat"
 
 for var in fsf_grouplevel_template fsf_grouplevel_model group_outputdir; do
     echo ${var} = ${!var}
@@ -101,10 +103,10 @@ done
 sed -e "s@__GROUP_OUTPUTDIR__@${group_outputdir}@g" \
     -e "s@__MNI_TEMPLATE__@${MNI_template}@g"  \
     -e "s@__MODEL__@${model}@g" \
-    ${fsf_grouplevel_template} > ${analyses_dir}/data/grouplevel_${model}.fsf
+    ${fsf_grouplevel_template} > ${analyses_dir}/results/grouplevel_${model}.fsf
 
 
-feat ${analyses_dir}/data/grouplevel_${model}.fsf
+feat ${analyses_dir}/results/grouplevel_${model}.fsf
 
 
 

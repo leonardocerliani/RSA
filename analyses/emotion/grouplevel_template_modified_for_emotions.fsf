@@ -272,88 +272,88 @@ set fmri(ncopeinputs) 1
 set fmri(copeinput.1) 1
 
 # 4D AVW data or FEAT directory (1)
-set feat_files(1) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-27___MODEL__.gfeat/cope1.feat"
+set feat_files(1) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-27___MODEL__.gfeat/__NCOPE__.feat"
 
 # 4D AVW data or FEAT directory (2)
-set feat_files(2) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-09___MODEL__.gfeat/cope1.feat"
+set feat_files(2) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-09___MODEL__.gfeat/__NCOPE__.feat"
 
 # 4D AVW data or FEAT directory (3)
-set feat_files(3) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-16___MODEL__.gfeat/cope1.feat"
+set feat_files(3) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-16___MODEL__.gfeat/__NCOPE__.feat"
 
 # 4D AVW data or FEAT directory (4)
-set feat_files(4) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-15___MODEL__.gfeat/cope1.feat"
+set feat_files(4) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-15___MODEL__.gfeat/__NCOPE__.feat"
 
 # 4D AVW data or FEAT directory (5)
-set feat_files(5) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-07___MODEL__.gfeat/cope1.feat"
+set feat_files(5) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-07___MODEL__.gfeat/__NCOPE__.feat"
 
 # 4D AVW data or FEAT directory (6)
-set feat_files(6) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-22___MODEL__.gfeat/cope1.feat"
+set feat_files(6) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-22___MODEL__.gfeat/__NCOPE__.feat"
 
 # 4D AVW data or FEAT directory (7)
-set feat_files(7) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-34___MODEL__.gfeat/cope1.feat"
+set feat_files(7) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-34___MODEL__.gfeat/__NCOPE__.feat"
 
 # 4D AVW data or FEAT directory (8)
-set feat_files(8) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-10___MODEL__.gfeat/cope1.feat"
+set feat_files(8) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-10___MODEL__.gfeat/__NCOPE__.feat"
 
 # 4D AVW data or FEAT directory (9)
-set feat_files(9) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-18___MODEL__.gfeat/cope1.feat"
+set feat_files(9) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-18___MODEL__.gfeat/__NCOPE__.feat"
 
 # 4D AVW data or FEAT directory (10)
-set feat_files(10) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-14___MODEL__.gfeat/cope1.feat"
+set feat_files(10) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-14___MODEL__.gfeat/__NCOPE__.feat"
 
 # 4D AVW data or FEAT directory (11)
-set feat_files(11) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-26___MODEL__.gfeat/cope1.feat"
+set feat_files(11) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-26___MODEL__.gfeat/__NCOPE__.feat"
 
 # 4D AVW data or FEAT directory (12)
-set feat_files(12) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-30___MODEL__.gfeat/cope1.feat"
+set feat_files(12) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-30___MODEL__.gfeat/__NCOPE__.feat"
 
 # 4D AVW data or FEAT directory (13)
-set feat_files(13) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-05___MODEL__.gfeat/cope1.feat"
+set feat_files(13) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-05___MODEL__.gfeat/__NCOPE__.feat"
 
 # 4D AVW data or FEAT directory (14)
-set feat_files(14) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-12___MODEL__.gfeat/cope1.feat"
+set feat_files(14) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-12___MODEL__.gfeat/__NCOPE__.feat"
 
 # 4D AVW data or FEAT directory (15)
-set feat_files(15) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-02___MODEL__.gfeat/cope1.feat"
+set feat_files(15) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-02___MODEL__.gfeat/__NCOPE__.feat"
 
 # 4D AVW data or FEAT directory (16)
-set feat_files(16) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-23___MODEL__.gfeat/cope1.feat"
+set feat_files(16) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-23___MODEL__.gfeat/__NCOPE__.feat"
 
 # 4D AVW data or FEAT directory (17)
-set feat_files(17) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-03___MODEL__.gfeat/cope1.feat"
+set feat_files(17) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-03___MODEL__.gfeat/__NCOPE__.feat"
 
 # 4D AVW data or FEAT directory (18)
-set feat_files(18) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-31___MODEL__.gfeat/cope1.feat"
+set feat_files(18) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-31___MODEL__.gfeat/__NCOPE__.feat"
 
 # 4D AVW data or FEAT directory (19)
-set feat_files(19) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-21___MODEL__.gfeat/cope1.feat"
+set feat_files(19) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-21___MODEL__.gfeat/__NCOPE__.feat"
 
 # 4D AVW data or FEAT directory (20)
-set feat_files(20) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-28___MODEL__.gfeat/cope1.feat"
+set feat_files(20) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-28___MODEL__.gfeat/__NCOPE__.feat"
 
 # 4D AVW data or FEAT directory (21)
-set feat_files(21) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-24___MODEL__.gfeat/cope1.feat"
+set feat_files(21) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-24___MODEL__.gfeat/__NCOPE__.feat"
 
 # 4D AVW data or FEAT directory (22)
-set feat_files(22) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-19___MODEL__.gfeat/cope1.feat"
+set feat_files(22) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-19___MODEL__.gfeat/__NCOPE__.feat"
 
 # 4D AVW data or FEAT directory (23)
-set feat_files(23) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-11___MODEL__.gfeat/cope1.feat"
+set feat_files(23) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-11___MODEL__.gfeat/__NCOPE__.feat"
 
 # 4D AVW data or FEAT directory (24)
-set feat_files(24) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-32___MODEL__.gfeat/cope1.feat"
+set feat_files(24) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-32___MODEL__.gfeat/__NCOPE__.feat"
 
 # 4D AVW data or FEAT directory (25)
-set feat_files(25) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-20___MODEL__.gfeat/cope1.feat"
+set feat_files(25) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-20___MODEL__.gfeat/__NCOPE__.feat"
 
 # 4D AVW data or FEAT directory (26)
-set feat_files(26) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-29___MODEL__.gfeat/cope1.feat"
+set feat_files(26) "/data00/leonardo/RSA/analyses/__MODEL__/results/2nd_level/sub-29___MODEL__.gfeat/__NCOPE__.feat"
 
 # Add confound EVs text file
 set fmri(confoundevs) 0
 
 # EV 1 title
-set fmri(evtitle1) "__MODEL___grouplevel"
+set fmri(evtitle1) "__NCOPE___grouplevel"
 
 # Basic waveform shape (EV 1)
 # 0 : Square

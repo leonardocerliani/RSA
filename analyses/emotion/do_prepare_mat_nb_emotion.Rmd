@@ -1,5 +1,5 @@
 ---
-title: "Prepare .mat for allMovies GLM"
+title: "Prepare .mat for emotion GLM"
 output: html_notebook
 ---
 

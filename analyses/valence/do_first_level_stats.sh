@@ -60,7 +60,7 @@ for run in $(seq 8); do
   anat_brain_image="${RSA_dir}/prep_data/sub-${sub}/anat/sub-${sub}_T1w_brain"
 
   # __EV_1__
-  ev_1="${RSA_dir}/prep_data/sub-${sub}/fmri/allMovies/sub-${sub}_run-${run}.mat"
+  ev_1="${RSA_dir}/prep_data/sub-${sub}/fmri/${model}/sub-${sub}_run-${run}.mat"
 
   # __NAME_EV_1__
   name_ev_1=${model}
