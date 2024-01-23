@@ -1,6 +1,6 @@
 #!/bin/bash
 
-${model} = "allMovies"
+${model}="allMovies"
 
 # build the .mat files for the 1st level analysis from the onset.csv files
 Rscript 01_do_prepare_mat_${model}.R

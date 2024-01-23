@@ -2,39 +2,42 @@ Processing sub-02_run-1
 Processing sub-03_run-1
 Processing sub-05_run-1
 Processing sub-07_run-1
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-05/fmri/emotion/design_sub-05_run-1.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-05/fmri/emotion/sub-05_run-1.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-05/fmri/emotion/sub-05_run-1_preproc_reg.feat
+
 fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-02/fmri/emotion/design_sub-02_run-1.fsf
 sub_mat : /data00/leonardo/RSA/prep_data/sub-02/fmri/emotion/sub-02_run-1.mat
 sub_feat : /data00/leonardo/RSA/prep_data/sub-02/fmri/emotion/sub-02_run-1_preproc_reg.feat
 
+tr : 1.816679 
+tr : 1.815949 
+total_volumes : 275 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-05/fmri/emotion/sub-05_run-1_preproc_reg.feat 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-02/fmri/emotion/sub-02_run-1_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-05/anat/sub-05_T1w_brain 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-02/anat/sub-02_T1w_brain 
+custom_ev_file_path : sub-05/fmri/emotion/sub-05_run-1 
+custom_ev_file_path : sub-02/fmri/emotion/sub-02_run-1 
+
+
+Processing sub-05_run-2
+
+
+Processing sub-02_run-2
 fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-07/fmri/emotion/design_sub-07_run-1.fsf
 sub_mat : /data00/leonardo/RSA/prep_data/sub-07/fmri/emotion/sub-07_run-1.mat
 sub_feat : /data00/leonardo/RSA/prep_data/sub-07/fmri/emotion/sub-07_run-1_preproc_reg.feat
-
-fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-05/fmri/emotion/design_sub-05_run-1.fsf
-sub_mat : /data00/leonardo/RSA/prep_data/sub-05/fmri/emotion/sub-05_run-1.mat
-sub_feat : /data00/leonardo/RSA/prep_data/sub-05/fmri/emotion/sub-05_run-1_preproc_reg.feat
 
 fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-03/fmri/emotion/design_sub-03_run-1.fsf
 sub_mat : /data00/leonardo/RSA/prep_data/sub-03/fmri/emotion/sub-03_run-1.mat
 sub_feat : /data00/leonardo/RSA/prep_data/sub-03/fmri/emotion/sub-03_run-1_preproc_reg.feat
 
-tr : 1.816679 
-total_volumes : 275 
-MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
-total_voxels : 495616000 
-feat_dir : /data00/leonardo/RSA/prep_data/sub-02/fmri/emotion/sub-02_run-1_preproc_reg.feat 
-anat_brain_image : /data00/leonardo/RSA/prep_data/sub-02/anat/sub-02_T1w_brain 
-custom_ev_file_path : sub-02/fmri/emotion/sub-02_run-1 
-
-
-Processing sub-02_run-2
-tr : 1.815949 
-total_volumes : 275 
-MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
-total_voxels : 495616000 
-feat_dir : /data00/leonardo/RSA/prep_data/sub-05/fmri/emotion/sub-05_run-1_preproc_reg.feat 
-anat_brain_image : /data00/leonardo/RSA/prep_data/sub-05/anat/sub-05_T1w_brain 
-custom_ev_file_path : sub-05/fmri/emotion/sub-05_run-1 
 tr : 1.816241 
 total_volumes : 275 
 MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
@@ -45,9 +48,6 @@ custom_ev_file_path : sub-07/fmri/emotion/sub-07_run-1
 
 
 Processing sub-07_run-2
-
-
-Processing sub-05_run-2
 tr : 1.816460 
 total_volumes : 275 
 MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
@@ -58,6 +58,20 @@ custom_ev_file_path : sub-03/fmri/emotion/sub-03_run-1
 
 
 Processing sub-03_run-2
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-02/fmri/emotion/design_sub-02_run-2.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-02/fmri/emotion/sub-02_run-2.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-02/fmri/emotion/sub-02_run-2_preproc_reg.feat
+
+tr : 1.816679 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-02/fmri/emotion/sub-02_run-2_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-02/anat/sub-02_T1w_brain 
+custom_ev_file_path : sub-02/fmri/emotion/sub-02_run-2 
+
+
+Processing sub-02_run-3
 fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-07/fmri/emotion/design_sub-07_run-2.fsf
 sub_mat : /data00/leonardo/RSA/prep_data/sub-07/fmri/emotion/sub-07_run-2.mat
 sub_feat : /data00/leonardo/RSA/prep_data/sub-07/fmri/emotion/sub-07_run-2_preproc_reg.feat
@@ -65,14 +79,6 @@ sub_feat : /data00/leonardo/RSA/prep_data/sub-07/fmri/emotion/sub-07_run-2_prepr
 fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-05/fmri/emotion/design_sub-05_run-2.fsf
 sub_mat : /data00/leonardo/RSA/prep_data/sub-05/fmri/emotion/sub-05_run-2.mat
 sub_feat : /data00/leonardo/RSA/prep_data/sub-05/fmri/emotion/sub-05_run-2_preproc_reg.feat
-
-fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-02/fmri/emotion/design_sub-02_run-2.fsf
-sub_mat : /data00/leonardo/RSA/prep_data/sub-02/fmri/emotion/sub-02_run-2.mat
-sub_feat : /data00/leonardo/RSA/prep_data/sub-02/fmri/emotion/sub-02_run-2_preproc_reg.feat
-
-fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-03/fmri/emotion/design_sub-03_run-2.fsf
-sub_mat : /data00/leonardo/RSA/prep_data/sub-03/fmri/emotion/sub-03_run-2.mat
-sub_feat : /data00/leonardo/RSA/prep_data/sub-03/fmri/emotion/sub-03_run-2_preproc_reg.feat
 
 tr : 1.816241 
 total_volumes : 275 
@@ -91,19 +97,13 @@ total_voxels : 495616000
 feat_dir : /data00/leonardo/RSA/prep_data/sub-05/fmri/emotion/sub-05_run-2_preproc_reg.feat 
 anat_brain_image : /data00/leonardo/RSA/prep_data/sub-05/anat/sub-05_T1w_brain 
 custom_ev_file_path : sub-05/fmri/emotion/sub-05_run-2 
-tr : 1.816679 
-total_volumes : 275 
-MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
-total_voxels : 495616000 
-feat_dir : /data00/leonardo/RSA/prep_data/sub-02/fmri/emotion/sub-02_run-2_preproc_reg.feat 
-anat_brain_image : /data00/leonardo/RSA/prep_data/sub-02/anat/sub-02_T1w_brain 
-custom_ev_file_path : sub-02/fmri/emotion/sub-02_run-2 
 
 
 Processing sub-05_run-3
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-03/fmri/emotion/design_sub-03_run-2.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-03/fmri/emotion/sub-03_run-2.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-03/fmri/emotion/sub-03_run-2_preproc_reg.feat
 
-
-Processing sub-02_run-3
 tr : 1.816460 
 total_volumes : 275 
 MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
@@ -121,10 +121,6 @@ sub_feat : /data00/leonardo/RSA/prep_data/sub-02/fmri/emotion/sub-02_run-3_prepr
 fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-07/fmri/emotion/design_sub-07_run-3.fsf
 sub_mat : /data00/leonardo/RSA/prep_data/sub-07/fmri/emotion/sub-07_run-3.mat
 sub_feat : /data00/leonardo/RSA/prep_data/sub-07/fmri/emotion/sub-07_run-3_preproc_reg.feat
-
-fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-03/fmri/emotion/design_sub-03_run-3.fsf
-sub_mat : /data00/leonardo/RSA/prep_data/sub-03/fmri/emotion/sub-03_run-3.mat
-sub_feat : /data00/leonardo/RSA/prep_data/sub-03/fmri/emotion/sub-03_run-3_preproc_reg.feat
 
 fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-05/fmri/emotion/design_sub-05_run-3.fsf
 sub_mat : /data00/leonardo/RSA/prep_data/sub-05/fmri/emotion/sub-05_run-3.mat
@@ -157,6 +153,13 @@ total_voxels : 495616000
 feat_dir : /data00/leonardo/RSA/prep_data/sub-05/fmri/emotion/sub-05_run-3_preproc_reg.feat 
 anat_brain_image : /data00/leonardo/RSA/prep_data/sub-05/anat/sub-05_T1w_brain 
 custom_ev_file_path : sub-05/fmri/emotion/sub-05_run-3 
+
+
+Processing sub-05_run-4
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-03/fmri/emotion/design_sub-03_run-3.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-03/fmri/emotion/sub-03_run-3.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-03/fmri/emotion/sub-03_run-3_preproc_reg.feat
+
 tr : 1.816460 
 total_volumes : 275 
 MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
@@ -164,9 +167,6 @@ total_voxels : 495616000
 feat_dir : /data00/leonardo/RSA/prep_data/sub-03/fmri/emotion/sub-03_run-3_preproc_reg.feat 
 anat_brain_image : /data00/leonardo/RSA/prep_data/sub-03/anat/sub-03_T1w_brain 
 custom_ev_file_path : sub-03/fmri/emotion/sub-03_run-3 
-
-
-Processing sub-05_run-4
 
 
 Processing sub-03_run-4
@@ -184,13 +184,23 @@ custom_ev_file_path : sub-02/fmri/emotion/sub-02_run-4
 
 
 Processing sub-02_run-5
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-07/fmri/emotion/design_sub-07_run-4.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-07/fmri/emotion/sub-07_run-4.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-07/fmri/emotion/sub-07_run-4_preproc_reg.feat
+
+tr : 1.816241 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-07/fmri/emotion/sub-07_run-4_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-07/anat/sub-07_T1w_brain 
+custom_ev_file_path : sub-07/fmri/emotion/sub-07_run-4 
+
+
+Processing sub-07_run-5
 fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-05/fmri/emotion/design_sub-05_run-4.fsf
 sub_mat : /data00/leonardo/RSA/prep_data/sub-05/fmri/emotion/sub-05_run-4.mat
 sub_feat : /data00/leonardo/RSA/prep_data/sub-05/fmri/emotion/sub-05_run-4_preproc_reg.feat
-
-fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-03/fmri/emotion/design_sub-03_run-4.fsf
-sub_mat : /data00/leonardo/RSA/prep_data/sub-03/fmri/emotion/sub-03_run-4.mat
-sub_feat : /data00/leonardo/RSA/prep_data/sub-03/fmri/emotion/sub-03_run-4_preproc_reg.feat
 
 tr : 1.815949 
 total_volumes : 275 
@@ -202,9 +212,9 @@ custom_ev_file_path : sub-05/fmri/emotion/sub-05_run-4
 
 
 Processing sub-05_run-5
-fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-07/fmri/emotion/design_sub-07_run-4.fsf
-sub_mat : /data00/leonardo/RSA/prep_data/sub-07/fmri/emotion/sub-07_run-4.mat
-sub_feat : /data00/leonardo/RSA/prep_data/sub-07/fmri/emotion/sub-07_run-4_preproc_reg.feat
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-03/fmri/emotion/design_sub-03_run-4.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-03/fmri/emotion/sub-03_run-4.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-03/fmri/emotion/sub-03_run-4_preproc_reg.feat
 
 tr : 1.816460 
 total_volumes : 275 
@@ -216,16 +226,6 @@ custom_ev_file_path : sub-03/fmri/emotion/sub-03_run-4
 
 
 Processing sub-03_run-5
-tr : 1.816241 
-total_volumes : 275 
-MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
-total_voxels : 495616000 
-feat_dir : /data00/leonardo/RSA/prep_data/sub-07/fmri/emotion/sub-07_run-4_preproc_reg.feat 
-anat_brain_image : /data00/leonardo/RSA/prep_data/sub-07/anat/sub-07_T1w_brain 
-custom_ev_file_path : sub-07/fmri/emotion/sub-07_run-4 
-
-
-Processing sub-07_run-5
 fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-02/fmri/emotion/design_sub-02_run-5.fsf
 sub_mat : /data00/leonardo/RSA/prep_data/sub-02/fmri/emotion/sub-02_run-5.mat
 sub_feat : /data00/leonardo/RSA/prep_data/sub-02/fmri/emotion/sub-02_run-5_preproc_reg.feat
@@ -240,6 +240,20 @@ custom_ev_file_path : sub-02/fmri/emotion/sub-02_run-5
 
 
 Processing sub-02_run-6
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-07/fmri/emotion/design_sub-07_run-5.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-07/fmri/emotion/sub-07_run-5.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-07/fmri/emotion/sub-07_run-5_preproc_reg.feat
+
+tr : 1.816241 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-07/fmri/emotion/sub-07_run-5_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-07/anat/sub-07_T1w_brain 
+custom_ev_file_path : sub-07/fmri/emotion/sub-07_run-5 
+
+
+Processing sub-07_run-6
 fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-05/fmri/emotion/design_sub-05_run-5.fsf
 sub_mat : /data00/leonardo/RSA/prep_data/sub-05/fmri/emotion/sub-05_run-5.mat
 sub_feat : /data00/leonardo/RSA/prep_data/sub-05/fmri/emotion/sub-05_run-5_preproc_reg.feat
@@ -254,28 +268,10 @@ custom_ev_file_path : sub-05/fmri/emotion/sub-05_run-5
 
 
 Processing sub-05_run-6
-fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-07/fmri/emotion/design_sub-07_run-5.fsf
-sub_mat : /data00/leonardo/RSA/prep_data/sub-07/fmri/emotion/sub-07_run-5.mat
-sub_feat : /data00/leonardo/RSA/prep_data/sub-07/fmri/emotion/sub-07_run-5_preproc_reg.feat
-
 fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-03/fmri/emotion/design_sub-03_run-5.fsf
 sub_mat : /data00/leonardo/RSA/prep_data/sub-03/fmri/emotion/sub-03_run-5.mat
 sub_feat : /data00/leonardo/RSA/prep_data/sub-03/fmri/emotion/sub-03_run-5_preproc_reg.feat
 
-fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-02/fmri/emotion/design_sub-02_run-6.fsf
-sub_mat : /data00/leonardo/RSA/prep_data/sub-02/fmri/emotion/sub-02_run-6.mat
-sub_feat : /data00/leonardo/RSA/prep_data/sub-02/fmri/emotion/sub-02_run-6_preproc_reg.feat
-
-tr : 1.816241 
-total_volumes : 275 
-MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
-total_voxels : 495616000 
-feat_dir : /data00/leonardo/RSA/prep_data/sub-07/fmri/emotion/sub-07_run-5_preproc_reg.feat 
-anat_brain_image : /data00/leonardo/RSA/prep_data/sub-07/anat/sub-07_T1w_brain 
-custom_ev_file_path : sub-07/fmri/emotion/sub-07_run-5 
-
-
-Processing sub-07_run-6
 tr : 1.816460 
 total_volumes : 275 
 MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
@@ -283,6 +279,13 @@ total_voxels : 495616000
 feat_dir : /data00/leonardo/RSA/prep_data/sub-03/fmri/emotion/sub-03_run-5_preproc_reg.feat 
 anat_brain_image : /data00/leonardo/RSA/prep_data/sub-03/anat/sub-03_T1w_brain 
 custom_ev_file_path : sub-03/fmri/emotion/sub-03_run-5 
+
+
+Processing sub-03_run-6
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-02/fmri/emotion/design_sub-02_run-6.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-02/fmri/emotion/sub-02_run-6.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-02/fmri/emotion/sub-02_run-6_preproc_reg.feat
+
 tr : 1.816679 
 total_volumes : 275 
 MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
@@ -293,12 +296,13 @@ custom_ev_file_path : sub-02/fmri/emotion/sub-02_run-6
 
 
 Processing sub-02_run-7
-
-
-Processing sub-03_run-6
 fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-05/fmri/emotion/design_sub-05_run-6.fsf
 sub_mat : /data00/leonardo/RSA/prep_data/sub-05/fmri/emotion/sub-05_run-6.mat
 sub_feat : /data00/leonardo/RSA/prep_data/sub-05/fmri/emotion/sub-05_run-6_preproc_reg.feat
+
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-07/fmri/emotion/design_sub-07_run-6.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-07/fmri/emotion/sub-07_run-6.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-07/fmri/emotion/sub-07_run-6_preproc_reg.feat
 
 tr : 1.815949 
 total_volumes : 275 
@@ -310,10 +314,6 @@ custom_ev_file_path : sub-05/fmri/emotion/sub-05_run-6
 
 
 Processing sub-05_run-7
-fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-07/fmri/emotion/design_sub-07_run-6.fsf
-sub_mat : /data00/leonardo/RSA/prep_data/sub-07/fmri/emotion/sub-07_run-6.mat
-sub_feat : /data00/leonardo/RSA/prep_data/sub-07/fmri/emotion/sub-07_run-6_preproc_reg.feat
-
 tr : 1.816241 
 total_volumes : 275 
 MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
@@ -328,6 +328,10 @@ fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-02/fmri/emotion/design_sub-02_r
 sub_mat : /data00/leonardo/RSA/prep_data/sub-02/fmri/emotion/sub-02_run-7.mat
 sub_feat : /data00/leonardo/RSA/prep_data/sub-02/fmri/emotion/sub-02_run-7_preproc_reg.feat
 
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-03/fmri/emotion/design_sub-03_run-6.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-03/fmri/emotion/sub-03_run-6.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-03/fmri/emotion/sub-03_run-6_preproc_reg.feat
+
 tr : 1.816679 
 total_volumes : 274 
 MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
@@ -335,10 +339,6 @@ total_voxels : 493813760
 feat_dir : /data00/leonardo/RSA/prep_data/sub-02/fmri/emotion/sub-02_run-7_preproc_reg.feat 
 anat_brain_image : /data00/leonardo/RSA/prep_data/sub-02/anat/sub-02_T1w_brain 
 custom_ev_file_path : sub-02/fmri/emotion/sub-02_run-7 
-fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-03/fmri/emotion/design_sub-03_run-6.fsf
-sub_mat : /data00/leonardo/RSA/prep_data/sub-03/fmri/emotion/sub-03_run-6.mat
-sub_feat : /data00/leonardo/RSA/prep_data/sub-03/fmri/emotion/sub-03_run-6_preproc_reg.feat
-
 
 
 Processing sub-02_run-8
@@ -370,10 +370,6 @@ fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-07/fmri/emotion/design_sub-07_r
 sub_mat : /data00/leonardo/RSA/prep_data/sub-07/fmri/emotion/sub-07_run-7.mat
 sub_feat : /data00/leonardo/RSA/prep_data/sub-07/fmri/emotion/sub-07_run-7_preproc_reg.feat
 
-fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-02/fmri/emotion/design_sub-02_run-8.fsf
-sub_mat : /data00/leonardo/RSA/prep_data/sub-02/fmri/emotion/sub-02_run-8.mat
-sub_feat : /data00/leonardo/RSA/prep_data/sub-02/fmri/emotion/sub-02_run-8_preproc_reg.feat
-
 tr : 1.816241 
 total_volumes : 275 
 MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
@@ -384,6 +380,18 @@ custom_ev_file_path : sub-07/fmri/emotion/sub-07_run-7
 
 
 Processing sub-07_run-8
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-03/fmri/emotion/design_sub-03_run-7.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-03/fmri/emotion/sub-03_run-7.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-03/fmri/emotion/sub-03_run-7_preproc_reg.feat
+
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-02/fmri/emotion/design_sub-02_run-8.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-02/fmri/emotion/sub-02_run-8.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-02/fmri/emotion/sub-02_run-8_preproc_reg.feat
+
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-05/fmri/emotion/design_sub-05_run-8.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-05/fmri/emotion/sub-05_run-8.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-05/fmri/emotion/sub-05_run-8_preproc_reg.feat
+
 tr : 1.816679 
 total_volumes : 275 
 MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
@@ -391,12 +399,6 @@ total_voxels : 495616000
 feat_dir : /data00/leonardo/RSA/prep_data/sub-02/fmri/emotion/sub-02_run-8_preproc_reg.feat 
 anat_brain_image : /data00/leonardo/RSA/prep_data/sub-02/anat/sub-02_T1w_brain 
 custom_ev_file_path : sub-02/fmri/emotion/sub-02_run-8 
-
-
-fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-03/fmri/emotion/design_sub-03_run-7.fsf
-sub_mat : /data00/leonardo/RSA/prep_data/sub-03/fmri/emotion/sub-03_run-7.mat
-sub_feat : /data00/leonardo/RSA/prep_data/sub-03/fmri/emotion/sub-03_run-7_preproc_reg.feat
-
 tr : 1.816460 
 total_volumes : 275 
 MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
@@ -404,17 +406,11 @@ total_voxels : 495616000
 feat_dir : /data00/leonardo/RSA/prep_data/sub-03/fmri/emotion/sub-03_run-7_preproc_reg.feat 
 anat_brain_image : /data00/leonardo/RSA/prep_data/sub-03/anat/sub-03_T1w_brain 
 custom_ev_file_path : sub-03/fmri/emotion/sub-03_run-7 
-fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-05/fmri/emotion/design_sub-05_run-8.fsf
-sub_mat : /data00/leonardo/RSA/prep_data/sub-05/fmri/emotion/sub-05_run-8.mat
-sub_feat : /data00/leonardo/RSA/prep_data/sub-05/fmri/emotion/sub-05_run-8_preproc_reg.feat
+
 
 
 
 Processing sub-03_run-8
-fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-07/fmri/emotion/design_sub-07_run-8.fsf
-sub_mat : /data00/leonardo/RSA/prep_data/sub-07/fmri/emotion/sub-07_run-8.mat
-sub_feat : /data00/leonardo/RSA/prep_data/sub-07/fmri/emotion/sub-07_run-8_preproc_reg.feat
-
 tr : 1.815952 
 total_volumes : 295 
 MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
@@ -423,6 +419,10 @@ feat_dir : /data00/leonardo/RSA/prep_data/sub-05/fmri/emotion/sub-05_run-8_prepr
 anat_brain_image : /data00/leonardo/RSA/prep_data/sub-05/anat/sub-05_T1w_brain 
 custom_ev_file_path : sub-05/fmri/emotion/sub-05_run-8 
 
+
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-07/fmri/emotion/design_sub-07_run-8.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-07/fmri/emotion/sub-07_run-8.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-07/fmri/emotion/sub-07_run-8_preproc_reg.feat
 
 tr : 1.816241 
 total_volumes : 275 
@@ -615,7 +615,6 @@ custom_ev_file_path : sub-10/fmri/emotion/sub-10_run-4
 
 
 Processing sub-10_run-5
-Processing sub-11_run-1
 fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-10/fmri/emotion/design_sub-10_run-5.fsf
 sub_mat : /data00/leonardo/RSA/prep_data/sub-10/fmri/emotion/sub-10_run-5.mat
 sub_feat : /data00/leonardo/RSA/prep_data/sub-10/fmri/emotion/sub-10_run-5_preproc_reg.feat
@@ -630,20 +629,6 @@ custom_ev_file_path : sub-10/fmri/emotion/sub-10_run-5
 
 
 Processing sub-10_run-6
-fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-11/fmri/emotion/design_sub-11_run-1.fsf
-sub_mat : /data00/leonardo/RSA/prep_data/sub-11/fmri/emotion/sub-11_run-1.mat
-sub_feat : /data00/leonardo/RSA/prep_data/sub-11/fmri/emotion/sub-11_run-1_preproc_reg.feat
-
-tr : 1.815912 
-total_volumes : 275 
-MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
-total_voxels : 495616000 
-feat_dir : /data00/leonardo/RSA/prep_data/sub-11/fmri/emotion/sub-11_run-1_preproc_reg.feat 
-anat_brain_image : /data00/leonardo/RSA/prep_data/sub-11/anat/sub-11_T1w_brain 
-custom_ev_file_path : sub-11/fmri/emotion/sub-11_run-1 
-
-
-Processing sub-11_run-2
 fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-10/fmri/emotion/design_sub-10_run-6.fsf
 sub_mat : /data00/leonardo/RSA/prep_data/sub-10/fmri/emotion/sub-10_run-6.mat
 sub_feat : /data00/leonardo/RSA/prep_data/sub-10/fmri/emotion/sub-10_run-6_preproc_reg.feat
@@ -658,13 +643,51 @@ custom_ev_file_path : sub-10/fmri/emotion/sub-10_run-6
 
 
 Processing sub-10_run-7
-fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-11/fmri/emotion/design_sub-11_run-2.fsf
-sub_mat : /data00/leonardo/RSA/prep_data/sub-11/fmri/emotion/sub-11_run-2.mat
-sub_feat : /data00/leonardo/RSA/prep_data/sub-11/fmri/emotion/sub-11_run-2_preproc_reg.feat
-
 fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-10/fmri/emotion/design_sub-10_run-7.fsf
 sub_mat : /data00/leonardo/RSA/prep_data/sub-10/fmri/emotion/sub-10_run-7.mat
 sub_feat : /data00/leonardo/RSA/prep_data/sub-10/fmri/emotion/sub-10_run-7_preproc_reg.feat
+
+tr : 1.816314 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-10/fmri/emotion/sub-10_run-7_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-10/anat/sub-10_T1w_brain 
+custom_ev_file_path : sub-10/fmri/emotion/sub-10_run-7 
+
+
+Processing sub-10_run-8
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-10/fmri/emotion/design_sub-10_run-8.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-10/fmri/emotion/sub-10_run-8.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-10/fmri/emotion/sub-10_run-8_preproc_reg.feat
+
+tr : 1.816314 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-10/fmri/emotion/sub-10_run-8_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-10/anat/sub-10_T1w_brain 
+custom_ev_file_path : sub-10/fmri/emotion/sub-10_run-8 
+
+
+Processing sub-11_run-1
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-11/fmri/emotion/design_sub-11_run-1.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-11/fmri/emotion/sub-11_run-1.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-11/fmri/emotion/sub-11_run-1_preproc_reg.feat
+
+tr : 1.815912 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-11/fmri/emotion/sub-11_run-1_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-11/anat/sub-11_T1w_brain 
+custom_ev_file_path : sub-11/fmri/emotion/sub-11_run-1 
+
+
+Processing sub-11_run-2
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-11/fmri/emotion/design_sub-11_run-2.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-11/fmri/emotion/sub-11_run-2.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-11/fmri/emotion/sub-11_run-2_preproc_reg.feat
 
 tr : 1.815912 
 total_volumes : 275 
@@ -676,16 +699,6 @@ custom_ev_file_path : sub-11/fmri/emotion/sub-11_run-2
 
 
 Processing sub-11_run-3
-tr : 1.816314 
-total_volumes : 275 
-MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
-total_voxels : 495616000 
-feat_dir : /data00/leonardo/RSA/prep_data/sub-10/fmri/emotion/sub-10_run-7_preproc_reg.feat 
-anat_brain_image : /data00/leonardo/RSA/prep_data/sub-10/anat/sub-10_T1w_brain 
-custom_ev_file_path : sub-10/fmri/emotion/sub-10_run-7 
-
-
-Processing sub-10_run-8
 fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-11/fmri/emotion/design_sub-11_run-3.fsf
 sub_mat : /data00/leonardo/RSA/prep_data/sub-11/fmri/emotion/sub-11_run-3.mat
 sub_feat : /data00/leonardo/RSA/prep_data/sub-11/fmri/emotion/sub-11_run-3_preproc_reg.feat
@@ -700,19 +713,6 @@ custom_ev_file_path : sub-11/fmri/emotion/sub-11_run-3
 
 
 Processing sub-11_run-4
-fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-10/fmri/emotion/design_sub-10_run-8.fsf
-sub_mat : /data00/leonardo/RSA/prep_data/sub-10/fmri/emotion/sub-10_run-8.mat
-sub_feat : /data00/leonardo/RSA/prep_data/sub-10/fmri/emotion/sub-10_run-8_preproc_reg.feat
-
-tr : 1.816314 
-total_volumes : 275 
-MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
-total_voxels : 495616000 
-feat_dir : /data00/leonardo/RSA/prep_data/sub-10/fmri/emotion/sub-10_run-8_preproc_reg.feat 
-anat_brain_image : /data00/leonardo/RSA/prep_data/sub-10/anat/sub-10_T1w_brain 
-custom_ev_file_path : sub-10/fmri/emotion/sub-10_run-8 
-
-
 fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-11/fmri/emotion/design_sub-11_run-4.fsf
 sub_mat : /data00/leonardo/RSA/prep_data/sub-11/fmri/emotion/sub-11_run-4.mat
 sub_feat : /data00/leonardo/RSA/prep_data/sub-11/fmri/emotion/sub-11_run-4_preproc_reg.feat
@@ -1179,7 +1179,6 @@ fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-16/fmri/emotion/design_sub-16_r
 sub_mat : /data00/leonardo/RSA/prep_data/sub-16/fmri/emotion/sub-16_run-5.mat
 sub_feat : /data00/leonardo/RSA/prep_data/sub-16/fmri/emotion/sub-16_run-5_preproc_reg.feat
 
-Processing sub-18_run-1
 tr : 1.816241 
 total_volumes : 275 
 MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
@@ -1190,24 +1189,10 @@ custom_ev_file_path : sub-16/fmri/emotion/sub-16_run-5
 
 
 Processing sub-16_run-6
-fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-18/fmri/emotion/design_sub-18_run-1.fsf
-sub_mat : /data00/leonardo/RSA/prep_data/sub-18/fmri/emotion/sub-18_run-1.mat
-sub_feat : /data00/leonardo/RSA/prep_data/sub-18/fmri/emotion/sub-18_run-1_preproc_reg.feat
-
 fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-16/fmri/emotion/design_sub-16_run-6.fsf
 sub_mat : /data00/leonardo/RSA/prep_data/sub-16/fmri/emotion/sub-16_run-6.mat
 sub_feat : /data00/leonardo/RSA/prep_data/sub-16/fmri/emotion/sub-16_run-6_preproc_reg.feat
 
-tr : 1.816314 
-total_volumes : 275 
-MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
-total_voxels : 495616000 
-feat_dir : /data00/leonardo/RSA/prep_data/sub-18/fmri/emotion/sub-18_run-1_preproc_reg.feat 
-anat_brain_image : /data00/leonardo/RSA/prep_data/sub-18/anat/sub-18_T1w_brain 
-custom_ev_file_path : sub-18/fmri/emotion/sub-18_run-1 
-
-
-Processing sub-18_run-2
 tr : 1.816241 
 total_volumes : 275 
 MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
@@ -1218,20 +1203,6 @@ custom_ev_file_path : sub-16/fmri/emotion/sub-16_run-6
 
 
 Processing sub-16_run-7
-fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-18/fmri/emotion/design_sub-18_run-2.fsf
-sub_mat : /data00/leonardo/RSA/prep_data/sub-18/fmri/emotion/sub-18_run-2.mat
-sub_feat : /data00/leonardo/RSA/prep_data/sub-18/fmri/emotion/sub-18_run-2_preproc_reg.feat
-
-tr : 1.816314 
-total_volumes : 275 
-MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
-total_voxels : 495616000 
-feat_dir : /data00/leonardo/RSA/prep_data/sub-18/fmri/emotion/sub-18_run-2_preproc_reg.feat 
-anat_brain_image : /data00/leonardo/RSA/prep_data/sub-18/anat/sub-18_T1w_brain 
-custom_ev_file_path : sub-18/fmri/emotion/sub-18_run-2 
-
-
-Processing sub-18_run-3
 fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-16/fmri/emotion/design_sub-16_run-7.fsf
 sub_mat : /data00/leonardo/RSA/prep_data/sub-16/fmri/emotion/sub-16_run-7.mat
 sub_feat : /data00/leonardo/RSA/prep_data/sub-16/fmri/emotion/sub-16_run-7_preproc_reg.feat
@@ -1246,6 +1217,48 @@ custom_ev_file_path : sub-16/fmri/emotion/sub-16_run-7
 
 
 Processing sub-16_run-8
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-16/fmri/emotion/design_sub-16_run-8.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-16/fmri/emotion/sub-16_run-8.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-16/fmri/emotion/sub-16_run-8_preproc_reg.feat
+
+tr : 1.816241 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-16/fmri/emotion/sub-16_run-8_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-16/anat/sub-16_T1w_brain 
+custom_ev_file_path : sub-16/fmri/emotion/sub-16_run-8 
+
+
+Processing sub-18_run-1
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-18/fmri/emotion/design_sub-18_run-1.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-18/fmri/emotion/sub-18_run-1.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-18/fmri/emotion/sub-18_run-1_preproc_reg.feat
+
+tr : 1.816314 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-18/fmri/emotion/sub-18_run-1_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-18/anat/sub-18_T1w_brain 
+custom_ev_file_path : sub-18/fmri/emotion/sub-18_run-1 
+
+
+Processing sub-18_run-2
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-18/fmri/emotion/design_sub-18_run-2.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-18/fmri/emotion/sub-18_run-2.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-18/fmri/emotion/sub-18_run-2_preproc_reg.feat
+
+tr : 1.816314 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-18/fmri/emotion/sub-18_run-2_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-18/anat/sub-18_T1w_brain 
+custom_ev_file_path : sub-18/fmri/emotion/sub-18_run-2 
+
+
+Processing sub-18_run-3
 fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-18/fmri/emotion/design_sub-18_run-3.fsf
 sub_mat : /data00/leonardo/RSA/prep_data/sub-18/fmri/emotion/sub-18_run-3.mat
 sub_feat : /data00/leonardo/RSA/prep_data/sub-18/fmri/emotion/sub-18_run-3_preproc_reg.feat
@@ -1260,19 +1273,6 @@ custom_ev_file_path : sub-18/fmri/emotion/sub-18_run-3
 
 
 Processing sub-18_run-4
-fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-16/fmri/emotion/design_sub-16_run-8.fsf
-sub_mat : /data00/leonardo/RSA/prep_data/sub-16/fmri/emotion/sub-16_run-8.mat
-sub_feat : /data00/leonardo/RSA/prep_data/sub-16/fmri/emotion/sub-16_run-8_preproc_reg.feat
-
-tr : 1.816241 
-total_volumes : 275 
-MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
-total_voxels : 495616000 
-feat_dir : /data00/leonardo/RSA/prep_data/sub-16/fmri/emotion/sub-16_run-8_preproc_reg.feat 
-anat_brain_image : /data00/leonardo/RSA/prep_data/sub-16/anat/sub-16_T1w_brain 
-custom_ev_file_path : sub-16/fmri/emotion/sub-16_run-8 
-
-
 fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-18/fmri/emotion/design_sub-18_run-4.fsf
 sub_mat : /data00/leonardo/RSA/prep_data/sub-18/fmri/emotion/sub-18_run-4.mat
 sub_feat : /data00/leonardo/RSA/prep_data/sub-18/fmri/emotion/sub-18_run-4_preproc_reg.feat
@@ -1651,9 +1651,14 @@ custom_ev_file_path : sub-21/fmri/emotion/sub-21_run-6
 
 
 Processing sub-21_run-7
+Processing sub-22_run-1
 fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-21/fmri/emotion/design_sub-21_run-7.fsf
 sub_mat : /data00/leonardo/RSA/prep_data/sub-21/fmri/emotion/sub-21_run-7.mat
 sub_feat : /data00/leonardo/RSA/prep_data/sub-21/fmri/emotion/sub-21_run-7_preproc_reg.feat
+
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-22/fmri/emotion/design_sub-22_run-1.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-22/fmri/emotion/sub-22_run-1.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-22/fmri/emotion/sub-22_run-1_preproc_reg.feat
 
 tr : 1.816533 
 total_volumes : 275 
@@ -1665,24 +1670,6 @@ custom_ev_file_path : sub-21/fmri/emotion/sub-21_run-7
 
 
 Processing sub-21_run-8
-fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-21/fmri/emotion/design_sub-21_run-8.fsf
-sub_mat : /data00/leonardo/RSA/prep_data/sub-21/fmri/emotion/sub-21_run-8.mat
-sub_feat : /data00/leonardo/RSA/prep_data/sub-21/fmri/emotion/sub-21_run-8_preproc_reg.feat
-
-tr : 1.816533 
-total_volumes : 275 
-MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
-total_voxels : 495616000 
-feat_dir : /data00/leonardo/RSA/prep_data/sub-21/fmri/emotion/sub-21_run-8_preproc_reg.feat 
-anat_brain_image : /data00/leonardo/RSA/prep_data/sub-21/anat/sub-21_T1w_brain 
-custom_ev_file_path : sub-21/fmri/emotion/sub-21_run-8 
-
-
-Processing sub-22_run-1
-fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-22/fmri/emotion/design_sub-22_run-1.fsf
-sub_mat : /data00/leonardo/RSA/prep_data/sub-22/fmri/emotion/sub-22_run-1.mat
-sub_feat : /data00/leonardo/RSA/prep_data/sub-22/fmri/emotion/sub-22_run-1_preproc_reg.feat
-
 tr : 1.816496 
 total_volumes : 274 
 MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
@@ -1693,9 +1680,22 @@ custom_ev_file_path : sub-22/fmri/emotion/sub-22_run-1
 
 
 Processing sub-22_run-2
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-21/fmri/emotion/design_sub-21_run-8.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-21/fmri/emotion/sub-21_run-8.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-21/fmri/emotion/sub-21_run-8_preproc_reg.feat
+
 fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-22/fmri/emotion/design_sub-22_run-2.fsf
 sub_mat : /data00/leonardo/RSA/prep_data/sub-22/fmri/emotion/sub-22_run-2.mat
 sub_feat : /data00/leonardo/RSA/prep_data/sub-22/fmri/emotion/sub-22_run-2_preproc_reg.feat
+
+tr : 1.816533 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-21/fmri/emotion/sub-21_run-8_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-21/anat/sub-21_T1w_brain 
+custom_ev_file_path : sub-21/fmri/emotion/sub-21_run-8 
+
 
 tr : 1.816496 
 total_volumes : 275 
@@ -2085,6 +2085,7 @@ custom_ev_file_path : sub-26/fmri/emotion/sub-26_run-5
 
 
 Processing sub-26_run-6
+Processing sub-27_run-1
 fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-26/fmri/emotion/design_sub-26_run-6.fsf
 sub_mat : /data00/leonardo/RSA/prep_data/sub-26/fmri/emotion/sub-26_run-6.mat
 sub_feat : /data00/leonardo/RSA/prep_data/sub-26/fmri/emotion/sub-26_run-6_preproc_reg.feat
@@ -2099,34 +2100,6 @@ custom_ev_file_path : sub-26/fmri/emotion/sub-26_run-6
 
 
 Processing sub-26_run-7
-fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-26/fmri/emotion/design_sub-26_run-7.fsf
-sub_mat : /data00/leonardo/RSA/prep_data/sub-26/fmri/emotion/sub-26_run-7.mat
-sub_feat : /data00/leonardo/RSA/prep_data/sub-26/fmri/emotion/sub-26_run-7_preproc_reg.feat
-
-tr : 1.816350 
-total_volumes : 275 
-MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
-total_voxels : 495616000 
-feat_dir : /data00/leonardo/RSA/prep_data/sub-26/fmri/emotion/sub-26_run-7_preproc_reg.feat 
-anat_brain_image : /data00/leonardo/RSA/prep_data/sub-26/anat/sub-26_T1w_brain 
-custom_ev_file_path : sub-26/fmri/emotion/sub-26_run-7 
-
-
-Processing sub-26_run-8
-fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-26/fmri/emotion/design_sub-26_run-8.fsf
-sub_mat : /data00/leonardo/RSA/prep_data/sub-26/fmri/emotion/sub-26_run-8.mat
-sub_feat : /data00/leonardo/RSA/prep_data/sub-26/fmri/emotion/sub-26_run-8_preproc_reg.feat
-
-tr : 1.816350 
-total_volumes : 275 
-MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
-total_voxels : 495616000 
-feat_dir : /data00/leonardo/RSA/prep_data/sub-26/fmri/emotion/sub-26_run-8_preproc_reg.feat 
-anat_brain_image : /data00/leonardo/RSA/prep_data/sub-26/anat/sub-26_T1w_brain 
-custom_ev_file_path : sub-26/fmri/emotion/sub-26_run-8 
-
-
-Processing sub-27_run-1
 fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-27/fmri/emotion/design_sub-27_run-1.fsf
 sub_mat : /data00/leonardo/RSA/prep_data/sub-27/fmri/emotion/sub-27_run-1.mat
 sub_feat : /data00/leonardo/RSA/prep_data/sub-27/fmri/emotion/sub-27_run-1_preproc_reg.feat
@@ -2141,6 +2114,20 @@ custom_ev_file_path : sub-27/fmri/emotion/sub-27_run-1
 
 
 Processing sub-27_run-2
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-26/fmri/emotion/design_sub-26_run-7.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-26/fmri/emotion/sub-26_run-7.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-26/fmri/emotion/sub-26_run-7_preproc_reg.feat
+
+tr : 1.816350 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-26/fmri/emotion/sub-26_run-7_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-26/anat/sub-26_T1w_brain 
+custom_ev_file_path : sub-26/fmri/emotion/sub-26_run-7 
+
+
+Processing sub-26_run-8
 fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-27/fmri/emotion/design_sub-27_run-2.fsf
 sub_mat : /data00/leonardo/RSA/prep_data/sub-27/fmri/emotion/sub-27_run-2.mat
 sub_feat : /data00/leonardo/RSA/prep_data/sub-27/fmri/emotion/sub-27_run-2_preproc_reg.feat
@@ -2155,6 +2142,19 @@ custom_ev_file_path : sub-27/fmri/emotion/sub-27_run-2
 
 
 Processing sub-27_run-3
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-26/fmri/emotion/design_sub-26_run-8.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-26/fmri/emotion/sub-26_run-8.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-26/fmri/emotion/sub-26_run-8_preproc_reg.feat
+
+tr : 1.816350 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-26/fmri/emotion/sub-26_run-8_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-26/anat/sub-26_T1w_brain 
+custom_ev_file_path : sub-26/fmri/emotion/sub-26_run-8 
+
+
 fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-27/fmri/emotion/design_sub-27_run-3.fsf
 sub_mat : /data00/leonardo/RSA/prep_data/sub-27/fmri/emotion/sub-27_run-3.mat
 sub_feat : /data00/leonardo/RSA/prep_data/sub-27/fmri/emotion/sub-27_run-3_preproc_reg.feat
