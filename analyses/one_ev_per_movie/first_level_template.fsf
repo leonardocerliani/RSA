@@ -290,6 +290,11 @@ set fmri(con_mode_old) orig
 set fmri(con_mode) orig
 
 
+# ------------------- Do not carry out contrast masking -------------
+# Do contrast masking at all?
+set fmri(conmask1_1) 0
+
+
 
 
 # Now options that don't appear in the GUI

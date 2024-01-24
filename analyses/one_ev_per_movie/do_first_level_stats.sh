@@ -78,7 +78,7 @@ for run in $(seq 8); do
   # 0 = no motion parameters in the model
   # 1 = std motion parameters
   # 2 = extended motion parameters
-  add_motion_parameters=0
+  add_motion_parameters=1
 
   for var in tr total_volumes MNI_template total_voxels feat_dir \
              anat_brain_image custom_ev_file_path; do

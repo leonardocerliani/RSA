@@ -1,0 +1,672 @@
+Processing sub-02_run-1
+Processing sub-03_run-1
+Processing sub-05_run-1
+Processing sub-07_run-1
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-05/fmri/one_ev_per_movie/design_sub-05_run-1.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-05/fmri/one_ev_per_movie/sub-05_run-1.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-05/fmri/one_ev_per_movie/sub-05_run-1_preproc_reg.feat
+
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-07/fmri/one_ev_per_movie/design_sub-07_run-1.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-07/fmri/one_ev_per_movie/sub-07_run-1.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-07/fmri/one_ev_per_movie/sub-07_run-1_preproc_reg.feat
+
+tr : 1.815949 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-05/fmri/one_ev_per_movie/sub-05_run-1_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-05/anat/sub-05_T1w_brain 
+custom_ev_file_path : sub-05/fmri/one_ev_per_movie/sub-05_run-1 
+tr : 1.816241 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-07/fmri/one_ev_per_movie/sub-07_run-1_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-07/anat/sub-07_T1w_brain 
+custom_ev_file_path : sub-07/fmri/one_ev_per_movie/sub-07_run-1 
+
+
+
+
+Processing sub-07_run-2
+Processing sub-05_run-2
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-02/fmri/one_ev_per_movie/design_sub-02_run-1.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-02/fmri/one_ev_per_movie/sub-02_run-1.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-02/fmri/one_ev_per_movie/sub-02_run-1_preproc_reg.feat
+
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-03/fmri/one_ev_per_movie/design_sub-03_run-1.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-03/fmri/one_ev_per_movie/sub-03_run-1.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-03/fmri/one_ev_per_movie/sub-03_run-1_preproc_reg.feat
+
+tr : 1.816460 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-03/fmri/one_ev_per_movie/sub-03_run-1_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-03/anat/sub-03_T1w_brain 
+custom_ev_file_path : sub-03/fmri/one_ev_per_movie/sub-03_run-1 
+tr : 1.816679 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-02/fmri/one_ev_per_movie/sub-02_run-1_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-02/anat/sub-02_T1w_brain 
+custom_ev_file_path : sub-02/fmri/one_ev_per_movie/sub-02_run-1 
+
+
+
+
+Processing sub-03_run-2
+Processing sub-02_run-2
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-05/fmri/one_ev_per_movie/design_sub-05_run-2.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-05/fmri/one_ev_per_movie/sub-05_run-2.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-05/fmri/one_ev_per_movie/sub-05_run-2_preproc_reg.feat
+
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-07/fmri/one_ev_per_movie/design_sub-07_run-2.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-07/fmri/one_ev_per_movie/sub-07_run-2.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-07/fmri/one_ev_per_movie/sub-07_run-2_preproc_reg.feat
+
+tr : 1.815949 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-05/fmri/one_ev_per_movie/sub-05_run-2_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-05/anat/sub-05_T1w_brain 
+custom_ev_file_path : sub-05/fmri/one_ev_per_movie/sub-05_run-2 
+
+
+tr : 1.816241 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-07/fmri/one_ev_per_movie/sub-07_run-2_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-07/anat/sub-07_T1w_brain 
+custom_ev_file_path : sub-07/fmri/one_ev_per_movie/sub-07_run-2 
+
+
+Processing sub-05_run-3
+Processing sub-07_run-3
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-02/fmri/one_ev_per_movie/design_sub-02_run-2.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-02/fmri/one_ev_per_movie/sub-02_run-2.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-02/fmri/one_ev_per_movie/sub-02_run-2_preproc_reg.feat
+
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-05/fmri/one_ev_per_movie/design_sub-05_run-3.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-05/fmri/one_ev_per_movie/sub-05_run-3.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-05/fmri/one_ev_per_movie/sub-05_run-3_preproc_reg.feat
+
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-03/fmri/one_ev_per_movie/design_sub-03_run-2.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-03/fmri/one_ev_per_movie/sub-03_run-2.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-03/fmri/one_ev_per_movie/sub-03_run-2_preproc_reg.feat
+
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-07/fmri/one_ev_per_movie/design_sub-07_run-3.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-07/fmri/one_ev_per_movie/sub-07_run-3.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-07/fmri/one_ev_per_movie/sub-07_run-3_preproc_reg.feat
+
+tr : 1.816679 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-02/fmri/one_ev_per_movie/sub-02_run-2_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-02/anat/sub-02_T1w_brain 
+custom_ev_file_path : sub-02/fmri/one_ev_per_movie/sub-02_run-2 
+
+
+tr : 1.815949 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-05/fmri/one_ev_per_movie/sub-05_run-3_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-05/anat/sub-05_T1w_brain 
+custom_ev_file_path : sub-05/fmri/one_ev_per_movie/sub-05_run-3 
+
+
+tr : 1.816460 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-03/fmri/one_ev_per_movie/sub-03_run-2_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-03/anat/sub-03_T1w_brain 
+custom_ev_file_path : sub-03/fmri/one_ev_per_movie/sub-03_run-2 
+
+
+tr : 1.816241 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-07/fmri/one_ev_per_movie/sub-07_run-3_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-07/anat/sub-07_T1w_brain 
+custom_ev_file_path : sub-07/fmri/one_ev_per_movie/sub-07_run-3 
+
+
+Processing sub-02_run-3
+Processing sub-05_run-4
+Processing sub-03_run-3
+Processing sub-07_run-4
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-05/fmri/one_ev_per_movie/design_sub-05_run-4.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-05/fmri/one_ev_per_movie/sub-05_run-4.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-05/fmri/one_ev_per_movie/sub-05_run-4_preproc_reg.feat
+
+tr : 1.815949 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-05/fmri/one_ev_per_movie/sub-05_run-4_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-05/anat/sub-05_T1w_brain 
+custom_ev_file_path : sub-05/fmri/one_ev_per_movie/sub-05_run-4 
+
+
+Processing sub-05_run-5
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-07/fmri/one_ev_per_movie/design_sub-07_run-4.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-07/fmri/one_ev_per_movie/sub-07_run-4.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-07/fmri/one_ev_per_movie/sub-07_run-4_preproc_reg.feat
+
+tr : 1.816241 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-07/fmri/one_ev_per_movie/sub-07_run-4_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-07/anat/sub-07_T1w_brain 
+custom_ev_file_path : sub-07/fmri/one_ev_per_movie/sub-07_run-4 
+
+
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-02/fmri/one_ev_per_movie/design_sub-02_run-3.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-02/fmri/one_ev_per_movie/sub-02_run-3.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-02/fmri/one_ev_per_movie/sub-02_run-3_preproc_reg.feat
+
+Processing sub-07_run-5
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-03/fmri/one_ev_per_movie/design_sub-03_run-3.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-03/fmri/one_ev_per_movie/sub-03_run-3.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-03/fmri/one_ev_per_movie/sub-03_run-3_preproc_reg.feat
+
+tr : 1.816679 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-02/fmri/one_ev_per_movie/sub-02_run-3_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-02/anat/sub-02_T1w_brain 
+custom_ev_file_path : sub-02/fmri/one_ev_per_movie/sub-02_run-3 
+
+
+tr : 1.816460 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-03/fmri/one_ev_per_movie/sub-03_run-3_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-03/anat/sub-03_T1w_brain 
+custom_ev_file_path : sub-03/fmri/one_ev_per_movie/sub-03_run-3 
+
+
+Processing sub-02_run-4
+Processing sub-03_run-4
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-05/fmri/one_ev_per_movie/design_sub-05_run-5.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-05/fmri/one_ev_per_movie/sub-05_run-5.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-05/fmri/one_ev_per_movie/sub-05_run-5_preproc_reg.feat
+
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-07/fmri/one_ev_per_movie/design_sub-07_run-5.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-07/fmri/one_ev_per_movie/sub-07_run-5.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-07/fmri/one_ev_per_movie/sub-07_run-5_preproc_reg.feat
+
+tr : 1.815949 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-05/fmri/one_ev_per_movie/sub-05_run-5_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-05/anat/sub-05_T1w_brain 
+custom_ev_file_path : sub-05/fmri/one_ev_per_movie/sub-05_run-5 
+
+
+tr : 1.816241 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-07/fmri/one_ev_per_movie/sub-07_run-5_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-07/anat/sub-07_T1w_brain 
+custom_ev_file_path : sub-07/fmri/one_ev_per_movie/sub-07_run-5 
+
+
+Processing sub-05_run-6
+Processing sub-07_run-6
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-02/fmri/one_ev_per_movie/design_sub-02_run-4.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-02/fmri/one_ev_per_movie/sub-02_run-4.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-02/fmri/one_ev_per_movie/sub-02_run-4_preproc_reg.feat
+
+tr : 1.816679 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-02/fmri/one_ev_per_movie/sub-02_run-4_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-02/anat/sub-02_T1w_brain 
+custom_ev_file_path : sub-02/fmri/one_ev_per_movie/sub-02_run-4 
+
+
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-03/fmri/one_ev_per_movie/design_sub-03_run-4.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-03/fmri/one_ev_per_movie/sub-03_run-4.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-03/fmri/one_ev_per_movie/sub-03_run-4_preproc_reg.feat
+
+Processing sub-02_run-5
+tr : 1.816460 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-03/fmri/one_ev_per_movie/sub-03_run-4_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-03/anat/sub-03_T1w_brain 
+custom_ev_file_path : sub-03/fmri/one_ev_per_movie/sub-03_run-4 
+
+
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-05/fmri/one_ev_per_movie/design_sub-05_run-6.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-05/fmri/one_ev_per_movie/sub-05_run-6.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-05/fmri/one_ev_per_movie/sub-05_run-6_preproc_reg.feat
+
+Processing sub-03_run-5
+tr : 1.815949 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-05/fmri/one_ev_per_movie/sub-05_run-6_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-05/anat/sub-05_T1w_brain 
+custom_ev_file_path : sub-05/fmri/one_ev_per_movie/sub-05_run-6 
+
+
+Processing sub-05_run-7
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-07/fmri/one_ev_per_movie/design_sub-07_run-6.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-07/fmri/one_ev_per_movie/sub-07_run-6.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-07/fmri/one_ev_per_movie/sub-07_run-6_preproc_reg.feat
+
+tr : 1.816241 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-07/fmri/one_ev_per_movie/sub-07_run-6_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-07/anat/sub-07_T1w_brain 
+custom_ev_file_path : sub-07/fmri/one_ev_per_movie/sub-07_run-6 
+
+
+Processing sub-07_run-7
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-05/fmri/one_ev_per_movie/design_sub-05_run-7.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-05/fmri/one_ev_per_movie/sub-05_run-7.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-05/fmri/one_ev_per_movie/sub-05_run-7_preproc_reg.feat
+
+tr : 1.815949 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-05/fmri/one_ev_per_movie/sub-05_run-7_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-05/anat/sub-05_T1w_brain 
+custom_ev_file_path : sub-05/fmri/one_ev_per_movie/sub-05_run-7 
+
+
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-02/fmri/one_ev_per_movie/design_sub-02_run-5.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-02/fmri/one_ev_per_movie/sub-02_run-5.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-02/fmri/one_ev_per_movie/sub-02_run-5_preproc_reg.feat
+
+tr : 1.816679 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-02/fmri/one_ev_per_movie/sub-02_run-5_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-02/anat/sub-02_T1w_brain 
+custom_ev_file_path : sub-02/fmri/one_ev_per_movie/sub-02_run-5 
+
+
+Processing sub-05_run-8
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-03/fmri/one_ev_per_movie/design_sub-03_run-5.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-03/fmri/one_ev_per_movie/sub-03_run-5.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-03/fmri/one_ev_per_movie/sub-03_run-5_preproc_reg.feat
+
+Processing sub-02_run-6
+tr : 1.816460 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-03/fmri/one_ev_per_movie/sub-03_run-5_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-03/anat/sub-03_T1w_brain 
+custom_ev_file_path : sub-03/fmri/one_ev_per_movie/sub-03_run-5 
+
+
+Processing sub-03_run-6
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-07/fmri/one_ev_per_movie/design_sub-07_run-7.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-07/fmri/one_ev_per_movie/sub-07_run-7.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-07/fmri/one_ev_per_movie/sub-07_run-7_preproc_reg.feat
+
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-05/fmri/one_ev_per_movie/design_sub-05_run-8.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-05/fmri/one_ev_per_movie/sub-05_run-8.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-05/fmri/one_ev_per_movie/sub-05_run-8_preproc_reg.feat
+
+tr : 1.816241 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-07/fmri/one_ev_per_movie/sub-07_run-7_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-07/anat/sub-07_T1w_brain 
+custom_ev_file_path : sub-07/fmri/one_ev_per_movie/sub-07_run-7 
+
+
+tr : 1.815952 
+total_volumes : 295 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 531660800 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-05/fmri/one_ev_per_movie/sub-05_run-8_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-05/anat/sub-05_T1w_brain 
+custom_ev_file_path : sub-05/fmri/one_ev_per_movie/sub-05_run-8 
+
+
+Processing sub-07_run-8
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-02/fmri/one_ev_per_movie/design_sub-02_run-6.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-02/fmri/one_ev_per_movie/sub-02_run-6.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-02/fmri/one_ev_per_movie/sub-02_run-6_preproc_reg.feat
+
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-03/fmri/one_ev_per_movie/design_sub-03_run-6.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-03/fmri/one_ev_per_movie/sub-03_run-6.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-03/fmri/one_ev_per_movie/sub-03_run-6_preproc_reg.feat
+
+tr : 1.816679 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-02/fmri/one_ev_per_movie/sub-02_run-6_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-02/anat/sub-02_T1w_brain 
+custom_ev_file_path : sub-02/fmri/one_ev_per_movie/sub-02_run-6 
+
+
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-07/fmri/one_ev_per_movie/design_sub-07_run-8.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-07/fmri/one_ev_per_movie/sub-07_run-8.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-07/fmri/one_ev_per_movie/sub-07_run-8_preproc_reg.feat
+
+Processing sub-02_run-7
+tr : 1.816460 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-03/fmri/one_ev_per_movie/sub-03_run-6_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-03/anat/sub-03_T1w_brain 
+custom_ev_file_path : sub-03/fmri/one_ev_per_movie/sub-03_run-6 
+
+
+Processing sub-03_run-7
+tr : 1.816241 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-07/fmri/one_ev_per_movie/sub-07_run-8_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-07/anat/sub-07_T1w_brain 
+custom_ev_file_path : sub-07/fmri/one_ev_per_movie/sub-07_run-8 
+
+
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-02/fmri/one_ev_per_movie/design_sub-02_run-7.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-02/fmri/one_ev_per_movie/sub-02_run-7.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-02/fmri/one_ev_per_movie/sub-02_run-7_preproc_reg.feat
+
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-03/fmri/one_ev_per_movie/design_sub-03_run-7.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-03/fmri/one_ev_per_movie/sub-03_run-7.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-03/fmri/one_ev_per_movie/sub-03_run-7_preproc_reg.feat
+
+tr : 1.816679 
+total_volumes : 274 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 493813760 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-02/fmri/one_ev_per_movie/sub-02_run-7_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-02/anat/sub-02_T1w_brain 
+custom_ev_file_path : sub-02/fmri/one_ev_per_movie/sub-02_run-7 
+
+
+Processing sub-02_run-8
+tr : 1.816460 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-03/fmri/one_ev_per_movie/sub-03_run-7_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-03/anat/sub-03_T1w_brain 
+custom_ev_file_path : sub-03/fmri/one_ev_per_movie/sub-03_run-7 
+
+
+Processing sub-03_run-8
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-02/fmri/one_ev_per_movie/design_sub-02_run-8.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-02/fmri/one_ev_per_movie/sub-02_run-8.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-02/fmri/one_ev_per_movie/sub-02_run-8_preproc_reg.feat
+
+tr : 1.816679 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-02/fmri/one_ev_per_movie/sub-02_run-8_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-02/anat/sub-02_T1w_brain 
+custom_ev_file_path : sub-02/fmri/one_ev_per_movie/sub-02_run-8 
+
+
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-03/fmri/one_ev_per_movie/design_sub-03_run-8.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-03/fmri/one_ev_per_movie/sub-03_run-8.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-03/fmri/one_ev_per_movie/sub-03_run-8_preproc_reg.feat
+
+tr : 1.816460 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-03/fmri/one_ev_per_movie/sub-03_run-8_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-03/anat/sub-03_T1w_brain 
+custom_ev_file_path : sub-03/fmri/one_ev_per_movie/sub-03_run-8 
+
+
+Processing sub-09_run-1
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-09/fmri/one_ev_per_movie/design_sub-09_run-1.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-09/fmri/one_ev_per_movie/sub-09_run-1.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-09/fmri/one_ev_per_movie/sub-09_run-1_preproc_reg.feat
+
+tr : 1.816460 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-09/fmri/one_ev_per_movie/sub-09_run-1_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-09/anat/sub-09_T1w_brain 
+custom_ev_file_path : sub-09/fmri/one_ev_per_movie/sub-09_run-1 
+
+
+Processing sub-09_run-2
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-09/fmri/one_ev_per_movie/design_sub-09_run-2.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-09/fmri/one_ev_per_movie/sub-09_run-2.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-09/fmri/one_ev_per_movie/sub-09_run-2_preproc_reg.feat
+
+tr : 1.816460 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-09/fmri/one_ev_per_movie/sub-09_run-2_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-09/anat/sub-09_T1w_brain 
+custom_ev_file_path : sub-09/fmri/one_ev_per_movie/sub-09_run-2 
+
+
+Processing sub-09_run-3
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-09/fmri/one_ev_per_movie/design_sub-09_run-3.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-09/fmri/one_ev_per_movie/sub-09_run-3.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-09/fmri/one_ev_per_movie/sub-09_run-3_preproc_reg.feat
+
+tr : 1.816460 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-09/fmri/one_ev_per_movie/sub-09_run-3_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-09/anat/sub-09_T1w_brain 
+custom_ev_file_path : sub-09/fmri/one_ev_per_movie/sub-09_run-3 
+
+
+Processing sub-09_run-4
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-09/fmri/one_ev_per_movie/design_sub-09_run-4.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-09/fmri/one_ev_per_movie/sub-09_run-4.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-09/fmri/one_ev_per_movie/sub-09_run-4_preproc_reg.feat
+
+tr : 1.816460 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-09/fmri/one_ev_per_movie/sub-09_run-4_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-09/anat/sub-09_T1w_brain 
+custom_ev_file_path : sub-09/fmri/one_ev_per_movie/sub-09_run-4 
+
+
+Processing sub-09_run-5
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-09/fmri/one_ev_per_movie/design_sub-09_run-5.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-09/fmri/one_ev_per_movie/sub-09_run-5.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-09/fmri/one_ev_per_movie/sub-09_run-5_preproc_reg.feat
+
+tr : 1.816460 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-09/fmri/one_ev_per_movie/sub-09_run-5_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-09/anat/sub-09_T1w_brain 
+custom_ev_file_path : sub-09/fmri/one_ev_per_movie/sub-09_run-5 
+
+
+Processing sub-09_run-6
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-09/fmri/one_ev_per_movie/design_sub-09_run-6.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-09/fmri/one_ev_per_movie/sub-09_run-6.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-09/fmri/one_ev_per_movie/sub-09_run-6_preproc_reg.feat
+
+tr : 1.816460 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-09/fmri/one_ev_per_movie/sub-09_run-6_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-09/anat/sub-09_T1w_brain 
+custom_ev_file_path : sub-09/fmri/one_ev_per_movie/sub-09_run-6 
+
+
+Processing sub-09_run-7
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-09/fmri/one_ev_per_movie/design_sub-09_run-7.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-09/fmri/one_ev_per_movie/sub-09_run-7.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-09/fmri/one_ev_per_movie/sub-09_run-7_preproc_reg.feat
+
+tr : 1.816460 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-09/fmri/one_ev_per_movie/sub-09_run-7_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-09/anat/sub-09_T1w_brain 
+custom_ev_file_path : sub-09/fmri/one_ev_per_movie/sub-09_run-7 
+
+
+Processing sub-09_run-8
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-09/fmri/one_ev_per_movie/design_sub-09_run-8.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-09/fmri/one_ev_per_movie/sub-09_run-8.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-09/fmri/one_ev_per_movie/sub-09_run-8_preproc_reg.feat
+
+tr : 1.816460 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-09/fmri/one_ev_per_movie/sub-09_run-8_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-09/anat/sub-09_T1w_brain 
+custom_ev_file_path : sub-09/fmri/one_ev_per_movie/sub-09_run-8 
+
+
+Processing sub-10_run-1
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-10/fmri/one_ev_per_movie/design_sub-10_run-1.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-10/fmri/one_ev_per_movie/sub-10_run-1.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-10/fmri/one_ev_per_movie/sub-10_run-1_preproc_reg.feat
+
+tr : 1.816314 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-10/fmri/one_ev_per_movie/sub-10_run-1_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-10/anat/sub-10_T1w_brain 
+custom_ev_file_path : sub-10/fmri/one_ev_per_movie/sub-10_run-1 
+
+
+Processing sub-10_run-2
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-10/fmri/one_ev_per_movie/design_sub-10_run-2.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-10/fmri/one_ev_per_movie/sub-10_run-2.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-10/fmri/one_ev_per_movie/sub-10_run-2_preproc_reg.feat
+
+tr : 1.816314 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-10/fmri/one_ev_per_movie/sub-10_run-2_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-10/anat/sub-10_T1w_brain 
+custom_ev_file_path : sub-10/fmri/one_ev_per_movie/sub-10_run-2 
+
+
+Processing sub-10_run-3
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-10/fmri/one_ev_per_movie/design_sub-10_run-3.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-10/fmri/one_ev_per_movie/sub-10_run-3.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-10/fmri/one_ev_per_movie/sub-10_run-3_preproc_reg.feat
+
+tr : 1.816314 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-10/fmri/one_ev_per_movie/sub-10_run-3_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-10/anat/sub-10_T1w_brain 
+custom_ev_file_path : sub-10/fmri/one_ev_per_movie/sub-10_run-3 
+
+
+Processing sub-10_run-4
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-10/fmri/one_ev_per_movie/design_sub-10_run-4.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-10/fmri/one_ev_per_movie/sub-10_run-4.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-10/fmri/one_ev_per_movie/sub-10_run-4_preproc_reg.feat
+
+tr : 1.816314 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-10/fmri/one_ev_per_movie/sub-10_run-4_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-10/anat/sub-10_T1w_brain 
+custom_ev_file_path : sub-10/fmri/one_ev_per_movie/sub-10_run-4 
+
+
+Processing sub-10_run-5
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-10/fmri/one_ev_per_movie/design_sub-10_run-5.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-10/fmri/one_ev_per_movie/sub-10_run-5.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-10/fmri/one_ev_per_movie/sub-10_run-5_preproc_reg.feat
+
+tr : 1.816314 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-10/fmri/one_ev_per_movie/sub-10_run-5_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-10/anat/sub-10_T1w_brain 
+custom_ev_file_path : sub-10/fmri/one_ev_per_movie/sub-10_run-5 
+
+
+Processing sub-10_run-6
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-10/fmri/one_ev_per_movie/design_sub-10_run-6.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-10/fmri/one_ev_per_movie/sub-10_run-6.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-10/fmri/one_ev_per_movie/sub-10_run-6_preproc_reg.feat
+
+tr : 1.816314 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-10/fmri/one_ev_per_movie/sub-10_run-6_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-10/anat/sub-10_T1w_brain 
+custom_ev_file_path : sub-10/fmri/one_ev_per_movie/sub-10_run-6 
+
+
+Processing sub-10_run-7
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-10/fmri/one_ev_per_movie/design_sub-10_run-7.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-10/fmri/one_ev_per_movie/sub-10_run-7.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-10/fmri/one_ev_per_movie/sub-10_run-7_preproc_reg.feat
+
+tr : 1.816314 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-10/fmri/one_ev_per_movie/sub-10_run-7_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-10/anat/sub-10_T1w_brain 
+custom_ev_file_path : sub-10/fmri/one_ev_per_movie/sub-10_run-7 
+
+
+Processing sub-10_run-8
+fsf_sub_run : /data00/leonardo/RSA/prep_data/sub-10/fmri/one_ev_per_movie/design_sub-10_run-8.fsf
+sub_mat : /data00/leonardo/RSA/prep_data/sub-10/fmri/one_ev_per_movie/sub-10_run-8.mat
+sub_feat : /data00/leonardo/RSA/prep_data/sub-10/fmri/one_ev_per_movie/sub-10_run-8_preproc_reg.feat
+
+tr : 1.816314 
+total_volumes : 275 
+MNI_template : /data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain 
+total_voxels : 495616000 
+feat_dir : /data00/leonardo/RSA/prep_data/sub-10/fmri/one_ev_per_movie/sub-10_run-8_preproc_reg.feat 
+anat_brain_image : /data00/leonardo/RSA/prep_data/sub-10/anat/sub-10_T1w_brain 
+custom_ev_file_path : sub-10/fmri/one_ev_per_movie/sub-10_run-8 
+
+
