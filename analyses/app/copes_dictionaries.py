@@ -1,0 +1,73 @@
+dict_emotion = {
+    "cope1" : "anger",
+    "cope2" : "disgust",
+    "cope3" : "fear",
+    "cope4" : "happiness",
+    "cope5" : "pain",
+    "cope6" : "sad"
+}
+
+# generated with:
+# cerliani@storm:/data00/leonardo/RSA/analyses/one_ev_per_movie/results/2nd_level/sub-02_one_ev_per_movie.gfeat$ 
+# for i in $(seq 56); do echo "\"cope${i}\" : \"`cat cope${i}.feat/design.lev | head -n 1`\""; done
+
+dict_muviz = {
+    "cope1" : "AK_Anger_high",
+    "cope2" : "AK_Anger_low",
+    "cope3" : "AK_Disgust_high",
+    "cope4" : "AK_Disgust_low",
+    "cope5" : "AK_Fear_high",
+    "cope6" : "AK_Fear_low",
+    "cope7" : "AK_Happy_high",
+    "cope8" : "AK_Happy_low",
+    "cope9" : "AK_Neutral_high",
+    "cope10" : "AK_Neutral_low",
+    "cope11" : "AK_Pain_high",
+    "cope12" : "AK_Pain_low",
+    "cope13" : "AK_Sad_high",
+    "cope14" : "AK_Sad_low",
+    "cope15" : "AL_Anger_high",
+    "cope16" : "AL_Anger_low",
+    "cope17" : "AL_Disgust_high",
+    "cope18" : "AL_Disgust_low",
+    "cope19" : "AL_Fear_high",
+    "cope20" : "AL_Fear_low",
+    "cope21" : "AL_Happy_high",
+    "cope22" : "AL_Happy_low",
+    "cope23" : "AL_Neutral_high",
+    "cope24" : "AL_Neutral_low",
+    "cope25" : "AL_Pain_high",
+    "cope26" : "AL_Pain_low",
+    "cope27" : "AL_Sad_high",
+    "cope28" : "AL_Sad_low",
+    "cope29" : "BP_Anger_high",
+    "cope30" : "BP_Anger_low",
+    "cope31" : "BP_Disgust_high",
+    "cope32" : "BP_Disgust_low",
+    "cope33" : "BP_Fear_high",
+    "cope34" : "BP_Fear_low",
+    "cope35" : "BP_Happy_high",
+    "cope36" : "BP_Happy_low",
+    "cope37" : "BP_Neutral_high",
+    "cope38" : "BP_Neutral_low",
+    "cope39" : "BP_Pain_high",
+    "cope40" : "BP_Pain_low",
+    "cope41" : "BP_Sad_high",
+    "cope42" : "BP_Sad_low",
+    "cope43" : "JvG_Anger_high",
+    "cope44" : "JvG_Anger_low",
+    "cope45" : "JvG_Disgust_high",
+    "cope46" : "JvG_Disgust_low",
+    "cope47" : "JvG_Fear_high",
+    "cope48" : "JvG_Fear_low",
+    "cope49" : "JvG_Happy_high",
+    "cope50" : "JvG_Happy_low",
+    "cope51" : "JvG_Neutral_high",
+    "cope52" : "JvG_Neutral_low",
+    "cope53" : "JvG_Pain_high",
+    "cope54" : "JvG_Pain_low",
+    "cope55" : "JvG_Sad_high",
+    "cope56" : "JvG_Sad_low"
+}
+
+

@@ -1,10 +1,12 @@
 #!/bin/bash
 
-# NB: currently the script is running only if we use the 26 subjects
-# of the original sub_list.txt.
-# I will modify it later to accept a new list of subs
+# The second-level analysis takes as input the .feat directories of the first level
+# in the RSA/prep_data location, and produces parameter estimates for the average effect
+# across runs within subject (for each contrast)
+#
+# The results are .gfeat dirs sent to ./results/2nd_level.
 
-export model="emotion"
+export model="one_ev_per_movie"
 
 export nruns=8  # input how many runs to process, e.g. 5 for runs 1..5
 
@@ -77,6 +79,7 @@ run_sub_2nd_level() {
 
 
     echo "running 2nd level feat for sub-${sub}"
+    # echo "feat ${fsf_sub_2nd_level}"
     feat ${fsf_sub_2nd_level}
 }
 
@@ -86,36 +89,37 @@ export -f run_sub_2nd_level
 cat ${sub_list} | xargs -P 30 -I{} bash -c 'run_sub_2nd_level {}'
 
 
-# ---------- run the grouplevel analysis ------------------
 
-RSA_dir="/data00/leonardo/RSA"
-analyses_dir=${RSA_dir}/analyses/${model}
+# # ---------- run the grouplevel analysis ------------------
 
-fsf_grouplevel_template="${analyses_dir}/grouplevel_template_modified_for_emotions.fsf"
+# RSA_dir="/data00/leonardo/RSA"
+# analyses_dir=${RSA_dir}/analyses/${model}
 
-for i in $(seq 6); do
+# fsf_grouplevel_template="${analyses_dir}/grouplevel_template.fsf"
 
-    ncope="cope${i}"
+# for i in $(seq 56); do
 
-    fsf_grouplevel_model="${analyses_dir}/results/grouplevel_${model}_${ncope}.fsf"
-    group_outputdir="${analyses_dir}/results/grouplevel_${model}_${ncope}.gfeat"
+#     ncope="cope${i}"
 
-    for var in fsf_grouplevel_template fsf_grouplevel_model group_outputdir; do
-        echo ${var} = ${!var}
-    done
+#     fsf_grouplevel_model="${analyses_dir}/results/grouplevel_${model}_${ncope}.fsf"
+#     group_outputdir="${analyses_dir}/results/grouplevel_${model}_${ncope}.gfeat"
 
-    sed -e "s@__GROUP_OUTPUTDIR__@${group_outputdir}@g" \
-        -e "s@__MNI_TEMPLATE__@${MNI_template}@g"  \
-        -e "s@__MODEL__@${model}@g" \
-        -e "s@__NCOPE__@${ncope}@g" \
-        ${fsf_grouplevel_template} > ${fsf_grouplevel_model}
+#     for var in fsf_grouplevel_template fsf_grouplevel_model group_outputdir; do
+#         echo ${var} = ${!var}
+#     done
 
-done
+#     sed -e "s@__GROUP_OUTPUTDIR__@${group_outputdir}@g" \
+#         -e "s@__MNI_TEMPLATE__@${MNI_template}@g"  \
+#         -e "s@__MODEL__@${model}@g" \
+#         -e "s@__NCOPE__@${ncope}@g" \
+#         ${fsf_grouplevel_template} > ${fsf_grouplevel_model}
+
+# done
 
 
-# run all the 6 grouplevel copes at once
-grouplevel_fsfs=("$PWD/results/grouplevel_${model}_cope"{1..6}".fsf")
-printf "%s\n" "${grouplevel_fsfs[@]}" | xargs -P 6 -I{} feat {}
+# # run all the 56 grouplevel copes at once
+# grouplevel_fsfs=("$PWD/results/grouplevel_${model}_cope"{1..56}".fsf")
+# printf "%s\n" "${grouplevel_fsfs[@]}" | xargs -P 56 -I{} feat {}
 
 
 
