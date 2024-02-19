@@ -1,0 +1,93 @@
+---
+title: "Fix ratings filename/format and copy them to the raw_data directory"
+output: html_notebook
+---
+
+The previous people who worked on this data left a messy situation: some files were saved as xslx, some with csv, and the names were always different, including sometimes the name of the parent directory.
+
+To fix this, rather than writing a very complex script, I had to fix some filenames manually. After that, I parse the files and put them in the raw_data dir
+
+- if the file is in excel format, I load it into a tmp dataframe and write it as csv to the destination
+
+- if the file is already in csv, I copy it to the destination
+
+
+NB: all the following is preceded by the manual creation of the `ratings` folder for each sub
+in the raw data dir
+
+```bash
+cd /data00/leonardo/RSA/raw_data
+for i in `ls`; do mkdir ${i}/ratings; done
+```
+
+```{r, message=FALSE}
+library(tidyverse)
+
+subs_file <- "/data00/leonardo/RSA/sub_list.txt"
+subs <- sprintf("%02d",readLines(subs_file) %>% as.numeric)
+
+keys <- read_csv("participant_key.csv") %>% 
+  mutate(cas = sprintf("%02d", cas), ritu = as.character(ritu)) %>% 
+  mutate(Rating_EXP1 = NA, Rating_EXP2 = NA, Arousal_EXP3 = NA, Valence_EXP4 = NA)
+
+keys
+```
+
+
+```{r}
+
+ritu_root <- "/data01/Ritu/7T_EmotionInsula/Data_collection/"
+raw_data_root <- "/data00/leonardo/RSA/raw_data"
+
+cp_rename <- function(sub_id, keys) {
+  
+  keys_one_sub <- keys %>% 
+      filter(cas == sub_id) %>% 
+      mutate(sub_id = sub_id) %>% 
+      relocate(sub_id, cas, ritu)
+  
+  ritu_key <- keys_one_sub$ritu
+  cas_key <- keys_one_sub$cas
+  
+  for (EXP in c("Rating_EXP1", "Rating_EXP2", "Arousal_EXP3", "Valence_EXP4")) {
+    
+    orig <- paste0(ritu_root, "/S", ritu_key, "/Posttasks/S",ritu_key,"_",EXP)
+    
+    dest <- paste0(raw_data_root,"/sub-", cas_key, "/ratings/sub-",cas_key,"_",EXP)
+    
+    # Excel file : write as csv
+    if (paste0(orig,'.xlsx') %>% file.exists) {
+      keys_one_sub[[EXP]] = 'XLSX'
+      tmp <- read_excel(paste0(orig,'.xlsx'))
+      write_csv(tmp, paste0(dest,'.csv'))
+      print(paste0(dest,'.csv'))
+    
+    # csv file : cp it to destination
+    } else if (paste0(orig,'.csv') %>% file.exists) {
+      keys_one_sub[[EXP]] = 'CSV'
+      file.copy(from = paste0(orig,'.csv'), to = paste0(dest,'.csv'))
+      print(paste0(dest,'.csv'))
+    
+    # file does not exist either aas xlsx or csv
+    } else {
+      keys_one_sub[[EXP]] = NA
+      print(orig)
+    }
+    
+    
+  }
+  cat("\n")
+  return(keys_one_sub)
+}
+
+
+# # Test for one sub
+# sub_id = subs[1]
+# cp_rename(sub_id, keys)
+
+subs %>% map_dfr(~ cp_rename(.x, keys))
+
+
+```
+
+

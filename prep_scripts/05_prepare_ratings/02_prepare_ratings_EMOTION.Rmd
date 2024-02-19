@@ -1,0 +1,120 @@
+---
+title: "Prepare EMOTION ratings"
+output: html_notebook
+---
+
+```{r, message=FALSE}
+library(tidyverse)
+library(janitor)
+
+subs_file <- "/data00/leonardo/RSA/sub_list.txt"
+subs <- sprintf("%02d",readLines(subs_file) %>% as.numeric)
+```
+
+
+
+```{r, message=FALSE}
+sub_id <- subs[1]
+
+orig_root = paste0("/data00/leonardo/RSA/raw_data/sub-",sub_id,"/ratings/sub-",sub_id,"_Rating_")
+
+# Sorry for not being DRY : there are only two files and in this way it's much clearer what is going on
+
+# Rating EXP 1
+df_EXP_1_raw_allrows <- read_csv(paste0(orig_root,"EXP1.csv")) %>% janitor::clean_names()
+
+# select only rows below the one with "Start Real Experiment"
+row_exp_start <- which(df_EXP_1_raw_allrows$display == "Start Real Experiment") + 1
+df_EXP_1_raw <- df_EXP_1_raw_allrows[row_exp_start:nrow(df_EXP_1_raw_allrows),]
+
+df_EXP_1 <- df_EXP_1_raw %>% 
+  filter(
+    # video == "AK_A_04.mp4", 
+    zone_name == "Ratingintensity",
+    zone_type == "response_slider_endValue"
+  ) %>% 
+  mutate(rate_this_emo = str_extract(rating, "Fear|Pain|Anger|Happy|Sad|Disgust")) %>% 
+  select(video, response, video, rate_this_emo)
+  # pivot_wider(names_from = rate_this_emo, values_from = response)
+
+
+# Rating EXP 2
+df_EXP_2_raw_allrows <- read_csv(paste0(orig_root,"EXP2.csv")) %>% janitor::clean_names()
+
+# select only rows below the one with "Start Real Experiment"
+row_exp_start <- which(df_EXP_2_raw_allrows$display == "Start Real Experiment") + 1
+df_EXP_2_raw <- df_EXP_2_raw_allrows[row_exp_start:nrow(df_EXP_2_raw_allrows),]
+
+df_EXP_2 <- df_EXP_2_raw %>% 
+  filter(
+    # video == "AK_A_04.mp4", 
+    zone_name == "Ratingintensity",
+    zone_type == "response_slider_endValue"
+  ) %>% 
+  mutate(rate_this_emo = str_extract(rating, "Fear|Pain|Anger|Happy|Sad|Disgust")) %>% 
+  select(video, response, video, rate_this_emo)
+  # pivot_wider(names_from = rate_this_emo, values_from = response)
+
+
+df <- rbind(df_EXP_1, df_EXP_2)
+df_wide <- df %>% pivot_wider(names_from = rate_this_emo, values_from = response)
+
+df_wide
+
+```
+
+
+Now I have a problem. 
+In these files the movies are coded as 
+
+```
+  AL_N_01.mp4 
+  BP_N_01.mp4 
+  JvG_F_01.mp4
+  AK_N_01.mp4 
+  BP_F_02.mp4 
+  AK_D_02.mp4 
+  BP_P_02.mp4 
+  AK_F_02.mp4 
+  JvG_D_02.mp4
+  AL_A_03.mp4
+```
+
+Which is the same that I find in the spreadsheets in [Rune's folder on dropbox](https://www.dropbox.com/scl/fo/j96fda5fr2uvxk8ps5t77/h?dl=0&e=1)
+
+
+However Cas left me only an indication of the movie number 
+(not otherwise specified - maybe he assigned it)
+and an indication of high/low
+
+```
+1	AK_Anger_high
+2	AK_Anger_low
+3	AK_Disgust_high
+4	AK_Disgust_low
+5	AK_Fear_high
+6	AK_Fear_low
+7	AK_Happy_high
+8	AK_Happy_low
+9	AK_Neutral_high
+10	AK_Neutral_low
+
+```
+
+The code for the emotion is clear, but how can I match high/low with the numbers?
+
+```{r}
+
+df_wide %>% 
+  mutate(numba_video = str_extract(video, "\\d{2}(?=\\.)")) %>%
+  arrange(numba_video) %>% 
+  select(video)
+
+df_wide %>% 
+  select(video) %>% 
+  arrange(video)
+
+```
+
+
+

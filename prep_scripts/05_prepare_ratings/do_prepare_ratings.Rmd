@@ -1,0 +1,111 @@
+---
+title: "Preparing ratings from raw files"
+output: html_notebook
+---
+
+```{r, message=FALSE}
+library(tidyverse)
+library(readxl)
+library(janitor)
+
+subs_file <- "/data00/leonardo/RSA/sub_list.txt"
+subs <- sprintf("%02d",readLines(subs_file) %>% as.numeric)
+```
+
+```{r}
+sub_id <- subs[1]
+
+rat_raw_dir <- paste0("/data00/leonardo/RSA/raw_data/sub-",sub_id,"/ratings")
+
+# Rating_EXP1
+emo_1_rat_raw <- read_excel( paste0(rat_raw_dir,"/sub-",sub_id,"_Rating_EXP1.xlsx") ) %>% 
+  janitor::clean_names()
+
+# select only rows below the one with "Start Real Experiment"
+# sorry for the syntax; I want to make sure the same rows are selected 
+# if the expression is re-evaluated
+emo_1_rat_raw <- emo_1_rat_raw[which(emo_1_rat_raw$display == "Start Real Experiment"):nrow(emo_1_rat_raw),]
+
+df_EXP_1 <- emo_1_rat_raw %>% 
+  filter(
+    # video == "AK_A_04.mp4", 
+    zone_name == "Ratingintensity",
+    zone_type == "response_slider_endValue"
+  ) %>% 
+  mutate(rate_this_emo = str_extract(rating, "Fear|Pain|Anger|Happy|Sad|Disgust")) %>% 
+  select(video, response, video, rate_this_emo)
+  # pivot_wider(names_from = rate_this_emo, values_from = response)
+
+
+
+# Rating_EXP2
+emo_2_rat_raw <- read_excel( paste0(rat_raw_dir,"/sub-",sub_id,"_Rating_EXP2.xlsx") ) %>% 
+  janitor::clean_names()
+
+# select only rows below the one with "Start Real Experiment"
+# sorry for the syntax; I want to make sure the same rows are selected 
+# if the expression is re-evaluated
+emo_2_rat_raw <- emo_2_rat_raw[which(emo_2_rat_raw$display == "Start Real Experiment"):nrow(emo_2_rat_raw),]
+
+df_EXP_2 <- emo_2_rat_raw %>% 
+  filter(
+    # video == "AK_A_04.mp4", 
+    zone_name == "Ratingintensity",
+    zone_type == "response_slider_endValue"
+  ) %>% 
+  mutate(rate_this_emo = str_extract(rating, "Fear|Pain|Anger|Happy|Sad|Disgust")) %>% 
+  select(video, response, video, rate_this_emo)
+  # pivot_wider(names_from = rate_this_emo, values_from = response)
+
+
+df <- rbind(df_EXP_1, df_EXP_2)
+
+df_wide <- df %>% pivot_wider(names_from = rate_this_emo, values_from = response)
+
+
+```
+
+
+
+
+```{r}
+df <- emo_1_rat_raw %>% 
+  select(task_version, screen_name, zone_name, response, display, video)
+
+# select only rows below the one with "Start Real Experiment"
+# sorry for the syntax; I want to make sure the same rows are selected 
+# if the expression is re-evaluated
+df <- df[which(df$display == "Start Real Experiment"):nrow(df),] %>% 
+  filter(zone_name == "Ratingintensity", !is.na(video))
+
+# 6 ratings for each video: good news
+df %>% 
+  filter(zone_name == "Ratingintensity", !is.na(video)) %>%
+  count(video)
+
+
+
+```
+
+```{r}
+df %>% 
+  filter(zone_name == "Ratingintensity")
+
+df$video %>% unique() %>% length()
+```
+
+```{r}
+
+# this is the result of the processing by ritu
+load("/data00/leonardo/RSA/raw_data/sub-02/ratings/fMRI_Rating_data_allsubs.RData")
+
+dd <- as_tibble(Result)
+
+
+dd %>% 
+  filter(Pt==2) %>% 
+  select(!c(fmri_code,duration) ) %>% 
+  group_split(movie_id)
+
+```
+
