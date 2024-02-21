@@ -1,0 +1,249 @@
+---
+title: "RSA v1"
+output: html_notebook
+---
+
+```{r load_libraries, message=F}
+library(tidyverse)
+library(future)
+library(furrr)
+library(tictoc)
+library(RNifti)
+library(proxy) # distances
+library(profvis)
+
+
+model="one_ev_per_movie"
+atlas_filename <-  "juelich_2mm.nii.gz"
+ratings_type <- "emotion"
+
+# base directory
+bd = "/data00/leonardo/RSA/analyses"
+bd_rsa = paste0(bd,"/rsa")
+
+bd_atlases = paste0(bd_rsa,"/atlases")
+
+bd_ratings = "/data00/leonardo/RSA/analyses/RATINGS"
+
+bd_copes = paste0(bd, "/", model, "/results/2nd_level")
+
+subs_file <- "/data00/leonardo/RSA/sub_list.txt"
+
+ratings_path <- paste0(bd_ratings,"/",ratings_type,"_ratings.csv")
+
+read_csv(ratings_path)
+
+```
+
+
+# Aux functions
+```{r}
+
+# plot_heatmap(D %>% as.matrix)
+plot_heatmap <- function(M) {
+  heatmap(M, Rowv = NA, Colv = NA, symm=T, revC = T)
+}
+
+```
+
+
+# Pathnames of the cope files
+Define a df with the pathname of all copes using the `list.files()` function.
+NB: The cope numbers in the `cope` column are not-zeropadded since this is how they come out from FSL Feat
+
+```{r create_dizio_data, message=FALSE}
+
+
+subs <- sprintf("%02d",readLines(subs_file) %>% as.numeric)
+
+# ----- EXPERIMENT WITH ONLY THREE SUBS ------------
+# subs <- subs[1:3]
+# ----- EXPERIMENT WITH ONLY THREE SUBS ------------
+
+bd_copes = paste0(bd, "/", model, "/results/2nd_level")
+
+df_path_copes <- list.files(bd_copes, recursive = T) %>% tibble()
+names(df_path_copes) <- "fname"
+
+df_path_copes <- df_path_copes %>%
+  filter(str_detect(fname, "gfeat/cope[0-9]+.feat/stats/cope")) %>%
+  tidyr::separate(
+    fname, c("sub","cope","tmp1","tmp2"),
+    sep = "/", fill = "right", remove = F
+  ) %>% 
+  select(!starts_with("tmp")) %>% 
+  mutate(sub = str_extract(sub, "[0-9]+")) %>% 
+  mutate(cope = (str_extract(cope, "[0-9]+") %>% as.numeric) ) %>% 
+  mutate(path = paste0(bd_copes,"/",fname)) %>% 
+  select(!fname) %>% 
+  arrange(sub,cope)
+
+df_path_copes
+
+```
+
+
+# Load copes
+Very fast: reads 56 nifti at 2mm resolution in about 1 sec
+```{r load_copes}
+sub_id = "02"
+copes <- df_path_copes$cope %>% unique
+
+load_sub_copes <- function(sub_id, copes) {
+  copes %>% map_dfc(~ {
+    nii <- df_path_copes %>% 
+      filter(sub == sub_id, cope == .x) %>% pull %>%  
+      readNifti %>% as.vector
+    tibble(!!paste0("cope_", .x) := nii)
+  }) 
+}
+
+tic()
+df_copes <- load_sub_copes(sub_id, copes)
+toc()
+
+```
+
+
+# Read atlas and calculate fmri RDMs
+```{r}
+
+atlas_path <- paste0(bd_atlases,"/",atlas_filename)
+
+calculate_fmri_RDMs <- function(df_copes, atlas_path) {
+  
+  # Load the atlas and define a vector with region_labels
+  atlas_nii <- readNifti(paste0(bd_rsa,"/atlases/",atlas_filename))
+  region_labels <- atlas_nii[atlas_nii > 0] %>% unique %>% sort
+  
+  # Calculate the RDM for each atlas region, 
+  # i.e. distance matrix of the betas of each movie across all voxels in that ROI.
+  # Returns a df of length(triu(D))-by-n_atlas_regions
+  region_labels %>% map_dfc(~ {
+    idx <- which(atlas_nii == .x)
+    df_copes_region <- df_copes[idx, ]
+    
+    # The following line will be replaced by the calculate_distance() fn
+    D <- dist( t(df_copes_region), method = "euclidean" )
+    
+    D <- D[!is.na(D)]
+    tibble(!!paste0("RDM_region_", .x) := D)
+  })
+}
+
+tic()
+RDMs <- calculate_fmri_RDMs(df_copes, atlas_path)
+toc()
+
+# RDMs
+
+```
+
+
+
+# Calculate ratings RDM
+```{r}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Try proxy for distances
+
+```{r, eval=F}
+library(proxy)
+# pr_DB$get_entries() 
+# summary(pr_DB)
+
+
+# df_region <- df[idx,]
+# D <- dist( t(df_region) )
+# dim(as.matrix(D))
+# # plot_heatmap(D %>% as.matrix)
+# D[!is.na(D)]
+
+df_region <- df[idx,]
+
+D <- dist( t(df_region) )
+D <- dist(t(df_region), method = "euclidean")
+
+dim(as.matrix(D))
+plot_heatmap(D %>% as.matrix)
+# D[!is.na(D)]
+
+heatmap(D %>% as.matrix, symm = T)
+
+types = c("angular","correlation","cosine","Euclidean") 
+par(mfrow=c(2,2))
+for (i in types) {
+  D = proxy::dist(t(df_region), method = i)
+  image(D %>% as.matrix, axes = F, asp=1)
+  title(i)
+}
+
+```
+
+
+# Explore proxy distances package
+```{r, eval=F}
+
+library(proxy)
+# pr_DB$get_entries() 
+# summary(pr_DB)
+
+set.seed(124)
+
+M = matrix(runif(100*10), ncol = 100)
+
+method <- "correlation"
+
+Dstats <- dist(M, method = method)
+Dproxy <- proxy::dist(M, method = method)
+
+sum(Dstats-Dproxy)
+
+
+par(mfrow = c(1,2))
+image(Dstats %>% as.matrix()); title("pippo")
+image(Dproxy %>% as.matrix()); title("topolino")
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

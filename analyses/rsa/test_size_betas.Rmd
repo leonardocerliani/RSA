@@ -1,0 +1,194 @@
+---
+title: "Test size df for analysis"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(future)
+library(furrr)
+library(tictoc)
+library(RNifti)
+```
+
+
+```{r}
+
+nbetas = 91 * 109 * 91
+ncopes = 56
+nsubs = 1
+
+tic()
+df <- data.frame(matrix(runif(nbetas * ncopes * nsubs), ncol = ncopes))
+toc()
+
+format(object.size(df), units = "GB")
+
+```
+
+
+
+```{r}
+copefile <- "/data00/leonardo/RSA/analyses/arousal/results/2nd_level/sub-02_arousal.gfeat/cope1.feat/stats/cope1.nii.gz"
+
+nii <- RNifti::readNifti(copefile)
+
+nii[1:length(nii)]
+
+typeof(nii)
+
+dim(nii)
+
+df_nii <- tibble(img = as.vector(nii))
+
+```
+
+
+# Pathnames of the cope files
+
+```{r create-dizio-data, message=FALSE}
+
+model="one_ev_per_movie"
+
+subs_file <- "/data00/leonardo/RSA/sub_list.txt"
+subs <- sprintf("%02d",readLines(subs_file) %>% as.numeric)
+
+# ----- EXPERIMENT WITH ONLY THREE SUBS ------------
+subs <- subs[1:3]
+# ----- EXPERIMENT WITH ONLY THREE SUBS ------------
+
+bd = paste0("/data00/leonardo/RSA/analyses/",model,"/results/2nd_level")
+
+df <- list.files(bd, recursive = T) %>% tibble()
+names(df) <- "fname"
+
+df <- df %>%
+  filter(str_detect(fname, "gfeat/cope[0-9]+.feat/stats/cope")) %>%
+  tidyr::separate(
+    fname, c("sub","cope","tmp1","tmp2"),
+    sep = "/", fill = "right", remove = F
+  ) %>% 
+  select(!starts_with("tmp")) %>% 
+  mutate(sub = str_extract(sub, "[0-9]+")) %>% 
+  mutate(cope = (str_extract(cope, "[0-9]+") %>% as.numeric) ) %>% 
+  mutate(path = paste0(bd,"/",fname)) %>% 
+  select(!fname) %>% 
+  arrange(sub,cope)
+
+df
+
+```
+
+
+# Read ALL SUBS together
+ read all the files and store them in dd
+```{r}
+
+copes <- df$cope %>% unique
+
+plan(multisession, workers = 3)
+
+tic()
+dd <- subs %>% 
+  future_map_dfr(function(sub) {
+    copes %>% map_dfr(function(cope) {
+      # cat(paste0(" ",sub,"_",cope," "))
+      tibble(
+        sub = sub, cope = cope,
+        nii = readNifti(df$path[df$sub == sub & df$cope == cope]) %>% list
+      )
+    })
+  })
+toc()
+
+plan(sequential)
+
+format(object.size(dd), units = "GB")
+
+# dd %>% glimpse
+
+# rm(dd)
+
+# dd %>% group_split(sub)
+
+
+```
+
+
+# one sub at a time
+maybe it's really better to do it one sub at the time
+
+This version is very slow: it first reads all the copes in a single column and then pivots in n columns (one for each cope)
+```{r}
+sub = "02"
+
+copes <- df$cope %>% unique
+
+dd <- copes %>% map_dfr(~ tibble(
+  sub=sub, cope=.x,
+  nii = readNifti(df$path[df$sub == sub & df$cope == .x]) %>% as.vector
+))
+
+cat("read")
+
+dd <- dd %>%
+  group_by(cope) %>%
+  mutate(idx = row_number()) %>%
+  pivot_wider(names_from = cope, values_from = nii, names_prefix = "cope_")
+
+dd
+
+cat("pivoted")
+
+format(object.size(dd), units = "GB")
+
+```
+
+This is actually much faster
+```{r, warning=FALSE}
+
+sub = "02"
+copes <- df$cope %>% unique
+
+# dd <- copes %>% map_dfc(
+#   function(cope) {
+#     tibble(cope = readNifti(df$path[df$sub == sub & df$cope == cope]) %>% as.vector)
+#   }
+# ) %>% janitor::clean_names()
+
+
+# and this is the fastest and cleanest
+tic()
+dd <- copes %>% map_dfc(~ {
+  nii <- readNifti(df$path[df$sub == sub & df$cope == .x]) %>% as.vector
+  tibble(!!paste0("cope_", .x) := nii)
+}) 
+toc()
+
+
+# for tomorrow: use a basic selection instead of 
+dd[c(1,3,4),]
+
+```
+
+
+
+
+
+# atlas
+```{r}
+
+analysis_dir <- "/data00/leonardo/RSA/analyses/rsa"
+
+ju <- readNifti(paste0(analysis_dir,"/","juelich_2mm.nii.gz"))
+
+region_labels <- ju[ju>0] %>% unique
+
+idx <- which(ju == 9)
+
+# for tomorrow
+dd[idx,] %>% as.matrix() # %>%  [distance calculation function here]
+```
+
+
+
