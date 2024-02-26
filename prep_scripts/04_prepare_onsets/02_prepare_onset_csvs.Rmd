@@ -1,0 +1,158 @@
+---
+title: "Prepare fmri onset csv's"
+output: html_notebook
+---
+
+```{r, message=FALSE}
+library(tidyverse)
+
+subs_file <- "/data00/leonardo/RSA/sub_list.txt"
+subs <- sprintf("%02d",readLines(subs_file) %>% as.numeric)
+
+movie_encodings_table <- read_csv("/data00/leonardo/RSA/encodings/movie_encodings.csv")
+
+```
+
+
+# Code preparation
+The following is just to prepare the code to read and preprocess the fmri log
+file. It will be used in the next cell to purrr across subs and runs
+
+```{r, message=FALSE}
+
+sub_id = subs[1]
+run_id = 1
+
+
+file_root <- paste0("/data00/leonardo/RSA/raw_data/sub-",sub_id,"/onsets")
+file_path <- paste0(file_root,"/run-",run_id,"-task-EmotionInsula.log")
+
+# parse the original log file
+df <- read_delim(
+  file_path,
+  
+  # tab delimited
+  delim = "\t", 
+  
+  # skip the first three lines
+  skip = 3, 
+  
+  # read the first line after the skipped as column header
+  col_names = TRUE
+) %>% 
+  janitor::clean_names() %>% 
+  
+  # retain only the rows where the 'Subject' column (which is NOT the sub) starts with "run" 
+  filter(grepl("run",subject)) %>%   
+  
+  # read the 'time' column as numeric (originally char)
+  mutate(time = as.numeric(time))
+
+# the time to subtract from each onset is in the first row with 
+# "event_type" = "Pulse" and "code" = "99"
+time_to_subtract <- df$time[df$event_type=="Pulse" & df$code == "99"] %>% min
+paste0("sub ",sub_id," run ",run_id, " subtract ",time_to_subtract) %>% cat
+
+
+# Subtract the onset, format appropriately the columns 
+# and select the relevant columns
+df_onset <- df %>% 
+  
+  # subtract the time when recording starts (time_to_subtract above)
+  mutate(time = time - time_to_subtract) %>%
+  
+  # in the raw log file, tims are in 10,000th of msec. Cast as secs,00
+  mutate(onset_sec = round(time / 1e4, 2)) %>% 
+  
+  # retain only "Video" rows : they contain info about movie type and onset
+  filter(event_type == "Video") %>% 
+  
+  # add columns for sub and run
+  mutate(sub = sub_id, run = run_id) %>%
+  
+  # prepare a column for joining the movie encodings table
+  rename(original_code = code) %>% 
+  
+  # select only the relevant columns
+  select(sub,run,original_code,onset_sec)
+  
+
+# Enrich the onset information with the info in the movie_encodings.csv
+# joining by original_code
+df_onset_enriched <- df_onset %>% 
+  inner_join(movie_encodings_table, by="original_code")
+
+# Write the file to disk
+processed_onset_filename <- paste0(file_root,"/sub-",sub_id,"_onset_run",run_id,".csv")
+write_csv(df_onset_enriched, processed_onset_filename)
+
+```
+
+
+
+# Prepare the function
+Commented code in the cell above
+```{r, message=FALSE, warning=FALSE}
+
+prepare_log_files <- function(sub_id, run_id) {
+  
+  file_root <- paste0("/data00/leonardo/RSA/raw_data/sub-",sub_id,"/onsets")
+  file_path <- paste0(file_root,"/run-",run_id,"-task-EmotionInsula.log")
+  
+  # parse the original log file
+  df <- read_delim(
+    file_path,
+    delim = "\t", 
+    skip = 3, 
+    col_names = TRUE
+  ) %>% 
+    janitor::clean_names() %>% 
+    filter(grepl("run",subject)) %>%   
+    mutate(time = as.numeric(time))
+  
+  # get the time of the first event (to substract from all other onsets)
+  time_to_subtract <- df$time[df$event_type=="Pulse" & df$code == "99"] %>% min
+  paste0("sub ",sub_id," run ",run_id, " subtract ",time_to_subtract,"\n") %>% cat
+  
+  
+  # Subtract the onset, format appropriately the columns and select the relevant columns
+  df_onset <- df %>% 
+    mutate(time = time - time_to_subtract) %>%
+    mutate(onset_sec = round(time / 1e4, 2)) %>% 
+    filter(event_type == "Video") %>% 
+    mutate(sub = sub_id, run = run_id) %>%
+    rename(original_code = code) %>% 
+    select(sub,run,original_code,onset_sec)
+    
+  
+  # Enrich the onset information with the info in the movie_encodings.csv
+  # joining by original_code
+  df_onset_enriched <- df_onset %>% 
+    inner_join(movie_encodings_table, by="original_code")
+  
+  # Write the file to disk
+  processed_onset_filename <- paste0(file_root,"/sub-",sub_id,"_onset_run",run_id,".csv")
+  write_csv(df_onset_enriched, processed_onset_filename)
+  
+}
+
+# test
+prepare_log_files(sub_id = "02", run_id = 1)
+
+```
+
+
+# Prepare fmri logs for all subs and runs
+```{r, message=FALSE, warning=FALSE}
+
+for (n_run in seq(8)) {
+  prepare_log_files(sub_id = "02", run_id = n_run)  
+}
+
+
+# now I need to put the stuff above into a purrr::walk to write the files
+# feeding the subs list
+
+```
+
+

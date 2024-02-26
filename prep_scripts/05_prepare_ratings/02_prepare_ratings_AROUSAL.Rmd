@@ -1,0 +1,91 @@
+---
+title: "Prepare AROUSAL ratings"
+output: html_notebook
+---
+
+```{r, message=FALSE}
+library(tidyverse)
+library(janitor)
+
+subs_file <- "/data00/leonardo/RSA/sub_list.txt"
+subs <- sprintf("%02d",readLines(subs_file) %>% as.numeric)
+movie_encodings_table <- read_csv("/data00/leonardo/RSA/encodings/movie_encodings.csv")
+
+```
+
+
+
+```{r, message=FALSE}
+
+prepare_csv_ratings <- function(sub_id) {
+  
+  paste0("Processing subj ",sub_id,"\n") %>% cat
+  
+  orig_rating_file = paste0("/data00/leonardo/RSA/raw_data/sub-",sub_id,"/ratings/sub-",sub_id,"_Arousal_EXP3.csv")
+
+  df_AROUSAL_raw_allrows <- read_csv(orig_rating_file) %>% janitor::clean_names()
+  
+  # select only rows below the one with "Start Real Experiment"
+  row_exp_start <- which(df_AROUSAL_raw_allrows$display == "Start Real Experiment") + 1
+  df_AROUSAL_raw <- df_AROUSAL_raw_allrows[row_exp_start:nrow(df_AROUSAL_raw_allrows),]
+  
+  df_AROUSAL <- df_AROUSAL_raw %>% 
+    filter(
+      # video == "AK_A_04.mp4", 
+      # zone_name == "Ratingintensity",
+      zone_type == "response_slider_endValue"
+    ) %>%
+    mutate(r_arousal = as.numeric(response)) %>% 
+    select(video, r_arousal)
+  
+  # add columns for:
+  # - original_code : extracted from the movie filename
+  # - high_low_code : the intensity of the emotion displayed in that movie
+  # - emotion : the emotion displayed in that movie
+  # - actor : the actor performing in that movie 
+  # - sub_id
+  df_AROUSAL_enriched <- df_AROUSAL %>% 
+    janitor::clean_names() %>% 
+    mutate(original_code = str_remove(video, "\\..*$")) %>% 
+    inner_join(movie_encodings_table, by="original_code") %>% 
+    arrange(high_low_code) %>% 
+    mutate(sub = sub_id) %>% 
+    relocate(sub)
+  
+  return(df_AROUSAL_enriched)
+}
+
+
+ff_arousal <- subs %>% map_dfr(~ prepare_csv_ratings(.x))
+
+write_csv(ff_arousal, "/data00/leonardo/RSA/analyses/RATINGS/arousal_ratings.csv")
+
+ff_arousal
+```
+
+```{r}
+
+
+ff_arousal %>%
+  mutate(intensity = str_extract(high_low_code, 'high|low')) %>%
+  select(sub, r_arousal, intensity, emotion) %>%
+  # mutate(r_arousal = scale(r_arousal)) %>%
+  group_by(emotion, intensity) %>%
+  reframe(avg_rating = mean(r_arousal, na.rm = TRUE),
+            sd_rating = sd(r_arousal, na.rm = TRUE)) %>%
+  ggplot(aes(x = emotion, y = avg_rating, fill = intensity)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  geom_errorbar(aes(ymin = avg_rating - sd_rating, ymax = avg_rating + sd_rating),
+                position = position_dodge(width = 0.9), width = 0.25, color = "grey") +
+  labs(
+    title = "Arousal rating for each movie across participants",
+    subtitle = "error bars show the standard deviation",
+    x = "Movie type",
+    y = "Mean rating (± sd)"
+  ) +
+  theme_minimal()
+  
+
+```
+
+

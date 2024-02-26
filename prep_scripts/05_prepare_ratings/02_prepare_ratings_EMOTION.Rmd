@@ -9,11 +9,26 @@ library(janitor)
 
 subs_file <- "/data00/leonardo/RSA/sub_list.txt"
 subs <- sprintf("%02d",readLines(subs_file) %>% as.numeric)
+movie_encodings_table <- read_csv("/data00/leonardo/RSA/encodings/movie_encodings.csv")
+
 ```
 
 
+# Preparing the `emotion_ratings.csv` file
+The final csv will be saved in `/data00/leonardo/RSA/analyses/RATINGS/emotion_ratings.csv`
 
-```{r, message=FALSE}
+This file will be used in the fmri as well as in the subsequent RSA. Note that while the participants carried out 8 runs inside the scanner, they only rated each movie once.
+
+## Congruence testing
+**IMPORTANT** : after preparing the csv file for the fmri analysis, we also conduct a simple analysis to verify sensitivity of the behavioural task. In brief, the highest rating given to any movie is hypothesized to refer to the emotion actually displayed in the movie.  
+
+Scroll down to `Examine movie/rating congruence` to see the outcome of this analysis
+
+
+## Code preparation 
+NB: all of the code in the following cell is just for preparation. The actual conversion will be carried out with a function encompassing all of this code and carried out using `purrr` on all subs
+
+```{r, message=FALSE, eval=FALSE}
 sub_id <- subs[1]
 
 orig_root = paste0("/data00/leonardo/RSA/raw_data/sub-",sub_id,"/ratings/sub-",sub_id,"_Rating_")
@@ -34,7 +49,8 @@ df_EXP_1 <- df_EXP_1_raw %>%
     zone_type == "response_slider_endValue"
   ) %>% 
   mutate(rate_this_emo = str_extract(rating, "Fear|Pain|Anger|Happy|Sad|Disgust")) %>% 
-  select(video, response, video, rate_this_emo)
+  select(video, response, video, rate_this_emo) %>% 
+  mutate(response = as.numeric(response))
   # pivot_wider(names_from = rate_this_emo, values_from = response)
 
 
@@ -52,69 +68,200 @@ df_EXP_2 <- df_EXP_2_raw %>%
     zone_type == "response_slider_endValue"
   ) %>% 
   mutate(rate_this_emo = str_extract(rating, "Fear|Pain|Anger|Happy|Sad|Disgust")) %>% 
-  select(video, response, video, rate_this_emo)
+  select(video, response, video, rate_this_emo) %>% 
+  mutate(response = as.numeric(response))
   # pivot_wider(names_from = rate_this_emo, values_from = response)
 
 
+# Merge the results from the two experimental runs and pivot it wider to have columns
+# for the ratings for each emotion
 df <- rbind(df_EXP_1, df_EXP_2)
 df_wide <- df %>% pivot_wider(names_from = rate_this_emo, values_from = response)
 
-df_wide
+# add columns for:
+# - original_code : extracted from the movie filename
+# - high_low_code : the intensity of the emotion displayed in that movie
+# - emotion : the emotion displayed in that movie
+# - actor : the actor performing in that movie 
+df_wide_codes <- df_wide %>% 
+  janitor::clean_names() %>% 
+  mutate(original_code = str_remove(video, "\\..*$")) %>% 
+  inner_join(movie_encodings_table, by="original_code") %>% 
+  rename_with(~ paste0("r_", .), c("happy","disgust","sad","fear","anger","pain") ) %>% 
+  arrange(high_low_code)
+
+df_wide_codes
 
 ```
 
 
-Now I have a problem. 
-In these files the movies are coded as 
+## Write the function to be passed to purrr over subs
 
+```{r, message=F}
+prepare_csv_ratings <- function(sub_id) {
+  
+  paste0("Processing subj ",sub_id,"\n") %>% cat
+  
+  orig_root = paste0("/data00/leonardo/RSA/raw_data/sub-",sub_id,"/ratings/sub-",sub_id,"_Rating_")
+
+  # Sorry for not being DRY : there are only two files and in this way it's much clearer what is going on
+  
+  # Rating EXP 1
+  df_EXP_1_raw_allrows <- read_csv(paste0(orig_root,"EXP1.csv")) %>% janitor::clean_names()
+  
+  # select only rows below the one with "Start Real Experiment"
+  row_exp_start <- which(df_EXP_1_raw_allrows$display == "Start Real Experiment") + 1
+  df_EXP_1_raw <- df_EXP_1_raw_allrows[row_exp_start:nrow(df_EXP_1_raw_allrows),]
+  
+  df_EXP_1 <- df_EXP_1_raw %>% 
+    filter(
+      # video == "AK_A_04.mp4", 
+      zone_name == "Ratingintensity",
+      zone_type == "response_slider_endValue"
+    ) %>% 
+    mutate(rate_this_emo = str_extract(rating, "Fear|Pain|Anger|Happy|Sad|Disgust")) %>% 
+    select(video, response, video, rate_this_emo) %>% 
+    mutate(response = as.numeric(response))
+    # pivot_wider(names_from = rate_this_emo, values_from = response)
+  
+  
+  # Rating EXP 2
+  df_EXP_2_raw_allrows <- read_csv(paste0(orig_root,"EXP2.csv")) %>% janitor::clean_names()
+  
+  # select only rows below the one with "Start Real Experiment"
+  row_exp_start <- which(df_EXP_2_raw_allrows$display == "Start Real Experiment") + 1
+  df_EXP_2_raw <- df_EXP_2_raw_allrows[row_exp_start:nrow(df_EXP_2_raw_allrows),]
+  
+  df_EXP_2 <- df_EXP_2_raw %>% 
+    filter(
+      # video == "AK_A_04.mp4", 
+      zone_name == "Ratingintensity",
+      zone_type == "response_slider_endValue"
+    ) %>% 
+    mutate(rate_this_emo = str_extract(rating, "Fear|Pain|Anger|Happy|Sad|Disgust")) %>% 
+    select(video, response, video, rate_this_emo) %>% 
+    mutate(response = as.numeric(response))
+    # pivot_wider(names_from = rate_this_emo, values_from = response)
+  
+  
+  # Merge the results from the two experimental runs and pivot it wider to have columns
+  # for the ratings for each emotion
+  df <- rbind(df_EXP_1, df_EXP_2)
+  df_wide <- df %>% pivot_wider(names_from = rate_this_emo, values_from = response)
+  
+  # add columns for:
+  # - original_code : extracted from the movie filename
+  # - high_low_code : the intensity of the emotion displayed in that movie
+  # - emotion : the emotion displayed in that movie
+  # - actor : the actor performing in that movie 
+  # - sub_id
+  df_wide_codes <- df_wide %>% 
+    janitor::clean_names() %>% 
+    mutate(original_code = str_remove(video, "\\..*$")) %>% 
+    inner_join(movie_encodings_table, by="original_code") %>% 
+    rename_with(~ paste0("r_", .), c("happy","disgust","sad","fear","anger","pain") ) %>% 
+    arrange(high_low_code) %>% 
+    mutate(sub = sub_id) %>% 
+    relocate(sub)
+}
 ```
-  AL_N_01.mp4 
-  BP_N_01.mp4 
-  JvG_F_01.mp4
-  AK_N_01.mp4 
-  BP_F_02.mp4 
-  AK_D_02.mp4 
-  BP_P_02.mp4 
-  AK_F_02.mp4 
-  JvG_D_02.mp4
-  AL_A_03.mp4
+
+
+## Purrr over subs, save csv, display the table
+```{r, message=F}
+ff <- subs %>% map_dfr(~ prepare_csv_ratings(.x))
+
+write_csv(ff, "/data00/leonardo/RSA/analyses/RATINGS/emotion_ratings.csv")
+
+ff
 ```
 
-Which is the same that I find in the spreadsheets in [Rune's folder on dropbox](https://www.dropbox.com/scl/fo/j96fda5fr2uvxk8ps5t77/h?dl=0&e=1)
 
+# Examine movie/rating congruence
+Each movie displays a specific emotion, however the participant is requested to rate each movie for all the 6 emotions. 
 
-However Cas left me only an indication of the movie number 
-(not otherwise specified - maybe he assigned it)
-and an indication of high/low
-
-```
-1	AK_Anger_high
-2	AK_Anger_low
-3	AK_Disgust_high
-4	AK_Disgust_low
-5	AK_Fear_high
-6	AK_Fear_low
-7	AK_Happy_high
-8	AK_Happy_low
-9	AK_Neutral_high
-10	AK_Neutral_low
-
-```
-
-The code for the emotion is clear, but how can I match high/low with the numbers?
+It is expected that across emotion rating, the highest will be for the emotion which is displayed in the movie. However it is better to verify this.
 
 ```{r}
 
-df_wide %>% 
-  mutate(numba_video = str_extract(video, "\\d{2}(?=\\.)")) %>%
-  arrange(numba_video) %>% 
-  select(video)
+df_congruence <- ff %>%
+  select(sub,original_code, emotion, starts_with("r_")) %>%
+  pivot_longer(starts_with("r_"), names_to = "rating") %>%
+  group_by(sub, original_code, emotion) %>%
+  filter(value == max(value)) %>%
+  filter(value != 0) %>%
+  mutate(rating = str_remove(rating,"r_")) %>%
+  mutate(consistent = ifelse(emotion==rating,1,0)) %>%
+  ungroup %>% 
+  group_by(sub) %>%
+  summarise(
+    congruence = round(sum(consistent)/n(),2)
+  ) %>% 
+  arrange(congruence)
 
-df_wide %>% 
-  select(video) %>% 
-  arrange(video)
+df_congruence
+
+df_congruence %>%
+  ggplot(aes(x = reorder(sub, congruence), y = congruence)) +
+  geom_bar(stat = "identity", color = "grey", fill = "lightblue") +
+  theme_minimal() +
+  labs(title = "Congruence between displayed emotion and max rated emotion", x = "sub")
 
 ```
+
+## Inspect participants with low movie/rating congruence
+The ratings for each emotion for each movie are shown. Here we do not remove 0 ratings to show the rating given for each emotion.
+
+```{r, eval=F}
+ff %>%
+  filter(sub=="34") %>%
+  select(sub,original_code, emotion, starts_with("r_")) %>%
+  pivot_longer(starts_with("r_"), names_to = "rating") %>%
+  group_by(sub, original_code, emotion) %>%
+  # filter(value != 0) %>%
+  arrange(desc(value)) %>% 
+  group_split()
+```
+
+
+## Look also at the congruence with the second highest rated emotion
+Maybe the participants with _low_ congruence - when looking at the max rated emotion - did rate as second highest the actually congruent emotion? Not really.
+
+
+```{r}
+df_second_highest_congruence <- ff %>%
+  select(sub, original_code, emotion, starts_with("r_")) %>%
+  pivot_longer(starts_with("r_"), names_to = "rating", values_to = "value") %>%
+  group_by(sub, original_code, emotion) %>%
+  arrange(desc(value)) %>%
+  slice(2) %>%
+  filter(value != 0) %>%
+  mutate(rating = str_remove(rating, "r_")) %>%
+  mutate(consistent = ifelse(emotion == rating, 1, 0)) %>%
+  ungroup() %>% 
+  group_by(sub) %>%
+  summarise(congruence = round(sum(consistent) / n(), 2)) %>% 
+  arrange(congruence)
+
+df_second_highest_congruence %>% 
+  rename(second_congruence = congruence) %>% 
+  select(sub, second_congruence) %>% 
+  inner_join(df_congruence, by = "sub") %>% 
+  relocate(sub, congruence, second_congruence) %>% 
+  arrange(desc(congruence), desc(second_congruence)) %>% 
+  ggplot(aes(x=congruence, y=second_congruence, label=sub)) + # Add label aesthetic for sub
+  geom_point() + 
+  geom_text(vjust=-0.5, hjust=0.5, check_overlap = TRUE) + # Add text labels for each point
+  theme_minimal() + 
+  labs(
+    title = "Movie/rating congruence in the highest vs. second highest rated emotion",
+    x = "congruence with highest rated emotion",
+    y = "congruence with second highest rated emotion"
+  )
+
+```
+
+
 
 
 
