@@ -1,0 +1,65 @@
+---
+title: "Prepare movie_encodings.csv"
+output: html_notebook
+---
+
+Organization of the movies:
+
+- 6 types of emotions are displayed, +1 with no apparent emotion (neutral).
+- each of these 7 emotional states (including the neutral) is displayed in two movies, one with low and one with high intensity
+- each combination of emotion/intensity is displayed by one of 4 actors
+- so in total there are 7 * 2 * 4 = 56 movies
+
+The initial list has two columns, one for the original movie code (`original_code` column - e.g. `AL_N_06`) and one which shows whether the emotion in that movie was displayed with high or low intensity (`high_low_code` column - e.g. `AL_N_high`). 
+
+The correspondence of each movie with the relative high/low intensity is evident when watching the movie. This is how the `movie_encodings_INITIAL.csv` was generated.
+
+We now enrich this initial table with 3 more columns. 
+
+- one for the `movie_cope_number` : this corresponds to the row number after alphabetically sorting the table by the `high_low_code` column. This column was chosen wrt to the `original_code` column to yield easier interpretability of the fmri results
+
+- one for the `actor` code : for potential future use
+
+- one for the `emotion` : where the emotion (or neutral) code in the original movie code is spelled out. Again we might need this for easier interpretability of the fmri results and for a preliminary analysis of the correspondence between the movie type and the max rating across emotions. 
+
+
+```{r, message=FALSE}
+library(tidyverse)
+```
+
+
+```{r, message=FALSE}
+df_initial <- read_csv("movie_encodings_INITIAL.csv")
+
+df <- df_initial %>%
+  
+  # Assign a movie number according to the alphabetical order of the high_low column
+  # This will be used to number the copes in the fmri analysis
+  arrange(high_low_code) %>% 
+  mutate(movie_cope_number = row_number()) %>% 
+  
+  # Create a column where the emotion represented in that movie is spelled out
+  mutate(tmp_original_code = original_code) %>% 
+  separate(
+    tmp_original_code, into = c("actor", "emotion", "movie_recording_number"), sep = "_"
+  ) %>% 
+  mutate(emotion = case_when(
+   emotion == "A" ~ "anger",
+   emotion == "D" ~ "disgust",
+   emotion == "F" ~ "fear",
+   emotion == "H" ~ "happy",
+   emotion == "N" ~ "neutral",
+   emotion == "P" ~ "pain",
+   emotion == "S" ~ "sad",
+   TRUE ~ as.character(emotion)  # If none of the above, keep the original value
+  )) %>% 
+  select(-movie_recording_number)
+
+df
+
+```
+
+```{r}
+write_csv(df, "movie_encodings.csv")
+```
+

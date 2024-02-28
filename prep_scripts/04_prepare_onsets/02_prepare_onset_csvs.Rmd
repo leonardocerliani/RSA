@@ -15,48 +15,84 @@ movie_encodings_table <- read_csv("/data00/leonardo/RSA/encodings/movie_encoding
 
 
 # Code preparation
-The following is just to prepare the code to read and preprocess the fmri log
+The following code cells are to prepare the code to read and preprocess the fmri log
 file. It will be used in the next cell to purrr across subs and runs
 
-```{r, message=FALSE}
 
+## 1. Read the log file and extract logs header and df
+The fmri log files do not just contain the df of the log. They are instead more complex:
+- a header of the scenario and date of recording (first two lines followed by an empty line)
+- the column header of the log df
+- the log df
+- a blank line
+- two other dfs separated by a blank line
+
+In an initial approach, I was skipping the first 3 lines, reading the rest and then
+filtering the header of the log df and the log df itself. However it was a quite 
+dirty approach, leading to many warnings.
+
+Here I choose instead to adopt a more "bash-like" approach: the whole file is read
+line by line, and the log df + its header are parsed as the lines that start with
+either "run" or "Subject" instead (note also that the Subject column does NOT actually
+contain a reference to the sub id).
+
+```{r, message=FALSE}
 sub_id = subs[1]
 run_id = 1
-
 
 file_root <- paste0("/data00/leonardo/RSA/raw_data/sub-",sub_id,"/onsets")
 file_path <- paste0(file_root,"/run-",run_id,"-task-EmotionInsula.log")
 
-# parse the original log file
-df <- read_delim(
-  file_path,
-  
-  # tab delimited
-  delim = "\t", 
-  
-  # skip the first three lines
-  skip = 3, 
-  
-  # read the first line after the skipped as column header
-  col_names = TRUE
-) %>% 
+# Read the entire file into R
+file_content <- readLines(file_path)
+
+# Parse header
+header_line <- grep("^Subject", file_content, value = TRUE)
+col_names <- strsplit(header_line, "\t")[[1]] %>% make.unique()
+
+# Filter lines that start with "run"
+filtered_lines <- grep("^run", file_content, value = TRUE)
+
+# - generate a first df_raw from the parsed lines of the logs df
+#   by separating the lines using a tab
+# - clean the names (tolower)
+# - make the 'time' column numeric (is parsed as character)
+df_raw <- filtered_lines %>% 
+  as_tibble() %>% 
+  separate(value, into = col_names, sep = "\t", fill = "right") %>% 
   janitor::clean_names() %>% 
-  
-  # retain only the rows where the 'Subject' column (which is NOT the sub) starts with "run" 
-  filter(grepl("run",subject)) %>%   
-  
-  # read the 'time' column as numeric (originally char)
   mutate(time = as.numeric(time))
 
+df_raw
+```
+
+
+## 2. Get the time of the initial pulse, which will be subtracted from all other time
+records
+```{r, message=FALSE}
 # the time to subtract from each onset is in the first row with 
 # "event_type" = "Pulse" and "code" = "99"
-time_to_subtract <- df$time[df$event_type=="Pulse" & df$code == "99"] %>% min
+time_to_subtract <- df_raw$time[df_raw$event_type=="Pulse" & df_raw$code == "99"] %>% min
 paste0("sub ",sub_id," run ",run_id, " subtract ",time_to_subtract) %>% cat
 
+```
 
+## 3. Prepare the df_onsets from the df_raw
+- filter only the "Video" event_type
+- subtract the time of the initial pulse
+- divide all the time by 10,000 thereby converting to onset_sec = sec.00
+- add sub_id and run_id
+- prepare a column to join the info from movie_encodings.csv
+```{r}
 # Subtract the onset, format appropriately the columns 
 # and select the relevant columns
-df_onset <- df %>% 
+df_onsets <- df_raw %>% 
+  
+  # retain only "Video" rows : they contain info about movie type and onset
+  filter(event_type == "Video") %>%
+  
+  # select only the columns we need
+  select(event_type, code, time) %>% 
   
   # subtract the time when recording starts (time_to_subtract above)
   mutate(time = time - time_to_subtract) %>%
@@ -64,33 +100,36 @@ df_onset <- df %>%
   # in the raw log file, tims are in 10,000th of msec. Cast as secs,00
   mutate(onset_sec = round(time / 1e4, 2)) %>% 
   
-  # retain only "Video" rows : they contain info about movie type and onset
-  filter(event_type == "Video") %>% 
-  
   # add columns for sub and run
   mutate(sub = sub_id, run = run_id) %>%
   
   # prepare a column for joining the movie encodings table
   rename(original_code = code) %>% 
   
-  # select only the relevant columns
+  # select only the relevant columns in an appropriate order
   select(sub,run,original_code,onset_sec)
-  
 
+df_onsets
+```
+
+
+## 4. Enrich the df_onset with the info in the movie_encodings.csv and write to disk
+```{r}
 # Enrich the onset information with the info in the movie_encodings.csv
 # joining by original_code
-df_onset_enriched <- df_onset %>% 
+df_onsets_enriched <- df_onsets %>% 
   inner_join(movie_encodings_table, by="original_code")
 
 # Write the file to disk
-processed_onset_filename <- paste0(file_root,"/sub-",sub_id,"_onset_run",run_id,".csv")
-write_csv(df_onset_enriched, processed_onset_filename)
-
+processed_onsets_filename <- paste0(file_root,"/sub-",sub_id,"_onset_run",run_id,".csv")
+write_csv(df_onsets_enriched, processed_onsets_filename)
 ```
 
 
 
-# Prepare the function
+
+
+# Prepare the function that does all of the above
 Commented code in the cell above
 ```{r, message=FALSE, warning=FALSE}
 
@@ -99,59 +138,107 @@ prepare_log_files <- function(sub_id, run_id) {
   file_root <- paste0("/data00/leonardo/RSA/raw_data/sub-",sub_id,"/onsets")
   file_path <- paste0(file_root,"/run-",run_id,"-task-EmotionInsula.log")
   
-  # parse the original log file
-  df <- read_delim(
-    file_path,
-    delim = "\t", 
-    skip = 3, 
-    col_names = TRUE
-  ) %>% 
+  # 1. Read the entire file into R and parse header and logs df
+  file_content <- readLines(file_path)
+  
+  # Parse header
+  header_line <- grep("^Subject", file_content, value = TRUE)
+  col_names <- strsplit(header_line, "\t")[[1]] %>% make.unique()
+  
+  # Filter lines that start with "run"
+  filtered_lines <- grep("^run", file_content, value = TRUE)
+  
+  # - generate a first df_raw from the parsed lines of the logs df
+  #   by separating the lines using a tab
+  # - clean the names (tolower)
+  # - make the 'time' column numeric (is parsed as character)
+  df_raw <- filtered_lines %>% 
+    as_tibble() %>% 
+    separate(value, into = col_names, sep = "\t", fill = "right") %>% 
     janitor::clean_names() %>% 
-    filter(grepl("run",subject)) %>%   
     mutate(time = as.numeric(time))
   
-  # get the time of the first event (to substract from all other onsets)
-  time_to_subtract <- df$time[df$event_type=="Pulse" & df$code == "99"] %>% min
-  paste0("sub ",sub_id," run ",run_id, " subtract ",time_to_subtract,"\n") %>% cat
   
+  # 2. Get the time of the first pulse
+  time_to_subtract <- df_raw$time[df_raw$event_type=="Pulse" & df_raw$code == "99"] %>% min
+  paste0("sub_",sub_id," run_",run_id, " subtract ",time_to_subtract,"\n") %>% cat
   
-  # Subtract the onset, format appropriately the columns and select the relevant columns
-  df_onset <- df %>% 
+  # 3. Prepare the df_onsets from the df_raw 
+  df_onsets <- df_raw %>% 
+    filter(event_type == "Video") %>%
+    select(event_type, code, time) %>% 
     mutate(time = time - time_to_subtract) %>%
     mutate(onset_sec = round(time / 1e4, 2)) %>% 
-    filter(event_type == "Video") %>% 
     mutate(sub = sub_id, run = run_id) %>%
     rename(original_code = code) %>% 
-    select(sub,run,original_code,onset_sec)
-    
+    select(sub,run,original_code,onset_sec)  
   
-  # Enrich the onset information with the info in the movie_encodings.csv
+  # 4. Enrich the onset information with the info in the movie_encodings.csv
   # joining by original_code
-  df_onset_enriched <- df_onset %>% 
+  df_onsets_enriched <- df_onsets %>% 
     inner_join(movie_encodings_table, by="original_code")
   
-  # Write the file to disk
-  processed_onset_filename <- paste0(file_root,"/sub-",sub_id,"_onset_run",run_id,".csv")
-  write_csv(df_onset_enriched, processed_onset_filename)
+  # 5. Write the file to disk
+  processed_onsets_filename <- paste0(file_root,"/sub-",sub_id,"_onset_run",run_id,".csv")
+  write_csv(df_onsets_enriched, processed_onsets_filename)
   
+  return(df_onsets_enriched)
 }
 
-# test
-prepare_log_files(sub_id = "02", run_id = 1)
-
+# # test
+# df_onsets_enriched <- prepare_log_files(sub_id = "02", run_id = 1)
+# df_onsets_enriched
 ```
 
 
 # Prepare fmri logs for all subs and runs
 ```{r, message=FALSE, warning=FALSE}
 
-for (n_run in seq(8)) {
-  prepare_log_files(sub_id = "02", run_id = n_run)  
-}
+# # test for one sub across 8 runs
+# sub_id <- subs[1]
+# for (n_run in seq(8)) {
+#   prepare_log_files(sub_id = sub_id, run_id = n_run)  
+# }
+
+subs %>% walk(function(sub_id) {
+  paste0("sub",sub_id,"\n") %>% cat
+  for (n_run in seq(8)) {
+    prepare_log_files(sub_id = sub_id, run_id = n_run)  
+  }
+  cat("\n")
+})
+
+```
 
 
-# now I need to put the stuff above into a purrr::walk to write the files
-# feeding the subs list
+
+
+# Check parsing
+To check that the parsing of all logs went fine, a simple way is to check the
+time of the first pulse - which is printed to the stout by the previous R code.
+
+To do this, we can read directly from the fmri log files using a bash script and
+display the same information. This scripts reads always the line 7 of each fmri log,
+which is the line that is supposed to contain the information about the time of
+the first pulse.
+
+```{bash}
+#!/bin/bash
+
+bd='/data00/leonardo/RSA/raw_data'
+
+for sub in `ls ${bd} | awk -F- '{print $2}'`; do
+	
+	echo sub-${sub}
+	
+	for run in $(seq 8); do 
+		head ${bd}/sub-${sub}/onsets/run-${run}-task-EmotionInsula.log -n 7 \
+		| tail -n 1 | awk '{print $1," ",$5}'
+	done
+	echo
+
+done
+
 
 ```
 

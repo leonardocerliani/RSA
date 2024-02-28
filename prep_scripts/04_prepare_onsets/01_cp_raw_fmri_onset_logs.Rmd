@@ -1,0 +1,106 @@
+---
+title: "Copy onset from data01 to RSA raw_data"
+output: html_notebook
+---
+
+NB: some inconsistencies had to be fixed manually before copying, namely:
+
+In **sub-02** we renamed the log of run-9 as run-8 - see /data01/Ritu/7T_EmotionInsula/Data_collection/S111/Logfiles/readme.txt
+
+In **sub-18** the log files still had prepended the original S## number.
+We removed them - see /data01/Ritu/7T_EmotionInsula/Data_collection/S166/Logfiles/readme.txt
+
+
+```{r}
+library(tidyverse)
+
+subs_file <- "/data00/leonardo/RSA/sub_list.txt"
+subs <- sprintf("%02d",readLines(subs_file) %>% as.numeric)
+
+subs_correspondence <- read.csv("/data00/leonardo/RSA/encodings/participants_encodings.csv") %>% 
+  mutate(cas = sprintf("%02d",cas))
+
+```
+
+
+```{r}
+# write the fn that will be passed to pwalk
+cp_log_files <- function(ritu_numba, cas_numba) {
+  
+  orig <- paste0("/data01/Ritu/7T_EmotionInsula/Data_collection/s",ritu_numba,"/Logfiles/*.log")
+  dest <- paste0("/data00/leonardo/RSA/raw_data/sub-",cas_numba,"/onsets/")
+
+  # execute the cp only if the dest dir exists
+  if (dir.exists(dest)) {
+    
+    paste0("Copying S",ritu_numba," --> sub-",cas_numba,"\n") %>% cat
+    
+    # carry out the actual copying
+    commando <- paste0("cp ",orig," ",dest)
+    # cat(paste0(commando," \n"))
+    system(commando)
+    
+    # display the copied files
+    paste0("ls ",dest,"*.log") %>% system()
+    
+  } else {
+    paste0("The directory for S",ritu_numba," --> sub-",cas_numba," does not exist.\n") %>% cat
+  }
+  cat("\n")
+  
+}
+
+# # Test for one sub
+# idx_sub <- 2
+# 
+# cp_log_files(
+#   ritu_numba = subs_correspondence$ritu[idx_sub], 
+#   cas_numba = subs_correspondence$cas[idx_sub]
+# )
+
+
+# purrr::pwalk for all subs
+list(
+  subs_correspondence$ritu, 
+  subs_correspondence$cas
+) %>% 
+  pwalk(~ cp_log_files(.x,.y))
+
+
+```
+
+
+```{bash}
+
+raw_data_dir="/data00/leonardo/RSA/raw_data"
+
+for i in $(seq 8); do 
+  nlogs=`ls ${raw_data_dir}/sub-??/onsets/run-${i}*.log | wc -l` 
+  echo "There are ${nlogs} log-${i}"
+  echo
+done
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
