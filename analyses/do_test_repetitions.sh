@@ -11,7 +11,7 @@ for model in allMovies arousal emotion valence; do
         if [ ${model} != ${directory} ]; then
 
             echo "Checking for ${model} in ${directory}"
-            grep -r "$model" ./${directory}/
+            grep -r "$model" ./${directory}/ --exclude=*.out
 
         fi
 

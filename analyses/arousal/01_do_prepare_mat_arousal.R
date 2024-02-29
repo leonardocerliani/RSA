@@ -2,7 +2,8 @@
 # the prep_data/sub-{sub}/fmri/{model}/sub-{sub}_run-{run}.mat file
 # which will be used in the first-level feat.
 # It cycles through all subs and all runs for each sub
-# run with Rscript do_prepare_mat_arousal.R
+# run with Rscript 01_do_prepare_mat_arousal.R
+
 
 # Load library and define initial variables
 library(tidyverse)
@@ -11,6 +12,7 @@ subs_file <- "/data00/leonardo/RSA/sub_list.txt"
 subs <- sprintf("%02d",readLines(subs_file) %>% as.numeric)
 
 model="arousal"
+movie_duration = 1.5 # (seconds)
 
 # read ratings and zeropad the sub number
 # remove the onset_sec - the onset in the out-of-scanner session
@@ -20,81 +22,78 @@ ratings <- read_csv(
   paste0(
     "/data00/leonardo/RSA/analyses/RATINGS", "/", model, "_ratings.csv"
   )
-) %>% 
-  mutate(sub = sprintf("%02d", sub)) %>% 
-  select(!onset_sec)
+)
 
 ratings
 
 nRuns = 8
-runs <- as.character(1:nRuns)
+runs <- 1:nRuns
+
+runs
+
+# In the posttask movies were presented only once, but we need to create .mat files
+# for 8 runs, therefore we cp/paste all the rows 8 times
+ratings_all_runs <- runs %>% map_dfr(
+  ~ ratings %>% mutate(run = .x) %>% relocate(sub,run)
+)
 
 
-# Reading onset.csv file, select ratings and write the .mat files
-# IMPORTANT: in the onset file, the movie_number go from 0..5, 
-# while in the ratings file they go from 1..56, 
-# so we need to add 1 in the onset_file in order to have a proper match. 
-# This is so important and can generate so much confusion 
-# - e.g. running the code twice - that we will actually 
-# create a separate df called df_added1.
+# Inner join the fmri log and the rating by high_low_code 
+# For each sub and run separately, so that we can then purrr the function
 
-read_onsets_write_mat <- function(sub, run, dest) {
-  current_sub = sub
-  current_run = run
-  
-  orig_csv_root = "/data00/leonardo/RSA/raw_data"
-  dest = paste0("/data00/leonardo/RSA/prep_data/sub-", sub, "/fmri/", model)
+read_onsets_write_mat <- function(sub_id, run_id, dest, show_test = FALSE) {
   
   sub_onsets_file <- paste0(orig_csv_root,
-                            "/sub-", sub,
-                            "/onsets/sub-", sub,"_Ins_onsets_allmovies_run-", run, ".csv")
+                            "/sub-", sub_id,
+                            "/onsets/sub-", sub_id, "_onset_run",run_id,".csv")
   
-  df <- read_csv(sub_onsets_file, progress = F) %>% suppressMessages()
+  # NB: the sub in fmri_log is read from a csv and assigned to dbl for numbers
+  # above 09, however I need to join it with the sub in ratings_all_runs
+  # which is a char, therefore I need to change the datatype of that column
+  fmri_log <- read_csv(sub_onsets_file, progress = F) %>% suppressMessages() %>% 
+    mutate(sub = as.character(sub))
   
-  colnames(df) = c("movie_number", "onset_sec", "duration", "movie_code")
+  joined_ratings_fmri_logs <- ratings_all_runs %>% 
+    filter(sub == sub_id, run == run_id) %>% 
+    select(sub, run, starts_with("r_"), high_low_code) %>% 
+    inner_join(fmri_log, by = c("sub","run","high_low_code"))
   
-  # add 1 to the movie number for consistency with the ratings file
-  # retain only the col needed for the inner_join (movie_number) and
-  # to write in the mat file (onset_sec, duration)
-  df_added1 <- df %>% 
-    mutate(movie_number = movie_number + 1) %>% 
-    select(!movie_code)
-  
-  # Start from the rating, select sub and run and *then* join the df_added1
-  # Finally select the three column .mat file for feat:
-  # (1) onset, (2) duration, (3) intensity = rating
-  mat_4_feat <- ratings %>% 
-    filter(sub == current_sub, run == current_run) %>% 
-    inner_join(df_added1, by = "movie_number") %>% 
-    select(onset_sec, duration, rating) %>% 
-    mutate(onset_sec = round(onset_sec, 2)) %>% 
+  # select onset_sec, duration and intensity to prepare the .mat file
+  mat_4_feat <- joined_ratings_fmri_logs %>% 
+    mutate(duration = movie_duration) %>% 
+    select(onset_sec, duration, starts_with("r_")) %>% 
     arrange(onset_sec)
   
-  mat_path <- paste0(dest, "/sub-", sub, "_run-", run, ".mat")
-  
+  # write the .mat file for that sub and run
+  mat_path <- paste0(dest, "/sub-", sub_id, "_run-", run_id, ".mat")
   write_tsv(mat_4_feat, col_names = FALSE, mat_path)
+  
+  # testing that same movies have same rating across runs but
+  # different onset_sec
+  if (show_test == TRUE) {
+    test_onset_rating <- joined_ratings_fmri_logs %>% 
+      mutate(duration = movie_duration) %>% 
+      select(high_low_code, onset_sec, duration, starts_with("r_")) %>% 
+      print()  
+  }
+  
 }
-
-# # example: write all .mat files (one for each run) for one sub
-# as.character(1:8) %>% map(~ read_onsets_write_mat(sub, run = .x, dest = dest))
 
 
 # Loops across subs and runs
-# I use a `for` construct for subjects since two nested `map` 
-# can be difficult to read 
+# I use a `for` construct for subjects since two nested `map` can be difficult to read 
 
-for (sub in subs) {
+for (sub_id in subs) {
   
-  # e.g. /data00/leonardo/RSA/raw_data/sub-02/onsets
   orig_csv_root = "/data00/leonardo/RSA/raw_data"
-  dest = paste0("/data00/leonardo/RSA/prep_data/sub-", sub, "/fmri/", model)
+  dest = paste0("/data00/leonardo/RSA/prep_data/sub-", sub_id, "/fmri/", model)
   
   # create the dir where all the mat files (and the stats.feat) will be stored
   if (!dir.exists(dest)) {dir.create(dest)} else paste0(dest, " exists")
-  paste0("Creating .mat files for sub", sub, " in ", dest) %>% print
+  paste0("Creating .mat files for sub", sub_id, " in ", dest) %>% print
   
   # write all .mat files (one for each run) for that sub
-  runs %>% walk(~ read_onsets_write_mat(sub = sub, run = .x, dest = dest))
+  runs %>% walk(~ read_onsets_write_mat(sub = sub_id, run = .x, dest = dest, show_test = F))
 }
 
 

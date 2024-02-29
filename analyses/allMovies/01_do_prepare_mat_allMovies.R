@@ -5,32 +5,34 @@
 # It cycles through all subs and all runs for each sub
 # run with Rscript do_prepare_mat.R
 
-# Load library and define initial variables
 
+# Load library and define initial variables
 library(tidyverse)
 
 subs_file <- "/data00/leonardo/RSA/sub_list.txt"
 subs <- sprintf("%02d",readLines(subs_file) %>% as.numeric)
 
 model="allMovies"
+movie_duration = 1.5 # (seconds)
 
 nRuns = 8
 runs <- as.character(1:nRuns)
+
 
 
 # Function that reads the onsets.csv file and writes the .mat files
 read_onsets_write_mat <- function(sub, run, dest) {
   # Read the onset file for that run
   sub_onsets_file <- paste0(orig_csv_root,
-                            "/sub-", sub,
-                            "/onsets/sub-", sub,"_Ins_onsets_allmovies_run-", run, ".csv")
+      "/sub-", sub,
+      "/onsets/sub-", sub, "_onset_run",run,".csv")
   
   df <- read_csv(sub_onsets_file, progress = F) %>% suppressMessages()
-  colnames(df) = c("movie_number", "onset_sec", "duration", "movie_code")
   
   # Write a three column .mat file for feat
   # (1) onset, (2) duration, (3) intensity
   mat_4_feat <- df %>% 
+    mutate(duration = movie_duration) %>% 
     select(onset_sec, duration) %>% 
     mutate(onset_sec = round(onset_sec, 2)) %>% 
     arrange(onset_sec)
@@ -64,4 +66,7 @@ for (sub in subs) {
   # write all .mat files (one for each run) for that sub
   runs %>% walk(~ read_onsets_write_mat(sub = sub, run = .x, dest = dest))
 }
+
+
+
 
