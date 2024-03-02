@@ -1,7 +1,8 @@
 #!/bin/bash
 
-# run with ./do_first_level_stats.sh $sub
-# where $sub is NOT zeropadded (see below)
+# run with ./02_do_first_level_stats.sh $sub
+# where $sub is NOT zeropadded. This is because we cannot (without too much difficulty)
+# store zeropadded sub_id in /data00/leonardo/RSA/sub_list.txt
 
 sub=$(printf "%02d" $1)
 

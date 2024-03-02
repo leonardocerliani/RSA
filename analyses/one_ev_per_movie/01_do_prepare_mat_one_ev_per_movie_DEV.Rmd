@@ -131,7 +131,44 @@ done
 
 
 
+```{r}
 
+# Prepare the list_numba_movies.txt which will be used by 02_do_first_level_stats.sh
+# For this you just need to load the onset of one sub/run. 
+# The movie/cope number relates to the alphabetical order of the movies with the high/low code and the emotion name spelled out, therefore is the same across all subs/runs
+
+sub_id = subs[1]
+run_id = 1
+
+orig_csv_root = "/data00/leonardo/RSA/raw_data"
+
+sub_onsets_file <- paste0(orig_csv_root,"/sub-", sub_id,
+       "/onsets/sub-", sub_id, "_onset_run",run_id,".csv")
+
+ff <- read_csv(sub_onsets_file, progress = F) %>% suppressMessages()
+
+list_numba_movies <- ff %>%
+  select(high_low_code, movie_cope_number) %>% 
+  separate(high_low_code, into = c("actor", "emotion_code", "high_low"), sep = "_") %>% 
+    mutate(emotion_code = case_when(
+     emotion_code == "A" ~ "Anger",
+     emotion_code == "D" ~ "Disgust",
+     emotion_code == "F" ~ "Fear",
+     emotion_code == "H" ~ "Happy",
+     emotion_code == "N" ~ "Neutral",
+     emotion_code == "P" ~ "Pain",
+     emotion_code == "S" ~ "Sad",
+     TRUE ~ as.character(emotion_code)  # If none of the above, keep the original value
+    )) %>% 
+  mutate(movie_name = paste(actor,emotion_code,high_low,sep = "_")) %>% 
+  select(movie_cope_number, movie_name) %>% 
+  arrange(movie_cope_number)
+
+list_numba_movies
+
+write_tsv(list_numba_movies, "list_numba_movies.txt", col_names = FALSE)
+
+```
 
 
 

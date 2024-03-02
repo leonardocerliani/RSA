@@ -37,7 +37,7 @@ either "run" or "Subject" instead (note also that the Subject column does NOT ac
 contain a reference to the sub id).
 
 ```{r, message=FALSE}
-sub_id = subs[1]
+sub_id = subs[6]
 run_id = 1
 
 file_root <- paste0("/data00/leonardo/RSA/raw_data/sub-",sub_id,"/onsets")
