@@ -1,0 +1,440 @@
+---
+title: "RSA v2"
+output: html_notebook
+---
+
+```{r load_libraries, message=F}
+library(tidyverse)
+library(future)
+library(furrr)
+library(tictoc)
+library(RNifti)
+library(proxy) # distances
+library(profvis)
+
+bd="/data00/leonardo/RSA/analyses"
+
+ratings_type <- "emotion"
+
+# Vector of zeropadded sub_ids
+subs_file <- "/data00/leonardo/RSA/sub_list.txt"
+subs <- sprintf("%02d",readLines(subs_file) %>% as.numeric)
+
+
+```
+
+
+# Aux functions
+```{r}
+# plot_heatmap(D %>% as.matrix)
+plot_heatmap <- function(M) {
+  heatmap(M, Rowv = NA, Colv = NA, symm=T, revC = T)
+}
+```
+
+
+# Create a df_path_copes with the location of the 56 cope niis from the one_movie_per_ev model
+Extract the pathname of all copes using the `list.files()` function.
+Also define a copes_numba vector with all the copes numbers.
+
+NB: The cope numbers in the `cope` column are NOT zeropadded since this is how they come out from FSL Feat
+```{r}
+
+bd_copes = paste0(bd, "/one_ev_per_movie/results/2nd_level")
+
+df_path_copes <- list.files(bd_copes, recursive = T) %>% tibble()
+names(df_path_copes) <- "fname"
+
+df_path_copes <- df_path_copes %>%
+  filter(str_detect(fname, "gfeat/cope[0-9]+.feat/stats/cope")) %>%
+  tidyr::separate(
+    fname, c("sub","cope","tmp1","tmp2"),
+    sep = "/", fill = "right", remove = F
+  ) %>% 
+  select(!starts_with("tmp")) %>% 
+  mutate(sub = str_extract(sub, "[0-9]+")) %>% 
+  mutate(cope = (str_extract(cope, "[0-9]+") %>% as.numeric) ) %>% 
+  mutate(path = paste0(bd_copes,"/",fname)) %>% 
+  select(!fname) %>% 
+  arrange(sub,cope)
+
+df_path_copes
+
+copes_numba <- df_path_copes$cope %>% unique
+```
+
+
+# Read atlas and create a vector of atlas labels
+```{r}
+
+bd_atlases = "/data00/leonardo/RSA/analyses/rsa/atlases"
+
+atlas_filename <-  "juelich_2mm.nii.gz"
+atlas_path <- paste0(bd_atlases,"/",atlas_filename)
+
+atlas_nii <- readNifti(paste0(bd_atlases,"/",atlas_filename))
+
+region_labels <- atlas_nii[atlas_nii > 0] %>% unique %>% sort
+
+```
+
+
+
+# Calculate RATINGS RDMs
+We do this first since the RDM for the ratings will be the same for whatever
+atlas will be used. Also, it's much faster than the RDM_fmri and can be done
+for all the sub_ids at once.
+
+The final RDMs_rats has 40040 nrows : 26 sub_ids * 1540, where the latter
+derives from ((56^2)-56)/2 = 1540, i.e. tril from the D matrix of 56 movies
+
+```{r, message=FALSE}
+
+bd_ratings = paste0(bd,"/RATINGS")
+ratings_path <- paste0(bd_ratings,"/",ratings_type,"_ratings.csv")
+rats <- read_csv(ratings_path)
+
+RDMs_rats <- subs %>% map_dfc(~ {
+  
+  D_rats <- rats %>% 
+  filter(sub == .x) %>% 
+  select(starts_with("r_")) %>% 
+  dist(method = "euclidean")
+  
+  D_rats_tril <- D_rats[!is.na(D_rats)]
+
+  tibble(!!.x := D_rats_tril)
+}) %>% 
+  pivot_longer(cols = everything(), names_to = "sub") %>% 
+  arrange(sub)
+
+
+# # alternative with nested columns
+# # following https://www.youtube.com/watch?v=rz3_FDVt9eg  26:57
+# do_extract_tril <- function(df_rats) {
+#   D_rats <- df_rats %>% dist(method = "euclidean")
+#   D_rats_tril <- D_rats[!is.na(D_rats)]
+# }
+# 
+# ff <- rats %>%
+#   select(sub, starts_with("r_")) %>% 
+#   group_by(sub) %>% 
+#   nest %>% 
+#   mutate(RDM_rats = data %>% map(do_extract_tril))
+# 
+# ff[ff$sub==sub_id,]$RDM_rats
+# 
+# # 1540 * 26 sub_ids
+# ff %>% unnest(RDM_rats)
+
+RDMs_rats
+```
+
+
+
+
+# Calculate FMRI RDMs
+```{r load_copes}
+
+# Load copes for one sub_id
+# (reasonably fast: reads 56 nifti at 2mm resolution in ~ 2.5 sec)
+sub_id = "02"
+
+
+load_sub_copes <- function(sub_id, copes_numba) {
+  copes_numba %>% map_dfc(~ {
+    nii <- df_path_copes %>% 
+      filter(sub == sub_id, cope == .x) %>% pull %>%  
+      readNifti %>% as.vector
+    tibble(!!paste0("cope_", .x) := nii)
+  }) 
+}
+
+df_copes <- load_sub_copes(sub_id, copes_numba)
+
+
+# Read atlas and calculate fmri RDMs : the final df has size n_tril_D-by-n_regions, where 
+# - n_tril_D : number of elements in the distance matrix = ((56^2)-56)/2 = 1540
+# - n_regions : number of distinctly labelled regions in the atlas 
+
+calculate_fmri_RDMs <- function(df_copes, atlas_path) {
+  
+  # Calculate the RDM for each atlas region, 
+  # i.e. distance matrix of the betas of each movie across all voxels in that ROI.
+  # Returns a df of length(triu(D))-by-n_atlas_regions
+  region_labels %>% map_dfc(~ {
+    idx <- which(atlas_nii == .x)
+    df_copes_region <- df_copes[idx, ]
+    
+    # The following line will be replaced by the calculate_distance() fn
+    D_fmri <- dist( t(df_copes_region), method = "euclidean" )
+    
+    D_fmri <- D_fmri[!is.na(D_fmri)]
+    tibble(!!paste0("RDM_region_", .x) := D_fmri)
+  })
+}
+
+one_RDM_fmri <- calculate_fmri_RDMs(df_copes, atlas_path)
+
+```
+
+
+# Furrr it up
+```{r}
+# 5 workers give the best performance (~ 15 sec)
+plan(multisession, workers = 5)
+
+tic()
+RDMs_fmri <- subs %>% future_map_dfr(~{
+  
+  paste0("Calculating RDMs for sub ",.x,"\n") %>% cat
+  
+  df_copes <- load_sub_copes(sub_id, copes_numba)
+  one_RDM_fmri <- calculate_fmri_RDMs(df_copes, atlas_path)
+  
+  one_RDM_fmri %>% mutate(sub = .x) %>% relocate(sub)
+  
+})
+toc()
+
+plan(sequential)
+```
+
+
+# RSA (OLE, messy and generally bad. See below the new version)
+```{r}
+
+
+RDMs_rats
+RDMs_fmri
+
+region_labels
+
+calculate_RSA <- function(sub_id, RDMs_rats, RDMs_fmri) {
+  
+  paste0("Calculating RSA for sub ", sub_id,"\n") %>% cat
+  
+  rat_onesub <- RDMs_rats %>% filter(sub == sub_id) %>% pull(value)
+
+  region_labels %>%  map(~ {
+    rdm_region_n <- RDMs_fmri %>% select(sub, !!paste0("RDM_region_",.x )) %>% 
+                        filter(sub == sub_id) %>% pull(starts_with("RDM"))
+    cor(rat_onesub, rdm_region_n)
+  })
+  
+}
+
+subs %>% map(~ calculate_RSA(.x, RDMs_rats, RDMs_fmri))
+
+
+df_RSA <- ff %>% as_tibble(.name_repair = "unique")
+
+
+```
+
+
+```{r}
+# This function returns one row at a time with the names
+# Most likely the syntax can be improved, for instance by assigning the region name 
+# and then operating a pivot wider afterwards
+calculate_RSA <- function(sub_id, RDMs_rats, RDMs_fmri, region_labels) {
+  
+  paste0("Calculating RSA for sub ", sub_id, "\n") %>% cat
+  
+  rat_onesub <- RDMs_rats %>% 
+    filter(sub == sub_id) %>% 
+    pull(value)
+  
+  # Calculate similarities and create a named vector
+  correlations <- setNames(
+    region_labels %>% 
+      map_dbl(~ {
+        rdm_region_n <- RDMs_fmri %>% 
+          select(sub, !!paste0("RDM_region_", .x)) %>% 
+          filter(sub == sub_id) %>% 
+          pull(starts_with("RDM"))
+        cor(rat_onesub, rdm_region_n)
+      }),
+    region_labels
+  )
+  
+  # Convert the named vector to a single-row data frame
+  data.frame(t(correlations)) %>% 
+    mutate(sub = sub_id) %>% relocate(sub)
+}
+
+# This calls the calculation for all subs, and afterwards assigns the column names
+df_RSA <- subs %>% 
+  map_df(~ calculate_RSA(.x, RDMs_rats, RDMs_fmri, region_labels))
+
+colnames(df_RSA) <- c("sub",region_labels)
+
+# Finally, this is the 
+df_RSA %>%
+  select(!sub) %>% 
+  pivot_longer(cols = everything(), names_to = "region") %>% 
+  group_by(region) %>%
+  reframe(
+    mean_similarity = round(mean(value),2),
+    sd_similarity = round(sd(value),2)
+  ) %>% 
+  arrange(desc(mean_similarity))
+  
+
+```
+
+
+
+
+# RSA take 2 - This is a MUCH better approach than the one above
+
+In the approach below purrr, tidy data and R in general shine at their best.
+
+The final aim is to calculate the similarity between each sub/region fmri RDM
+and each sub rat RDM. Therefore the fmri rdms is grouped by sub/region and the
+rat rdms is grouped only by sub.
+
+First, nesting both fmri and rat rdms allows to keep the dfs tidy. 
+Soon after nesting, we can *right*-join the fmri to the rat, to create a copy
+of the rat rdm for each sub/region of the atlas.
+
+At this point, calculating the similarity is just a matter of using a purrr:map2
+(or pmap as I prefer) to the fmri and rat columns
+
+The simplicity yielded by the tidy data approach and the purrr functions is 
+unparalleled.
+
+```{r}
+
+
+# nest the RDMs for both rat and fmri. In the second case, they are nested by sub AND region
+rdms_fmri_nested <- RDMs_fmri %>% 
+  pivot_longer(cols = starts_with("RDM"), names_to = "region") %>% 
+  group_by(sub, region) %>% 
+  nest %>% 
+  rename(fmri = data)
+
+rdms_rats_nested <- RDMs_rats %>% 
+  group_by(sub) %>% 
+  nest %>% 
+  rename(rat = data)
+
+# we put a copy of the rating RDM for each atlas region's RDM
+joint_fmri_rat_nested <- right_join(rdms_fmri_nested,rdms_rats_nested, by = "sub")
+# # the following is just to check that the join went as expected
+# ff %>% mutate(sum_rat = rat %>% map_dbl(sum)  )
+
+joint_fmri_rat_nested
+
+# Calculate all similarity
+# This is effectively when we are calculating the RSA
+all_similarities <- joint_fmri_rat_nested %>% 
+  mutate(similarity = list(fmri,rat) %>% pmap_dbl(~ cor(.x,.y)) ) %>% 
+  ungroup
+
+# Produce estimates of RSA acros subjects
+all_similarities %>%
+  select(region, similarity) %>% 
+  group_by(region) %>% 
+  reframe(
+    mean_similarity = round(mean(similarity),2),
+    sd_similarity = round(sd(similarity),2)
+  ) %>% 
+  arrange(desc(mean_similarity))
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Try proxy for distances
+
+```{r, eval=F}
+library(proxy)
+# pr_DB$get_entries() 
+# summary(pr_DB)
+
+
+# df_region <- df[idx,]
+# D <- dist( t(df_region) )
+# dim(as.matrix(D))
+# # plot_heatmap(D %>% as.matrix)
+# D[!is.na(D)]
+
+df_region <- df[idx,]
+
+D <- dist( t(df_region) )
+D <- dist(t(df_region), method = "euclidean")
+
+dim(as.matrix(D))
+plot_heatmap(D %>% as.matrix)
+# D[!is.na(D)]
+
+heatmap(D %>% as.matrix, symm = T)
+
+types = c("angular","correlation","cosine","Euclidean") 
+par(mfrow=c(2,2))
+for (i in types) {
+  D = proxy::dist(t(df_region), method = i)
+  image(D %>% as.matrix, axes = F, asp=1)
+  title(i)
+}
+
+```
+
+
+# Explore proxy distances package
+```{r, eval=F}
+
+library(proxy)
+# pr_DB$get_entries() 
+# summary(pr_DB)
+
+set.seed(124)
+
+M = matrix(runif(100*10), ncol = 100)
+
+method <- "correlation"
+
+Dstats <- dist(M, method = method)
+Dproxy <- proxy::dist(M, method = method)
+
+sum(Dstats-Dproxy)
+
+
+par(mfrow = c(1,2))
+image(Dstats %>% as.matrix()); title("pippo")
+image(Dproxy %>% as.matrix()); title("topolino")
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
