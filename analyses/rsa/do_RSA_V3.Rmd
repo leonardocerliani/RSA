@@ -61,6 +61,10 @@ df_path_copes <- df_path_copes %>%
 df_path_copes
 
 copes_numba <- df_path_copes$cope %>% unique
+
+write_csv(df_path_copes, paste0(bd,"/rsa/copes_location.csv"))
+
+
 ```
 
 
@@ -75,6 +79,7 @@ atlas_path <- paste0(bd_atlases,"/",atlas_filename)
 atlas_nii <- readNifti(paste0(bd_atlases,"/",atlas_filename))
 
 region_labels <- atlas_nii[atlas_nii > 0] %>% unique %>% sort
+
 
 ```
 

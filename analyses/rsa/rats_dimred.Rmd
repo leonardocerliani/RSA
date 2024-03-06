@@ -3,16 +3,147 @@ title: "R Notebook"
 output: html_notebook
 ---
 
-This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+Here we experiment with some dimred methods to assess the consistency of the ratings.
 
-Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+NB: umap requires reticulate. We need to install a version of reticulate which does not require `RcppTOML` (v1.4)
+`remotes::install_version("reticulate", version = "1.4")`
 
-```{r}
-plot(cars)
+
+# Load the ratings for all subs
+```{r, message=FALSE}
+library(tidyverse)
+library(proxy)
+# pr_DB$get_entries() 
+# summary(pr_DB)
+
+bd="/data00/leonardo/RSA/analyses"
+bd_ratings = paste0(bd,"/RATINGS")
+ratings_path <- paste0(bd_ratings,"/",ratings_type,"_ratings.csv")
+rats <- read_csv(ratings_path)
+
+# arrange by emotion to have a reference
+rats <- rats %>% arrange(emotion)
+
+# plot_heatmap(D %>% as.matrix)
+plot_heatmap <- function(M) {
+  heatmap(M, Rowv = NA, Colv = NA, symm=T, revC = T)
+}
 ```
 
-Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
 
-When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+# List the available metrics
+```{r}
+summary(pr_DB)
+```
 
-The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+
+
+```{r}
+
+labels <- rats$emotion
+high_low <- str_extract(rats$high_low_code, "high|low")
+
+
+length(labels)
+
+tic()
+D <- rats %>% 
+  # filter(str_starts(sub,"3")) %>% 
+  # filter(emotion == "anger") %>%
+  arrange(emotion) %>% 
+  select(starts_with("r_")) %>% 
+  dist(method = "cosine") %>% 
+  as.matrix
+toc()
+
+rownames(D) <- colnames(D) <- labels
+
+dim(D)
+
+plot_heatmap(D %>% as.matrix)
+
+```
+
+
+# SVD and plot
+```{r}
+
+# Perform SVD
+svd_result <- svd(D)
+
+# Extract the first two eigenvectors (U matrix in SVD)
+U <- svd_result$u
+
+# define which lowdim components to use
+lowdim_x = 3   
+lowdim_y = 4
+svd_lowdim <- data.frame(pc_x = U[,lowdim_x], pc_y = U[,lowdim_y], labels, high_low)
+
+paletta <- c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3", "#FF7F00", "#FFFF33", "#A65628")
+
+ggplot(svd_lowdim, aes(x = pc_x, y = pc_y, color = labels, shape = high_low)) +
+  geom_point(size = 3, alpha = 0.7) +  # Open circles for points
+  scale_color_manual(values = paletta) +
+  scale_shape_manual(values = c(1, 3)) +  # Assign specific shapes
+  labs(title = "UMAP Projection", x = paste0("lowdim ",lowdim_x), y = paste0("lowdim ",lowdim_y)) +
+  theme_minimal() +
+  guides(color = guide_legend(override.aes = list(shape = 16)))  # Filled circles in the legend
+
+
+```
+
+
+
+```{r, warning=FALSE}
+
+library(umap)
+# tunings here : https://cran.r-project.org/web/packages/umap/vignettes/umap.html
+
+# # Perform UMAP
+umap_result <- umap::umap(D, input="dist", n_components=5)
+
+# define which lowdim components to use
+lowdim_x = 2
+lowdim_y = 3
+umap_lowdim <- data.frame(UMAP1 = umap_result$layout[,lowdim_x], UMAP2 = umap_result$layout[,lowdim_y], labels, high_low)
+
+paletta <- c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3", "#FF7F00", "#FFFF33", "#A65628")
+
+ggplot(umap_lowdim, aes(x = UMAP1, y = UMAP2, color = labels, shape = high_low)) +
+  geom_point(size = 4, alpha = 0.7) +  # Open circles for points
+  scale_color_manual(values = paletta) +
+  scale_shape_manual(values = c(1, 3)) +  # Assign specific shapes
+  labs(title = "UMAP Projection", x = paste0("lowdim ",lowdim_x), y = paste0("lowdim ",lowdim_y)) +
+  theme_minimal() +
+  guides(color = guide_legend(override.aes = list(shape = 16)))  # Filled circles in the legend
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,172 @@
+---
+title: "R Notebook"
+runtime: shiny 
+output: 
+  html_notebook:
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+# this is to avoid printing the code (folded or not)
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r load_libraries, message=F}
+library(tidyverse)
+library(future)
+library(furrr)
+library(tictoc)
+library(RNifti)
+library(proxy) # distances
+library(profvis)
+
+bd="/data00/leonardo/RSA/analyses"
+
+ratings_type <- "emotion"
+
+# Vector of zeropadded sub_ids
+subs_file <- "/data00/leonardo/RSA/sub_list.txt"
+subs <- sprintf("%02d",readLines(subs_file) %>% as.numeric)
+
+df_path_copes <- read_csv(paste0(bd,"/rsa/copes_location.csv"))
+copes_numba <- df_path_copes$cope %>% unique
+
+# read avg_cope (for exploration) - see below how it was created
+avg_copes <- readRDS("avg_copes.rds")
+
+all_similarity_methods <- c("correlation","cosine","Euclidean")
+
+
+# import the ratings emotion labels for the plot
+rats <- read_csv("/data00/leonardo/RSA/analyses/RATINGS/emotion_ratings.csv") %>% 
+  filter(sub == "02") %>% 
+  select(movie_cope_number, emotion) %>% 
+  arrange(movie_cope_number)
+
+emotion_labels <- rats$emotion
+
+paletta <- c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3", "#FF7F00", "#FFFF33", "#A65628")
+```
+
+
+```{r}
+
+# Select atlas
+
+bd_atlases = "/data00/leonardo/RSA/analyses/rsa/atlases"
+available_atlases <- list.files(bd_atlases, pattern = ".nii\\.gz$")
+
+selectInput("atlas_selector", "Choose an atlas:", choices = available_atlases, selected = available_atlases[1])
+
+textOutput("selected_atlas")
+output$selected_atlas <- renderText(input$atlas_selector)
+
+```
+
+
+```{r}
+# Select similarity measure
+
+selectInput("d_type", "Similarity measure", choices = all_similarity_methods, selected = "Euclidean")
+textOutput("d_type")
+output$d_type <- renderText(paste0("Similarity measure : ", input$d_type))
+```
+
+
+```{r}
+# Select the region whose lowdim you want to visualize
+
+radioButtons("atlas_region", "Choose a region:", choices = 1:100, selected = 1, inline = TRUE)
+
+```
+
+
+
+```{r}
+
+# The commented parts were used to develop the reactive code
+
+# atlas_filename <-  "juelich_2mm.nii.gz"
+# atlas_path <- paste0(bd_atlases,"/",atlas_filename)
+# atlas_nii <- readNifti(atlas_path)
+# 
+# region_labels <- unique(atlas_nii[atlas_nii > 0]) %>% sort()
+# 
+# ith_region = region_labels[1]
+# method = "Euclidean"
+# n_comp = 5
+# 
+
+# Function to calculate the svd - used in the next reactive object (pc_svd)
+do_one_region <- function(ith_region, atlas_nii, avg_copes, method="Euclidean") {
+  
+  idx <- which(atlas_nii == ith_region)
+  avg_copes_ROI <- avg_copes[idx, ]
+  D_fmri <- dist(t(avg_copes_ROI), method = input$d_type) %>% as.matrix
+  
+  n_comp = 5
+  svd_result <- svd(D_fmri)
+  U <- svd_result$u
+  return(U[, 1:n_comp])
+}
+
+# ff <- region_labels %>% map(~ do_one_region(.x))
+# ff[[1]] %>% dim
+# ff %>% length
+
+# Create a reactive object with the svd of all regions
+pc_svd <- reactive({
+  # read the atlas
+  req(input$atlas_selector)
+  atlas_nii <- readNifti(paste0(bd_atlases, "/", input$atlas_selector))
+  region_labels <- unique(atlas_nii[atlas_nii > 0]) %>% sort()
+  
+  pcs <- region_labels %>% map(~ do_one_region(.x, atlas_nii, avg_copes))
+  return(pcs)
+})
+
+
+
+# Function to plot the svd of one region - used in the observer below
+plot_lowdim <- function(df_pc_ROI) {
+  ggplot(df_pc_ROI, aes(x = pc_x, y = pc_y, color = emotion_labels)) +
+    geom_point(shape = 16, size = 4) +  # 1 = empty, 16 = filled
+    scale_color_manual(values = paletta) +
+    theme_minimal()
+}
+
+
+# plot the pc1 vs pc2 and pc2 vs pc3 for the selected region
+observe({
+  req(pc_svd, input$atlas_selector, input$atlas_region)
+  
+  # select one region
+  pc_ROI <- pc_svd()[[as.numeric(input$atlas_region)]]
+  # cat("Dimensions of pc_ROI:", dim(pc_ROI), "\n")
+  
+  # plot pc 1 and 2
+  df_pc_ROI_1_2 <- data.frame(pc_x = pc_ROI[,1], pc_y = pc_ROI[,2], emotion_labels)
+  output$svd_1_2 <- renderPlot(plot_lowdim(df_pc_ROI_1_2))
+  
+  # plot pc 2 and 3
+  df_pc_ROI_2_3 <- data.frame(pc_x = pc_ROI[,2], pc_y = pc_ROI[,3], emotion_labels)
+  output$svd_2_3 <- renderPlot(plot_lowdim(df_pc_ROI_2_3))
+
+})
+
+plotOutput("svd_1_2")
+plotOutput("svd_2_3")
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
