@@ -17,6 +17,8 @@ library(proxy)
 # summary(pr_DB)
 
 bd="/data00/leonardo/RSA/analyses"
+
+ratings_type <- "emotion"
 bd_ratings = paste0(bd,"/RATINGS")
 ratings_path <- paste0(bd_ratings,"/",ratings_type,"_ratings.csv")
 rats <- read_csv(ratings_path)
@@ -24,11 +26,30 @@ rats <- read_csv(ratings_path)
 # arrange by emotion to have a reference
 rats <- rats %>% arrange(emotion)
 
+subs_file <- "/data00/leonardo/RSA/sub_list.txt"
+subs <- sprintf("%02d",readLines(subs_file) %>% as.numeric)
+
 # plot_heatmap(D %>% as.matrix)
 plot_heatmap <- function(M) {
   heatmap(M, Rowv = NA, Colv = NA, symm=T, revC = T)
 }
 ```
+
+
+# Subject exclusion
+```{r}
+
+# # If you want to select subs, do it here
+# subs_to_exclude <- c(7,34,24,10,16,31,30,27,05,21,14) %>% as.character()
+# subs <- subs[!subs %in% subs_to_exclude]
+# rats <- rats %>% 
+#   filter(sub %in% subs)
+# 
+# subs
+
+```
+
+
 
 
 # List the available metrics
@@ -42,17 +63,17 @@ summary(pr_DB)
 
 labels <- rats$emotion
 high_low <- str_extract(rats$high_low_code, "high|low")
-
-
 length(labels)
+
+summary(pr_DB)
+dist_method <- "euclidean"
 
 tic()
 D <- rats %>% 
-  # filter(str_starts(sub,"3")) %>% 
-  # filter(emotion == "anger") %>%
+  filter(sub %in% subs) %>%
   arrange(emotion) %>% 
   select(starts_with("r_")) %>% 
-  dist(method = "cosine") %>% 
+  dist(method = dist_method) %>% 
   as.matrix
 toc()
 
@@ -61,6 +82,19 @@ rownames(D) <- colnames(D) <- labels
 dim(D)
 
 plot_heatmap(D %>% as.matrix)
+
+# # replacing the NAs which come out mostly from neutral movies, which have
+# # mostly scores at 0 across all emotion rating
+#
+# rats %>%
+#   mutate(r_sum = rowSums(select(., starts_with("r_")), na.rm = TRUE)) %>% 
+#   select(video, r_sum) %>% 
+#   filter(r_sum == 0)
+
+
+D[is.na(D)] <- 0
+# sum(is.na(D)) / length(D)
+# sum(is.infinite(D)) / length(D)
 
 ```
 
@@ -72,12 +106,14 @@ plot_heatmap(D %>% as.matrix)
 svd_result <- svd(D)
 
 # Extract the first two eigenvectors (U matrix in SVD)
-U <- svd_result$u
+U <- svd_result$u[,1:3]
+S <- svd_result$d[1:3] %>% diag
+US <- U %*% S
 
 # define which lowdim components to use
-lowdim_x = 3   
-lowdim_y = 4
-svd_lowdim <- data.frame(pc_x = U[,lowdim_x], pc_y = U[,lowdim_y], labels, high_low)
+lowdim_x = 2
+lowdim_y = 3
+svd_lowdim <- data.frame(pc_x = US[,lowdim_x], pc_y = US[,lowdim_y], labels, high_low)
 
 paletta <- c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3", "#FF7F00", "#FFFF33", "#A65628")
 

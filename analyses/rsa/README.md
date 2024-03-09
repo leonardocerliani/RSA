@@ -1,5 +1,9 @@
 # RSA analysis
 
+Scripts / Notebooks description
+- `do_RSA_V[n].Rmd` : the main nb where the RDMs are calculated and the final RSA analysis is carried out
+- `rats_dimred` : to probe the separation of the ratings across movies (and subs) using different metrics
+
 
 ```mermaid
 graph TD;

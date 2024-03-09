@@ -163,6 +163,23 @@ plotOutput("svd_2_3")
 
 
 
+```{r}
+# NB: unfortunately I deleted the code to create the avg_copes.rds. 
+# If you need to redo the calculation, load the a given cope for all subs
+# using readNifti, purrr it into a list and take the mean with Reduce, similar
+# to the following
+# 
+# my_list <- list(
+#   1:4,
+#   5:8
+# )
+# 
+# # Use Reduce to sum the vectors elementwise and then calculate the mean
+# elementwise_mean <- Reduce("+", my_list) / length(my_list)
+
+
+
+```
 
 
 

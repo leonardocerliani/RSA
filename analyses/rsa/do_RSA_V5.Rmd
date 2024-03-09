@@ -1,6 +1,8 @@
 ---
-title: "RSA v3"
-output: html_notebook
+title: "do_RSA_v5"
+author: "LC"
+date: "2024-03-08"
+output: html_document
 ---
 
 ```{r load_libraries, message=F}
@@ -12,9 +14,19 @@ library(RNifti)
 library(proxy) # distances
 library(profvis)
 
+source("funs.R")
+
 bd="/data00/leonardo/RSA/analyses"
 
 ratings_type <- "emotion"
+copes_type <- "one_ev_per_movie"
+atlas_filename <-  "juelich_2mm.nii.gz"
+
+dist_method_rating <- "euclidean"
+dist_method_fmri = "euclidean"
+
+RDM_type = "tril"  # svd or tril. Must be the same for both rating and fmri
+ncomp_svd = 10
 
 # Vector of zeropadded sub_ids
 subs_file <- "/data00/leonardo/RSA/sub_list.txt"
@@ -38,32 +50,19 @@ Extract the pathname of all copes using the `list.files()` function.
 Also define a copes_numba vector with all the copes numbers.
 
 NB: The cope numbers in the `cope` column are NOT zeropadded since this is how they come out from FSL Feat
-```{r}
+```{r, message=FALSE}
 
-bd_copes = paste0(bd, "/one_ev_per_movie/results/2nd_level")
+copes_location_csv <- paste0(bd,"/rsa/copes_location.csv")
 
-df_path_copes <- list.files(bd_copes, recursive = T) %>% tibble()
-names(df_path_copes) <- "fname"
-
-df_path_copes <- df_path_copes %>%
-  filter(str_detect(fname, "gfeat/cope[0-9]+.feat/stats/cope")) %>%
-  tidyr::separate(
-    fname, c("sub","cope","tmp1","tmp2"),
-    sep = "/", fill = "right", remove = F
-  ) %>% 
-  select(!starts_with("tmp")) %>% 
-  mutate(sub = str_extract(sub, "[0-9]+")) %>% 
-  mutate(cope = (str_extract(cope, "[0-9]+") %>% as.numeric) ) %>% 
-  mutate(path = paste0(bd_copes,"/",fname)) %>% 
-  select(!fname) %>% 
-  arrange(sub,cope)
-
-df_path_copes
+df_path_copes <- if (file.exists(copes_location_csv) ) {
+  df_path_copes <- read_csv(copes_location_csv)
+} else {
+  df_path_copes <- import_df_path_copes(bd, copes_type)
+}
 
 copes_numba <- df_path_copes$cope %>% unique
 
-write_csv(df_path_copes, paste0(bd,"/rsa/copes_location.csv"))
-
+df_path_copes
 
 ```
 
@@ -73,13 +72,10 @@ write_csv(df_path_copes, paste0(bd,"/rsa/copes_location.csv"))
 
 bd_atlases = "/data00/leonardo/RSA/analyses/rsa/atlases"
 
-atlas_filename <-  "juelich_2mm.nii.gz"
 atlas_path <- paste0(bd_atlases,"/",atlas_filename)
 
 atlas_nii <- readNifti(paste0(bd_atlases,"/",atlas_filename))
-
 region_labels <- atlas_nii[atlas_nii > 0] %>% unique %>% sort
-
 
 ```
 
@@ -90,50 +86,34 @@ We do this first since the RDM for the ratings will be the same for whatever
 atlas will be used. Also, it's much faster than the RDM_fmri and can be done
 for all the sub_ids at once.
 
-The final RDMs_rats has 40040 nrows : 26 sub_ids * 1540, where the latter
-derives from ((56^2)-56)/2 = 1540, i.e. tril from the D matrix of 56 movies
 
+- **tril** : The final RDMs_rats has 40040 nrows : 26 sub_ids * 1540, where the latter
+derives from ((56^2)-56)/2 = 1540, i.e. tril from the D matrix of 56 movies
+- **svd** : The final RDMs_rats has 4368 nrows : 26 sub_ids * 168, where the latter
+derives from 56*3, i.e. the first three components from svd of the D matrix
 ```{r, message=FALSE}
 
 bd_ratings = paste0(bd,"/RATINGS")
 ratings_path <- paste0(bd_ratings,"/",ratings_type,"_ratings.csv")
 rats <- read_csv(ratings_path)
 
-RDMs_rats <- subs %>% map_dfc(~ {
-  
-  D_rats <- rats %>% 
-  filter(sub == .x) %>% 
-  select(starts_with("r_")) %>% 
-  dist(method = "euclidean")
-  
-  D_rats_tril <- D_rats[!is.na(D_rats)]
+# dist_method_rating <- "euclidean"
+# RDM_type = "tril"  # svd or tril, see below
 
-  tibble(!!.x := D_rats_tril)
-}) %>% 
+# for RDM_type use:
+# - tril for the lower triangular of the D matrix
+# - svd for the first 3 pc from svd of the D matrix
+RDMs_rats_wider <- subs %>% map_dfc(~ {
+  do_RDM_ratings_one_sub(.x, dist_method_rating, rats, RDM_type =  RDM_type)
+})
+
+RDMs_rats <- RDMs_rats_wider %>% 
   pivot_longer(cols = everything(), names_to = "sub") %>% 
   arrange(sub)
 
-
-# # alternative with nested columns
-# # following https://www.youtube.com/watch?v=rz3_FDVt9eg  26:57
-# do_extract_tril <- function(df_rats) {
-#   D_rats <- df_rats %>% dist(method = "euclidean")
-#   D_rats_tril <- D_rats[!is.na(D_rats)]
-# }
-# 
-# ff <- rats %>%
-#   select(sub, starts_with("r_")) %>% 
-#   group_by(sub) %>% 
-#   nest %>% 
-#   mutate(RDM_rats = data %>% map(do_extract_tril))
-# 
-# ff[ff$sub==sub_id,]$RDM_rats
-# 
-# # 1540 * 26 sub_ids
-# ff %>% unnest(RDM_rats)
-
 RDMs_rats
 ```
+
 
 
 
@@ -144,52 +124,21 @@ RDMs_rats
 1. df_copes[one_sub] <- load_sub_copes(sub_id, copes_numba)
 2. RDM_fmri[one_sub] <- calculate_fmri_RDMs(df_copes, atlas_path)
 
-```{r load_copes}
+```{r load_copes, eval=FALSE}
 
 # Load copes for one sub_id
 # (reasonably fast: reads 56 nifti at 2mm resolution in ~ 2.5 sec)
-sub_id = "02"
+# sub_id = "02"
+
+# tic()
+# df_copes <- load_sub_copes(sub_id, copes_numba, df_path_copes)
+# toc()
+# 
+# # Read atlas and calculate fmri RDMs for each atlas region
+# dist_method_fmri = "Euclidean"
+# one_RDM_fmri <- calculate_fmri_RDMs(df_copes, atlas_nii, dist_method_fmri, RDM_type = RDM_type)
 
 
-# Function : load_sub_copes(sub_id, copes_numba)
-# Loads the nii for all 56 copes for one sub, and returns a df of (91x109x91) rows
-# and 56 (length(copes_numba)) columns, each one named with the cope numba
-load_sub_copes <- function(sub_id, copes_numba) {
-  copes_numba %>% map_dfc(~ {
-    nii <- df_path_copes %>% 
-      filter(sub == sub_id, cope == .x) %>% pull %>%  
-      readNifti %>% as.vector
-    tibble(!!paste0("cope_", .x) := nii)
-  }) 
-}
-
-tic()
-df_copes <- load_sub_copes(sub_id, copes_numba)
-toc()
-
-# Read atlas and calculate fmri RDMs : the final df has size n_tril_D-by-n_regions, where 
-# - n_tril_D : number of elements in the distance matrix = ((56^2)-56)/2 = 1540
-# - n_regions : number of distinctly labelled regions in the atlas 
-calculate_fmri_RDMs <- function(df_copes, atlas_path) {
-  
-  # Calculate the RDM for each atlas region, 
-  # i.e. distance matrix of the betas of each movie across all voxels in that ROI.
-  # Returns a df of length(triu(D))-by-n_atlas_regions
-  region_labels %>% map_dfc(~ {
-    idx <- which(atlas_nii == .x)
-    df_copes_region <- df_copes[idx, ]
-    
-    # The following line will be replaced by the calculate_distance() fn
-    D_fmri <- dist( t(df_copes_region), method = "euclidean" )
-    
-    D_fmri <- D_fmri[!is.na(D_fmri)]
-    tibble(!!paste0("RDM_region_", .x) := D_fmri)
-  })
-}
-
-tic()
-one_RDM_fmri <- calculate_fmri_RDMs(df_copes, atlas_path)
-toc()
 ```
 
 
@@ -207,8 +156,14 @@ RDMs_fmri <- subs %>% future_map_dfr(~{
   
   paste0("Calculating RDMs for sub ",.x,"\n") %>% cat
   
-  df_copes <- load_sub_copes(sub_id, copes_numba)
-  one_RDM_fmri <- calculate_fmri_RDMs(df_copes, atlas_path)
+  df_copes <- load_sub_copes(.x, copes_numba, df_path_copes)
+  
+  one_RDM_fmri <- calculate_fmri_RDMs(
+    df_copes, 
+    atlas_nii, 
+    dist_method_fmri, 
+    RDM_type = RDM_type
+  )
   
   one_RDM_fmri %>% mutate(sub = .x) %>% relocate(sub)
   
@@ -238,7 +193,6 @@ unparalleled.
 
 ```{r}
 
-
 # nest the RDMs for both rat and fmri. In the second case, they are nested by sub AND region
 rdms_fmri_nested <- RDMs_fmri %>% 
   pivot_longer(cols = starts_with("RDM"), names_to = "region") %>% 
@@ -261,7 +215,7 @@ joint_fmri_rat_nested
 # Calculate all similarity
 # This is effectively when we are calculating the RSA
 all_similarities <- joint_fmri_rat_nested %>% 
-  mutate(similarity = list(fmri,rat) %>% pmap_dbl(~ cor(.x,.y)) ) %>% 
+  mutate(similarity = list(fmri,rat) %>% pmap_dbl(~ cor(.x,.y, method = "pearson")) ) %>% 
   ungroup
 
 # Produce estimates of RSA acros subjects
@@ -273,7 +227,6 @@ all_similarities %>%
     sd_similarity = round(sd(similarity),2)
   ) %>% 
   arrange(desc(mean_similarity))
-
 
 ```
 
@@ -352,21 +305,5 @@ image(Dproxy %>% as.matrix()); title("topolino")
 
 
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
