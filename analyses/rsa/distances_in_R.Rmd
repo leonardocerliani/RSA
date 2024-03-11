@@ -1,0 +1,288 @@
+---
+title: "Distances in R"
+author: "LC"
+date: "2024-03-10"
+output: html_document
+---
+
+# Motivation
+When dealing with distances, every language and library has its own peculiarities,
+which can go unnoticed, leading to big mistakes. 
+
+Let's see how distances can be calculated
+in R and how the vectors and matrices should be passed to the distance calculating
+functions
+
+# Libraries
+Correlation-based distances can be calculated with `cor`, while a few fundamental
+distances can be calculated with `stats::dist`. 
+
+The library [`proxy::dist`](https://cran.r-project.org/web/packages/proxy/proxy.pdf) extends the
+`stats::dist` function with many kind of distance metrics. 
+
+Another package which provides distance calculation is [`philentropy::distance`](https://cran.r-project.org/web/packages/philentropy/vignettes/Distances.html)
+
+Here we will look at how to work with `proxy` and its relation to `cor`. We use the Pearson correlation coefficient, however the same usage is applied to all listed measures.
+
+```{r, message=FALSE}
+library(tidyverse)
+library(proxy)
+```
+
+A comprehensive list of the distances and similarity measures implemented in the `proxy` package can be obtained with `summary(pr_DB)`, while `pr_DB$get_entries()` gives a description with references about the implemented measures
+```{r}
+summary(pr_DB)
+# pr_DB$get_entries()
+```
+
+
+
+# Distance / similarity between single vectors
+
+First of all, when a vector is defined, R does not store it as a row or column
+vector - like e.g. in Matlab. This property becomes apparent only when we either 
+`rbind` or `cbind` multiple vectors
+
+```{r}
+set.seed(124)
+
+x <- rnorm(100)
+y = -0.8*x + 0.5*rnorm(100)
+# plot(x ~ y)
+
+dim(x)
+
+rbind(x,y) %>% dim
+
+cbind(x,y) %>% dim
+
+```
+
+
+Given two vectors x and y we can then calculate their correlation using `cor` or
+with `dist([],method="correlation")`. However while `cor` accepts single vectors,
+`dist` requires the two vectors to be _concatenated by row in a matrix_ of 2-by-length(x or y)
+size.
+
+**Importantly**, although "correlation" is listed among the similarity measures, if
+`dist` is used, it will actually return 1-correlation. To get the actual correlation
+we can either use the `proxy::simil` function or just calculate `1 - dist(method="correlation")`
+
+**Also note** that when using `dist`, in any case the _absolute value_ of 1-correlation is 
+returned. So to avoid confusion, it is definitively better to remember to use `simil` in these
+cases
+
+```{r}
+# NB!!! When using "correlation" in dist(), it is actually 1-r
+cor(x,y, method = "pearson")
+simil(rbind(x,y), method = "correlation") %>% as.vector()
+1 - dist(rbind(x,y), method = "correlation") %>% as.vector()
+```
+
+Note that both `simil` and `dist` return 1-by-1 matrices, therefore we probably want
+to convert them `as.vector` as done above.
+
+We can also pass a matrix to `cor`, however in this case the vectors should be _column binded_. 
+Also in this case it will return a matrix with ones on the diagonal (the correlation of each
+vector with itself)
+```{r}
+cor(cbind(x,y), method = "pearson")
+```
+
+
+# Distance / Similarity matrices
+
+The reason why all methods in `proxy` return matrices is that they are mainly thought
+to calculate distance / similarity among many vectors.
+
+As hinted above, in this case we need to _row-bind_ the vectors.
+
+Again, note how the `dist` function returns the _absolute_ value of 1-correlation.
+
+```{r}
+set.seed(124)
+
+z = 0.5*y + 0.4*x + rnorm(100)
+
+1 - dist(rbind(x,y,z), method = "correlation")
+simil(rbind(x,y,z), method = "correlation")
+```
+
+The `dist` and `simil` functions return not the full distance / similarity matrix.
+Since the latter is symmetrical, they instead return the lower triangular (tril).
+
+To get the full matrix, we can convert this `as.matrix`, which is the same that 
+we would obtain by using the `cor` function.
+
+Another difference is that in the full matrix returned by `simil`, the diagonal
+is set to `NA`
+
+```{r}
+
+simil(rbind(x,y,z), method = "correlation") %>% as.matrix
+
+cor(cbind(x,y,z))
+```
+
+
+# Summary
+
+- The [`proxy::dist`](https://cran.r-project.org/web/packages/proxy/proxy.pdf) library contains many readily available distance metrics. It can be extended by user-defined distances
+
+- The single vectors among which the similarity / distance one wishes to calculate should be 
+_row binded_ (`rbind`). In other words, the provided matrix should have the standard arrangement with observations on the rows and variables on the columns
+
+- The output is the lower triangular of the similarity / distance matrix. To convert it to full
+matrix, pass the output to `as.matrix`
+
+
+
+# Appendix - function to handle different measures
+```{r}
+
+# ------- DDOS - Do Distance Or Similarity -------
+# The input matrix should be observations-by-variables, that is:
+# - rows index observations
+# - columns index variables
+# This is the format required by dist(), while for cor() is the
+# opposite, so when using the cor() function we pass t(X) 
+
+DDOS <- function(X, method) {
+  
+  X[is.na(X)] = 0
+  X[is.infinite(X)] = 0
+  
+  switch(method,
+    pearson = {
+      D <- cor(t(X), method = "pearson") %>% as.dist()
+    },
+    
+    spearman = {
+      D <- cor(t(X), method = "spearman") %>% as.dist()
+    },
+    
+    euclidean = {
+      D <- dist(X, method = "euclidean")
+    },
+    
+    cosine = {
+      D <- simil(X, method = "cosine")
+    },
+    
+    mahalanobis = {
+      D <- dist(X, method = "mahalanobis")
+    },
+    stop("Supported methods: 'pearson', 'spearman', 'euclidean', 'cosine' or 'mahalanobis'.")
+  )
+  return(D)
+}
+
+# # example usage:
+# DDOS(Y, method = "cosine")
+
+
+```
+
+
+```{r}
+
+DDOS(Y, "correlation")
+cor(t(Y), method = "pearson") %>% as.dist
+
+DDOS(Y, "spearman")
+cor(t(Y), method = "spearman") %>% as.dist
+
+DDOS(Y, "euclidean")
+dist(Y, method = "euclidean")
+
+DDOS(Y, "cosine")
+simil(Y, method = "cosine")
+
+
+```
+
+
+
+```{r}
+
+x = c(0,0,0)
+y = c(1,1,1)
+z = c(3,4,5)
+
+X <- rbind(x,y,z)
+X
+
+s1 <- 1
+s2 <- 2
+s3 <- 3
+S = rbind(s1,s2,s3)
+
+dist(S, method = "euclidean") %>% as.matrix
+
+set.seed(124)
+y1 <- rnorm(100,1,2)
+y2 <- 0.7*y1 + 0.3*rnorm(100,2,3)
+y3 <- -0.7*y1 + 0.3*rnorm(100,4,5)
+Y <- rbind(y1,y2,y3)
+
+X %>% dist(method = "euclidean") %>% as.matrix() %>% as.dist()
+Y %>% dist(method = "Mahalanobis") %>% as.matrix() %>% as.dist()
+
+cov(t(Y)) %>% inv
+
+
+Y %>% simil(method = "cosine")
+Y %>% simil(method = "correlation")
+t(Y) %>% cor(method = "pearson") %>% as.dist()
+t(Y) %>% cor(method = "spearman") %>% as.dist()
+
+```
+
+
+
+```{r}
+# pr_DB$get_entries()
+pr_DB %>% summary
+```
+
+
+
+## Mahalanobis distance
+```{r}
+
+Y <- matrix(1:5, nrow=5)
+Y <- matrix(rnorm(200), nrow=20)
+
+# Step 1: Calculate the covariance matrix
+(Sigma <- cov(Y))
+
+# Step 2: Calculate the inverse of the covariance matrix
+(Sigma_inv <- solve(Sigma))
+
+# Step 3: Calculate the Mahalanobis distance matrix
+n <- nrow(Y)
+D <- matrix(NA, n, n) # Initialize a matrix to store the distances
+
+for(i in 1:n) {
+  for(j in i:n) { # Can start from i to avoid redundant calculations
+    diff <- Y[i,] - Y[j,]
+    D[i,j] <- sqrt(t(diff) %*% Sigma_inv %*% diff)
+    D[j,i] <- D[i,j] # The distance matrix is symmetric
+  }
+}
+
+D
+
+```
+
+
+
+```{r}
+Y <- matrix(rnorm(200), nrow=20)
+
+cor(t(Y)) %>% dim
+
+```
+
+
+

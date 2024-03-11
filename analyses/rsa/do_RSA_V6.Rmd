@@ -1,9 +1,11 @@
 ---
 title: "do_RSA_v5"
 author: "LC"
-date: "2024-03-08"
+date: "2024-03-10"
 output: html_document
 ---
+
+NB: this Rmd can be used for all types of ratings: emotion, arousal, valence
 
 ```{r load_libraries, message=F}
 library(tidyverse)
@@ -13,25 +15,43 @@ library(tictoc)
 library(RNifti)
 library(proxy) # distances
 library(profvis)
+library(DT)
+library(formattable)
 
-source("funs.R")
+source("funs_V6.R")
 
 bd="/data00/leonardo/RSA/analyses"
 
+# can be emotion, arousal, valence
 ratings_type <- "emotion"
-copes_type <- "one_ev_per_movie"
-atlas_filename <-  "juelich_2mm.nii.gz"
 
+# the following is out contrast of interest and it's always the same
+copes_type <- "one_ev_per_movie"
+
+atlas_filename <-  "HO_sub_2mm.nii.gz"
+# choices:
+# HO_cort_2mm.nii.gz
+# HO_sub_2mm.nii.gz
+# juelich_2mm.nii.gz
+
+
+# Choose the distance metric to use for fmri RDM
+# The metric for ratings RDM *should be* euclidean, since arousal and valence
+# ratings have only one value
+# Supported methods: 'pearson', 'spearman', 'euclidean', 'cosine' or 'mahalanobis'
 dist_method_rating <- "euclidean"
-dist_method_fmri = "euclidean"
+dist_method_fmri = "cosine"
+
+cat(paste0("Ratings RDM to be calculated with : ", dist_method_rating, "\n"))
+cat(paste0("fMRI RDM to be calculated with : ", dist_method_fmri, "\n"))
+
 
 RDM_type = "tril"  # svd or tril. Must be the same for both rating and fmri
-ncomp_svd = 10
+ncomp_svd = 30
 
 # Vector of zeropadded sub_ids
 subs_file <- "/data00/leonardo/RSA/sub_list.txt"
 subs <- sprintf("%02d",readLines(subs_file) %>% as.numeric)
-
 
 ```
 
@@ -62,7 +82,7 @@ df_path_copes <- if (file.exists(copes_location_csv) ) {
 
 copes_numba <- df_path_copes$cope %>% unique
 
-df_path_copes
+# df_path_copes
 
 ```
 
@@ -116,8 +136,6 @@ RDMs_rats
 
 
 
-
-
 # Calculate FMRI RDMs
 
 ## Define the functions
@@ -142,7 +160,7 @@ RDMs_rats
 ```
 
 
-## Furrr it up
+## Furrr the calculation of RDMs
 First, the copes are loaded into a df of 91x109x91 (MNI 2mm) rows and 56 columns.
 Then the RDM is estimated for each atlas region as the tril of the similarity. 
 matrix across the 56 subs
@@ -172,6 +190,8 @@ toc()
 
 plan(sequential)
 ```
+
+
 
 
 # RSA 
@@ -219,7 +239,7 @@ all_similarities <- joint_fmri_rat_nested %>%
   ungroup
 
 # Produce estimates of RSA acros subjects
-all_similarities %>%
+RSA <- all_similarities %>%
   select(region, similarity) %>% 
   group_by(region) %>% 
   reframe(
@@ -228,14 +248,43 @@ all_similarities %>%
   ) %>% 
   arrange(desc(mean_similarity))
 
+RSA %>% datatable()
 ```
 
 
 
 
 
+# Write the map with the values
+```{r}
 
+results_to_map <- RSA %>% 
+  mutate(region = as.integer(str_extract(region, "\\d+$"))) %>% 
+  select(region, mean_similarity)
 
+results_to_map
+
+filename_results_nii <- paste0("rsa_results/rsa_results_",ratings_type,"_",atlas_filename)
+
+write_results_to_nii <- function(results_to_map, filename_results_nii, atlas_nii) {
+  
+  results_nii = atlas_nii
+  
+  for (ROI_numba in region_labels) {
+    cat(paste0(ROI_numba," "))
+    row_region <- which(results_to_map$region == ROI_numba)
+    value <- results_to_map$mean_similarity[row_region]
+    
+    idx <- which(results_nii == ROI_numba)
+    results_nii[idx] = value
+  }
+
+  writeNifti(results_nii, filename_results_nii)
+}
+
+write_results_to_nii(results_to_map, filename_results_nii, atlas_nii)
+
+```
 
 
 
@@ -305,5 +354,8 @@ image(Dproxy %>% as.matrix()); title("topolino")
 
 
 ```
+
+
+
 
 
