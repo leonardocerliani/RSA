@@ -1,5 +1,5 @@
 ---
-title: "do_RSA_v5"
+title: "do_RSA_v6"
 author: "LC"
 date: "2024-03-10"
 output: html_document
@@ -18,7 +18,7 @@ library(profvis)
 library(DT)
 library(formattable)
 
-source("funs_V6.R")
+source("funs_V7.R")
 
 bd="/data00/leonardo/RSA/analyses"
 
@@ -40,14 +40,14 @@ atlas_filename <-  "HO_sub_2mm.nii.gz"
 # ratings have only one value
 # Supported methods: 'pearson', 'spearman', 'euclidean', 'cosine' or 'mahalanobis'
 dist_method_rating <- "euclidean"
-dist_method_fmri = "cosine"
+dist_method_fmri = "euclidean"
 
 cat(paste0("Ratings RDM to be calculated with : ", dist_method_rating, "\n"))
 cat(paste0("fMRI RDM to be calculated with : ", dist_method_fmri, "\n"))
 
 
-RDM_type = "tril"  # svd or tril. Must be the same for both rating and fmri
-ncomp_svd = 30
+RDM_type = "svd"  # svd or tril. Must be the same for both rating and fmri
+ncomp_svd = 5
 
 # Vector of zeropadded sub_ids
 subs_file <- "/data00/leonardo/RSA/sub_list.txt"

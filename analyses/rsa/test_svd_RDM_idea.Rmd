@@ -1,0 +1,224 @@
+---
+title: "Test svd-RDM idea"
+author: "LC"
+date: "2024-03-11"
+output: html_document
+---
+
+```{r load_libraries, message=F}
+library(tidyverse)
+library(future)
+library(furrr)
+library(tictoc)
+library(RNifti)
+library(proxy) # distances
+library(profvis)
+library(DT)
+library(formattable)
+
+source("funs_V7.R")
+
+bd="/data00/leonardo/RSA/analyses"
+
+# can be emotion, arousal, valence
+ratings_type <- "emotion"
+
+# the following is out contrast of interest and it's always the same
+copes_type <- "one_ev_per_movie"
+
+atlas_filename <-  "HO_cort_2mm.nii.gz"
+# choices:
+# HO_cort_2mm.nii.gz
+# HO_sub_2mm.nii.gz
+# juelich_2mm.nii.gz
+
+
+# Choose the distance metric to use for fmri RDM
+# The metric for ratings RDM *should be* euclidean, since arousal and valence
+# ratings have only one value
+# Supported methods: 'pearson', 'spearman', 'euclidean', 'cosine' or 'mahalanobis'
+dist_method_rating <- "euclidean"
+dist_method_fmri = "euclidean"
+
+cat(paste0("Ratings RDM to be calculated with : ", dist_method_rating, "\n"))
+cat(paste0("fMRI RDM to be calculated with : ", dist_method_fmri, "\n"))
+
+
+RDM_type = "svd"  # svd or tril. Must be the same for both rating and fmri
+ncomp_svd = 3
+
+# Vector of zeropadded sub_ids
+subs_file <- "/data00/leonardo/RSA/sub_list.txt"
+subs <- sprintf("%02d",readLines(subs_file) %>% as.numeric)
+subs <- subs[1]
+
+```
+
+
+```{r, message=FALSE}
+copes_location_csv <- paste0(bd,"/rsa/copes_location.csv")
+
+df_path_copes <- if (file.exists(copes_location_csv) ) {
+  df_path_copes <- read_csv(copes_location_csv)
+} else {
+  df_path_copes <- import_df_path_copes(bd, copes_type)
+}
+
+copes_numba <- df_path_copes$cope %>% unique
+```
+
+
+# Read atlas and create a vector of atlas labels
+```{r}
+
+bd_atlases = "/data00/leonardo/RSA/analyses/rsa/atlases"
+
+atlas_path <- paste0(bd_atlases,"/",atlas_filename)
+
+atlas_nii <- readNifti(paste0(bd_atlases,"/",atlas_filename))
+region_labels <- atlas_nii[atlas_nii > 0] %>% unique %>% sort
+
+```
+
+
+# Calculate RATINGS RDMs
+We do this first since the RDM for the ratings will be the same for whatever
+atlas will be used. Also, it's much faster than the RDM_fmri and can be done
+for all the sub_ids at once.
+
+
+- **tril** : The final RDMs_rats has 40040 nrows : 26 sub_ids * 1540, where the latter
+derives from ((56^2)-56)/2 = 1540, i.e. tril from the D matrix of 56 movies
+- **svd** : The final RDMs_rats has 4368 nrows : 26 sub_ids * 168, where the latter
+derives from 56*3, i.e. the first three components from svd of the D matrix
+```{r, message=FALSE}
+
+bd_ratings = paste0(bd,"/RATINGS")
+ratings_path <- paste0(bd_ratings,"/",ratings_type,"_ratings.csv")
+rats <- read_csv(ratings_path)
+
+# dist_method_rating <- "euclidean"
+# RDM_type = "tril"  # svd or tril, see below
+
+# for RDM_type use:
+# - tril for the lower triangular of the D matrix
+# - svd for the first 3 pc from svd of the D matrix
+RDMs_rats_wider <- subs[1] %>% map_dfc(~ {
+  do_RDM_ratings_one_sub(.x, dist_method_rating, rats, RDM_type =  RDM_type)
+})
+
+RDMs_rats <- RDMs_rats_wider %>% 
+  pivot_longer(cols = everything(), names_to = "sub") %>% 
+  arrange(sub)
+
+RDMs_rats
+
+rats_pc1 <- RDMs_rats$value[1:56]
+rats_pc2 <- RDMs_rats$value[57:112]
+rats_pc3 <- RDMs_rats$value[113:168]
+
+paletta <- c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3", "#FF7F00", "#FFFF33", "#A65628")
+
+rats_pcs <- rats %>% 
+  filter(sub == subs[1]) %>% 
+  select(emotion) %>% 
+  mutate(pc1 = rats_pc1, pc2 = rats_pc2, pc3 = rats_pc3) 
+
+rats_pcs %>%
+  ggplot(aes(x = pc2, y = pc3, color = emotion)) +
+  geom_point(shape = 16, size = 4) +  # 1 = empty, 16 = filled
+    scale_color_manual(values = paletta) +
+    theme_minimal()
+
+all_rats_pcs <- c(rats_pc1, rats_pc2, rats_pc3) %>% scale
+```
+
+
+
+# Calculate FMRI RDMs
+
+## Define the functions
+1. df_copes[one_sub] <- load_sub_copes(sub_id, copes_numba)
+2. RDM_fmri[one_sub] <- calculate_fmri_RDMs(df_copes, atlas_path)
+
+```{r load_copes, eval=FALSE}
+
+sub_id <- subs[1]
+
+# load the copes
+df_copes <- load_sub_copes(sub_id, copes_numba, df_path_copes)
+
+# Read atlas and calculate fmri RDMs for each atlas region
+dist_method_fmri = "euclidean"
+cat(RDM_type)
+one_RDM_fmri <- calculate_fmri_RDMs(df_copes, atlas_nii, dist_method_fmri, RDM_type = RDM_type)
+
+one_region = "RDM_region_1"
+
+one_RDM_fmri_one_region <- one_RDM_fmri %>% select(any_of(one_region))
+
+fmri_pc1 <- one_RDM_fmri_one_region[[one_region]][1:56]
+fmri_pc2 <- one_RDM_fmri_one_region[[one_region]][57:112]
+fmri_pc3 <- one_RDM_fmri_one_region[[one_region]][113:168]
+
+paletta <- c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3", "#FF7F00", "#FFFF33", "#A65628")
+
+# We start with the rats just to have a vector with the emotion name.
+# The copes number are *already* aligned (sorted) according to the emotion names
+# in the ratings
+fmri_pcs <- rats %>% 
+  filter(sub == sub_id) %>% 
+  select(emotion) %>% 
+  mutate(pc1 = fmri_pc1, pc2 = fmri_pc2, pc3 = fmri_pc3) 
+
+fmri_pcs %>%
+  ggplot(aes(x = pc1, y = pc2, color = emotion)) +
+  geom_point(shape = 16, size = 4) +  # 1 = empty, 16 = filled
+    scale_color_manual(values = paletta) +
+    theme_minimal()
+
+all_fmri_pcs <- c(fmri_pc1, fmri_pc2, fmri_pc3) %>% scale
+
+```
+
+# try the RSA with svd for one region
+```{r}
+
+cor(all_rats_pcs, all_fmri_pcs, method = "spearman")
+
+plot(all_rats_pcs, all_fmri_pcs)
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
