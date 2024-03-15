@@ -12,7 +12,7 @@ library(RNifti)
 set.seed(124)
 
 # choose the number of clusters
-nclusters <- 900
+nclusters <- 30
 
 # read mask
 insula <- readNifti("atlases/insula_HO.nii.gz")
@@ -32,7 +32,8 @@ nii_insula_clusters <- insula[]
 nii_insula_clusters[idx_nnz] = insula_clusters$cluster
 
 # write to file
-writeNifti(nii_insula_clusters, "atlases/insula_HO_clusters.nii.gz")
+writeNifti(nii_insula_clusters, paste0("atlases/insula_HO_clusters_",nclusters,".nii.gz") )
+
 
 # --- create insula voxels ---
 nii_insula_voxels <- insula[]

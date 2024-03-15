@@ -1,9 +1,26 @@
 # RSA analysis
 
-Scripts / Notebooks description
-- `do_RSA_V[n].Rmd` : the main nb where the RDMs are calculated and the final RSA analysis is carried out
-- `rats_dimred` : to probe the separation of the ratings across movies (and subs) using different metrics
+Files/Folders description
 
+- `RDMs_explorer.Rmd` : shiny rmd to inspect the lowdim embedding (from svd) of different regions according to the mean fMRI RDMs. Note that this is not per subject, but on the `avg_copes.rds`
+
+- `atlases` : contains the atlases to generated the RDMs by means of `do_RSA_V[n].Rmd`, including the insula clusters
+
+- `copes_location.csv` : created by `do_RSA_V[n].Rmd` to have a faster index of the location of the 2nd level copes for each sub in the one_ev_per_movie model
+
+- `create_insula_regions.Rmd` : creates random clusters in the insula for probing this region specifically as a searchlight
+
+- `distances_in_R.Rmd` : nb showing how to use the `proxy` and `stats::cor` packages to calculate distances and similarities in R
+
+- `do_RSA_V[n].Rmd` : the main nb where the RDMs are calculated, the  RSA analysis is carried out
+
+- `funs_V[N].R` : various functions used in `do_RSA_V[n].Rmd`
+
+- `ratings_separability.Rmd` : exploring the differences in ratings 
+
+- `rsa_results` : final nii maps produced by `do_RSA_V[n].Rmd`
+
+- `test_svd_RDM_idea.Rmd` : testing the idea to use the first n components from the svd instead of the RMD tril - later implemented in `funs_V[N].R`
 
 ```mermaid
 graph TD;

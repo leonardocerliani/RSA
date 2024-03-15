@@ -1,5 +1,5 @@
 ---
-title: "do_RSA_v7"
+title: "do_RSA_v8"
 author: "LC"
 date: "2024-03-10"
 output: html_document
@@ -18,21 +18,26 @@ library(profvis)
 library(DT)
 library(formattable)
 
-source("funs_V7.R")
+source("funs_V8.R")
 
 bd="/data00/leonardo/RSA/analyses"
 
 # can be emotion, arousal, valence
 ratings_type <- "arousal"
 
-# the following is out contrast of interest and it's always the same
+# the following is our contrast of interest and it's always the same
 copes_type <- "one_ev_per_movie"
 
-atlas_filename <-  "insula_HO_clusters.nii.gz"
-# choices:
+
+# Choose one atlas among:
 # HO_cort_2mm.nii.gz
 # HO_sub_2mm.nii.gz
 # juelich_2mm.nii.gz
+# Schaefer100_2mm.nii.gz
+# Schaefer200_2mm.nii.gz
+# Schaefer400_2mm.nii.gz
+# insula_HO_clusters_[N].nii.gz
+atlas_filename <- "insula_HO_clusters_600.nii.gz"
 
 
 # Choose the distance metric to use for fmri RDM
@@ -41,6 +46,7 @@ atlas_filename <-  "insula_HO_clusters.nii.gz"
 # Supported methods: 'pearson', 'spearman', 'euclidean', 'cosine' or 'mahalanobis'
 dist_method_rating <- "euclidean"
 dist_method_fmri = "euclidean"
+dist_method_rsa = "pearson"
 
 cat(paste0("Ratings RDM to be calculated with : ", dist_method_rating, "\n"))
 cat(paste0("fMRI RDM to be calculated with : ", dist_method_fmri, "\n"))
@@ -57,6 +63,8 @@ subs <- sprintf("%02d",readLines(subs_file) %>% as.numeric)
 subs <- c("02","03","12","11","22","09","29","28","26","32","23","15","20","19")
 
 ```
+
+
 
 
 # Aux functions
@@ -261,13 +269,24 @@ RSA %>% datatable()
 ```{r}
 
 results_to_map <- RSA %>% 
-  mutate(region = as.integer(str_extract(region, "\\d+$"))) %>% 
+  mutate(region = as.integer(str_replace(region, "RDM_region_",""))) %>% 
   select(region, mean_similarity)
 
 results_to_map
 
-filename_results_nii <- paste0("rsa_results/rsa_results_",ratings_type,"_",atlas_filename)
+# results_path <- ("/data00/leonardo/RSA/analyses/rsa/rsa_results")
+# filename_results_nii <- paste0("rsa_results/rsa_results_",ratings_type,"_",atlas_filename)
 
+
+results_path <- "/data00/leonardo/RSA/analyses/rsa/rsa_results"
+
+results_filename <- create_filename_results(
+  atlas_filename, ratings_type, dist_method_rating, dist_method_fmri, dist_method_rsa
+)
+
+
+# Function to write the results to a nii.gz volume
+# (purrr gives issues here)
 write_results_to_nii <- function(results_to_map, filename_results_nii, atlas_nii) {
   
   results_nii = atlas_nii
@@ -284,7 +303,13 @@ write_results_to_nii <- function(results_to_map, filename_results_nii, atlas_nii
   writeNifti(results_nii, filename_results_nii)
 }
 
-write_results_to_nii(results_to_map, filename_results_nii, atlas_nii)
+
+# Write the results nii.gz in the rsa_results dir
+write_results_to_nii(
+  results_to_map, 
+  paste0(results_path, "/", results_filename), 
+  atlas_nii
+)
 
 ```
 
@@ -356,7 +381,6 @@ image(Dproxy %>% as.matrix()); title("topolino")
 
 
 ```
-
 
 
 
