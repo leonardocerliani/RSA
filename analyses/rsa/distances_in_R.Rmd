@@ -35,7 +35,13 @@ summary(pr_DB)
 # pr_DB$get_entries()
 ```
 
-
+# Aux functions
+```{r}
+# plot_heatmap(D %>% as.matrix)
+plot_heatmap <- function(M) {
+  heatmap(M, Rowv = NA, Colv = NA, symm=T, revC = T)
+}
+```
 
 # Distance / similarity between single vectors
 
@@ -284,5 +290,42 @@ cor(t(Y)) %>% dim
 
 ```
 
+# Implementation of Mahalanobis distance
+
+$$d(x, y) = \sqrt{(x - y)^T S^{-1} (x - y)}$$
+NB: for scalars, the cov is replaced by the var, which should not be 0.
+The inv cov is simply the reciprocal of var (1/var)
+
+```{r}
+
+library(proxy)
+
+X = matrix(c(5,6,5,3,9,7,8,6,2,11), ncol = 2)
+
+cov_mat <- cov(X)
+inv_cov <- solve(cov_mat)
+
+# # usual case where the M distance is calculated from the center of the 
+# # multivariate distribution
+# m <- apply(X,2,mean)
+
+# For vectors (i.e. dim > 1)
+manual_mahalanobis <- function(X, inv_cov) {
+  dists <- matrix(NA, nrow(X), nrow(X))
+  for (i in 1:nrow(X)) {
+    for (j in 1:nrow(X)) {
+      diff <- X[i,] - X[j,]
+      dists[i,j] <- sqrt(t(diff) %*% inv_cov %*% diff)
+    }
+  }
+  return(dists)
+}
+
+manual_mahalanobis(X, inv_cov)
+
+dist(X, method="mahalanobis") %>% as.matrix
+
+
+```
 
 

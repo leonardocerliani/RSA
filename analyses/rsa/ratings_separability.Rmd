@@ -276,3 +276,39 @@ ggbetweenstats(
 ```
 
 
+
+# Relation between arousal and valence ratings
+```{r, message=FALSE}
+
+ratings_type <- "arousal"
+bd_ratings = paste0(bd,"/RATINGS")
+ratings_path <- paste0(bd_ratings,"/",ratings_type,"_ratings.csv")
+rats_arousal <- read_csv(ratings_path)
+
+
+ratings_type <- "valence"
+bd_ratings = paste0(bd,"/RATINGS")
+ratings_path <- paste0(bd_ratings,"/",ratings_type,"_ratings.csv")
+rats_valence <- read_csv(ratings_path)
+
+
+rats_AV <- tibble(
+  sub = rats_arousal$sub, 
+  r_arousal = rats_arousal$r_arousal, 
+  r_valence = rats_valence$r_valence
+)
+
+
+rats_AV %>% 
+  group_by(sub) %>% 
+  mutate(cor_AV = cor(r_arousal,r_valence, method = "spearman")) %>% 
+  select(sub,cor_AV) %>% 
+  unique %>%
+  ungroup() %>% 
+  reframe(
+    mean_cor = mean(cor_AV),
+    sd_cor = sd(cor_AV)
+  )
+
+```
+

@@ -1,0 +1,399 @@
+---
+title: "RDM MDS Explorer"
+author: "LC"
+date: "2024-03-16"
+output: html_document
+---
+
+```{r load_libraries, message=F}
+library(tidyverse)
+library(future)
+library(furrr)
+library(tictoc)
+library(RNifti)
+library(proxy) # distances
+library(profvis)
+library(DT)
+library(formattable)
+
+source("funs_V8.R")
+
+bd="/data00/leonardo/RSA/analyses"
+
+# load ratings
+rats <- read_csv("/data00/leonardo/RSA/analyses/RATINGS/emotion_ratings.csv")
+
+# the following is our contrast of interest and it's always the same
+copes_type <- "one_ev_per_movie"
+
+# Vector of zeropadded sub_ids
+subs_file <- "/data00/leonardo/RSA/sub_list.txt"
+subs <- sprintf("%02d",readLines(subs_file) %>% as.numeric)
+
+# ---------- ONLY TOP RATERS BELOW ------------
+subs <- c("02","03","12","11","22","09","29","28","26","32","23","15","20","19")
+
+```
+
+
+# Use the rats to get - from one sub only - the label for emotion and high/low code
+```{r}
+labels <- rats %>% 
+  filter(sub == "02") %>% 
+  select(movie_cope_number,emotion, high_low_code) %>%
+  mutate(high_low_code = str_extract(high_low_code,"high|low"))
+
+labels
+  
+```
+
+
+# Read atlas and create a vector of atlas labels
+```{r}
+
+atlas_filename <- "insula_HO_RH_LH.nii.gz"
+
+bd_atlases = "/data00/leonardo/RSA/analyses/rsa/atlases"
+
+atlas_path <- paste0(bd_atlases,"/",atlas_filename)
+
+atlas_nii <- readNifti(paste0(bd_atlases,"/",atlas_filename))
+region_labels <- atlas_nii[atlas_nii > 0] %>% unique %>% sort
+
+```
+
+
+# Get the path_copes
+```{r}
+
+df_path_copes <- import_df_path_copes(bd, copes_type)
+copes_numba <- df_path_copes$cope %>% unique
+
+```
+
+
+Calculate fmri RDMs for a given atlas across all subs
+```{r}
+
+dist_method_fmri = "pearson"
+RDM_type = "tril"  # svd or tril. Must be the same for both rating and fmri
+
+
+plan(multisession, workers = 5)
+
+tic()
+RDMs_fmri <- subs %>% future_map_dfr(~{
+  
+  paste0("Calculating RDMs for sub ",.x,"\n") %>% cat
+  
+  df_copes <- load_sub_copes(.x, copes_numba, df_path_copes)
+  
+  one_RDM_fmri <- calculate_fmri_RDMs(
+    df_copes, 
+    atlas_nii, 
+    dist_method_fmri, 
+    RDM_type = RDM_type
+  )
+  
+  one_RDM_fmri %>% mutate(sub = .x) %>% relocate(sub)
+  
+})
+toc()
+
+plan(sequential)
+
+```
+
+
+Calculate avg RDM for each region in the atlas across subs
+```{r}
+
+# subs_subset <- "02"
+subs_subset <- subs
+
+avg_RDMs_fmri <- RDMs_fmri %>% 
+  
+  # Choose a specific (list of) subs
+  filter(sub %in% subs_subset) %>% 
+  
+  # Convert specific columns to long format, specifying which start with "RDM_region"
+  pivot_longer(
+    cols = starts_with("RDM_region"), names_to = "RDM_region_N", values_to = "value"
+  ) %>% 
+  
+  # Group the data by 'sub' and the newly created 'RDM_region_N'
+  group_by(sub, RDM_region_N) %>% 
+  
+  # Create a nested data frame for the 'value' column
+  reframe(nested_data = list(value)) %>% 
+  
+  # Convert back to wide format with each 'RDM_region_N' as separate columns
+  pivot_wider(names_from = RDM_region_N, values_from = nested_data) %>% 
+  ungroup %>% 
+  
+  # Calculate the mean for each 'RDM_region' column across all 'sub' groups
+  reframe(across(starts_with("RDM_region"), ~ {
+    mean = list(pmap(RDM_region_1, ~ sum(...) / n()))
+  }, .names = "mean_{.col}"))
+
+avg_RDMs_fmri
+
+```
+
+# Select one region and recreate the original distance matrix
+```{r}
+insula_RH <- avg_RDMs_fmri$mean_RDM_region_1 %>% unlist
+insula_LH <- avg_RDMs_fmri$mean_RDM_region_2 %>% unlist
+
+region <- insula_RH
+
+D_size <- labels$movie_cope_number %>% length()
+
+D <- matrix(0, nrow = D_size, ncol = D_size)
+
+D[lower.tri(D, diag = F)] = region
+
+D = D + t(D)
+diag(D) <- NA
+
+
+# get the reordered labels
+emo_labels <- labels$emotion
+idx_reorded <- order(emo_labels)
+emo_labels_reord <- emo_labels[idx_reorded]
+
+
+
+plot_heatmap <- function(D_reord, emo_labels_reord) {
+  # Define a blue to red color palette for the heatmap
+  blue_to_red <- colorRampPalette(c("blue", "white", "red"))(n = 100)
+  
+  # Define the palette for emotions
+  paletta_emotions <- c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3", "#FF7F00", "#FFFF33", "#A65628")
+  unique_labels <- unique(emo_labels_reord)
+  
+  # Map each unique emotion to a color
+  label_colors <- setNames(paletta_emotions, unique_labels)
+  
+  # Create vectors of colors for row and column side colors based on emo_labels_reord
+  row_side_colors <- label_colors[emo_labels_reord]
+  col_side_colors <- row_side_colors
+  
+  # Apply the row and column names
+  rownames(D_reord) <- colnames(D_reord) <- emo_labels_reord
+  
+  # Use the defined color palette in the heatmap with RowSideColors and ColSideColors
+  heatmap(D_reord, Rowv = NA, Colv = NA, symm = T, revC = T, col = blue_to_red, 
+          RowSideColors = row_side_colors, ColSideColors = col_side_colors)
+}
+
+
+# Reorder cols and rows to group movies/copes with the same emotion
+D_reord <- D[idx_reorded, idx_reorded]
+rownames(D_reord) <- colnames(D_reord) <- emo_labels_reord
+
+plot_heatmap(D_reord, emo_labels_reord)
+
+```
+
+## For arousal
+```{r}
+# get the reordered labels
+arousal_labels <- labels$high_low_code
+idx_arousal_reorded <- order(arousal_labels)
+arousal_labels_reord <- arousal_labels[idx_arousal_reorded]
+
+plot_heatmap_arousal <- function(D_reord, arousal_labels_reord) {
+  # Define a blue to red color palette for the heatmap
+  blue_to_red <- colorRampPalette(c("blue", "white", "red"))(n = 100)
+  
+  # Define the palette for emotions
+  paletta_arousal <- c("#E41A1C", "#377EB8")
+  unique_labels <- unique(arousal_labels_reord)
+  
+  # Map each unique emotion to a color
+  label_colors <- setNames(paletta_arousal, unique_labels)
+  
+  # Create vectors of colors for row and column side colors based on emo_labels_reord
+  row_side_colors <- label_colors[arousal_labels_reord]
+  col_side_colors <- row_side_colors
+  
+  # Apply the row and column names
+  rownames(D_reord) <- colnames(D_reord) <- arousal_labels_reord
+  
+  # Use the defined color palette in the heatmap with RowSideColors and ColSideColors
+  heatmap(D_reord, Rowv = NA, Colv = NA, symm = T, revC = T, col = blue_to_red, 
+          RowSideColors = row_side_colors, ColSideColors = col_side_colors)
+}
+
+
+# Reorder cols and rows to group movies/copes with the same emotion
+D_reord <- D[idx_arousal_reorded, idx_arousal_reorded]
+rownames(D_reord) <- colnames(D_reord) <- arousal_labels_reord
+
+plot_heatmap(D_reord, arousal_labels_reord)
+
+
+M <- 1 - D_reord
+diag(M) = 0
+
+mds_result <- data.frame(cmdscale(M, k = 3)) # k=2 for 2-dimensional MDS
+
+mds_result$label <- arousal_labels_reord  
+
+mds_result %>% 
+  ggplot(aes(x = X1, y = X2, color = label)) +
+  geom_point(size = 4) +
+  theme_minimal() +
+  labs(title = "MDS")
+
+```
+
+
+
+
+# MDS
+```{r}
+# Prepare the M matrix for MDS:
+# take 1 - D_reord
+# put 0 on the diag
+M <- 1 - D_reord
+diag(M) = 0
+
+mds_result <- data.frame(cmdscale(M, k = 3)) # k=2 for 2-dimensional MDS
+
+mds_result$label <- emo_labels_reord  
+
+mds_result %>% 
+  ggplot(aes(x = X1, y = X2, color = label)) +
+  geom_point(size = 4) +
+  theme_minimal() +
+  labs(title = "MDS")
+
+```
+
+
+# UMAP
+```{r}
+
+library(umap)
+
+umap_result <- umap::umap(M, input="dist", n_components=2)
+
+lowdim_x = 1
+lowdim_y = 2
+
+umap_lowdim <- data.frame(
+  X1 = umap_result$layout[,lowdim_x], 
+  X2 = umap_result$layout[,lowdim_y], 
+  label = emo_labels_reord
+)
+
+
+umap_lowdim %>% 
+  ggplot(aes(x = X1, y = X2, color = label)) +
+  geom_point(size = 4) +
+  theme_minimal() +
+  labs(title = "UMAP")
+
+```
+
+
+
+
+
+```{r, eval=F, include=F}
+# alternative heatmap
+
+# library(fields)
+# library(viridis)
+# 
+# plot_heatmap <- function(M) {
+#   # Assuming M is your matrix with NA on the diagonal
+#   # Choose a colormap, for example, using the 'viridis' colormap from RColorBrewer
+#   # If you want to use other colormaps, you can specify them here. RColorBrewer and viridisLite are good sources.
+#   colormap <- viridis::viridis(100) # You can replace 'viridis' with any other desired colormap
+#   
+#   # Use image.plot from the fields package for plotting, with the specified colormap
+#   fields::image.plot(M, col = colormap, asp=1, main = "Heatmap with Custom Colormap")
+# }
+# 
+# plot_heatmap(D)
+
+```
+
+
+
+
+
+
+# let's redo it for one sub manually
+```{r}
+sub_id="02"
+df_copes <- load_sub_copes(sub_id, copes_numba, df_path_copes) %>% as.matrix
+
+atlas_nii <- readNifti(paste0(bd_atlases,"/",atlas_filename))
+region_labels <- atlas_nii[atlas_nii > 0] %>% unique %>% sort
+
+idx <- which(atlas_nii == 1)
+
+df_copes <- df_copes[idx,]
+
+library(proxy)
+D <- cor(df_copes, method = "pearson")
+
+dim(D)
+
+
+# get the reordered labels
+emo_labels <- labels$emotion
+idx_reorded <- order(emo_labels)
+emo_labels_reord <- emo_labels[idx_reorded]
+rownames(D_reord) <- colnames(D_reord) <- emo_labels_reord
+
+D_reord <- D[idx_reorded, idx_reorded]
+
+plot_heatmap(D_reord)
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r, eval=FALSE, include=FALSE}
+# https://stackoverflow.com/questions/54607053/dplyr-element-wise-summarise-in-nested-lists
+df <- data.frame(X1 = c(1,2,2))
+df$X2 <- list(list(1, 2), list(0, 1), list(1,0))
+```
+
+
+
