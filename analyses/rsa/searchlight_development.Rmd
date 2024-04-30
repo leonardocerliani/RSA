@@ -1,0 +1,133 @@
+---
+title: "Create regions for searchlight"
+author: "LC"
+date: "2024-04-30"
+output: html_document
+---
+
+Notes on searchlight RSA in R [here](https://jacbel.github.io/virtem_code/run-rsa-searchlight.html)
+
+Searchlight is also in [Brainiak](https://brainiak.org/)
+
+
+```{r, message=FALSE}
+library(tidyverse)
+library(RNifti)
+library(proxy)
+library(future)
+library(furrr)
+library(tictoc)
+
+# Define searchlight radius in mm
+r_mm <- 6
+
+# read mask
+gm <- readNifti("masks/GM_clean.nii.gz")
+
+# voxel size of gm
+voxel_size <- pixdim(gm) %>% mean
+
+# index of nonzero voxels
+idx <- which(gm != 0)
+
+# get coordinates
+coords <- which(gm != 0, arr.ind = TRUE)
+
+```
+
+
+
+# Define a searchlight function
+
+
+## DEV version
+NB: the one below is for development: three outputs are returned (distances, coordinates and indices) to carry out the checks needed to know that the function works correctly. 
+
+The function used in production will be much simpler and just return the indices 
+
+```{r}
+
+searchlight_DEV <- function(center_coord, r_mm, coords, idx, voxel_size) {
+  
+  cat(paste0("Search radius in mm : ", r_mm))
+  
+  # Calculate distance of the given voxel from every other voxel, considering voxel size
+  # Voxel dimensions are applied to account for the real distances in mm
+  distances <- sqrt(rowSums((t(t(coords) - center_coord) * voxel_size)^2))
+  
+  # return the coords of the voxels in the searchlight
+  sl_coords <- coords[distances <= r_mm, , drop = FALSE]
+
+  # return only the distances <- r_mm (for test/check)
+  sl_distances <- distances[distances <= r_mm]
+  
+  # return the idx of the voxels in the searchlight
+  sl_idx <- idx[distances <= r_mm]
+  
+  return(list(
+    sl_coords = sl_coords, 
+    sl_distances = sl_distances, 
+    sl_idx = sl_idx
+  ))
+}
+
+
+# Testing the searchlight fn with one coordinate
+mycoord <- coords[1,]
+out <- searchlight_DEV(mycoord, r_mm=4, coords, idx, voxel_size)
+
+# Test the max distance
+out$sl_distances %>% hist
+
+# Test the correspondence of the coordinates
+cbind(
+  out$sl_coords,
+  coords[match(out$sl_idx, idx), , drop = FALSE]
+)
+
+```
+
+
+
+## PROD version
+```{r}
+searchlight <- function(center_coord, r_mm, coords, idx, voxel_size) {
+
+  # Calculate distance of the given voxel from every other voxel, considering voxel size
+  distances <- sqrt(rowSums((t(t(coords) - center_coord) * voxel_size)^2))
+  
+  # # TEST ONLY: return the coords of the voxels in the searchlight
+  # return(coords[distances <= r_mm, , drop = FALSE])
+
+  # return the idx of the voxels in the searchlight
+  return(idx[distances <= r_mm])
+}
+```
+
+
+
+
+
+
+## Test parallelization
+Fastest with 10-20 workers 
+```{r}
+
+plan(multisession, workers = 15)
+
+tic()
+searchlight_voxels <- 1:length(idx) %>% future_map(
+  ~ searchlight(coords[.x,], r_mm, coords, idx, voxel_size)
+)
+toc()
+
+plan(sequential)
+
+searchlight_voxels %>% map_dbl(length) %>% hist
+
+```
+
+
+
+
+
