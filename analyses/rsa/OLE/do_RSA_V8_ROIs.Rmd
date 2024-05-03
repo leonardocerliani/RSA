@@ -24,7 +24,7 @@ library(profvis)
 library(DT)
 library(formattable)
 
-source("funs_V8.R")
+source("funs_V8_ROIs.R")
 
 bd="/data00/leonardo/RSA/analyses"
 
@@ -42,8 +42,9 @@ copes_type <- "one_ev_per_movie"
 # Schaefer100_2mm.nii.gz
 # Schaefer200_2mm.nii.gz
 # Schaefer400_2mm.nii.gz
+# Schaefer_1000_7Networks.nii.gz
 # insula_HO_clusters_[N].nii.gz
-atlas_filename <- "insula_HO_clusters_600.nii.gz"
+atlas_filename <- "Schaefer_1000_7Networks.nii.gz"
 
 
 # Choose the distance metric to use for fmri RDM

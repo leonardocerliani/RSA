@@ -26,7 +26,7 @@ library(profvis)
 library(DT)
 library(formattable)
 
-source("funs_V8.R")
+source("funs_V8_Searchlight.R")
 
 bd="/data00/leonardo/RSA/analyses"
 

@@ -1,0 +1,176 @@
+---
+title: "do randomise emotion vs arousal"
+author: "LC"
+date: "2024-05-02"
+output: html_document
+---
+
+
+```{r, message=FALSE}
+library(tidyverse)
+library(glue)
+
+rsa_flavour <- "insula_HO_GM_EER"
+mask_name <- "insula_HO_GM"
+
+mask_file <- dir("/data00/leonardo/RSA/analyses/rsa/masks/", pattern = mask_name, full.names = T)
+
+bd <- "/data00/leonardo/RSA/analyses/rsa/rsa_results"
+
+# rd = results_dir
+rd <- paste0(bd,"/",rsa_flavour)
+```
+
+
+# Create the model for a two-samples paired t-test
+```{r}
+df <- tibble(path = dir(rd, pattern = "sub"))
+
+df <- df %>% 
+  separate_wider_delim(path, "_", names = c("prefix","sub","rsa","model")) %>% 
+  select(sub,model) %>% 
+  mutate(sub = factor(sub)) %>% 
+  mutate(emotion = ifelse(str_detect(model,"emotion"),1,0 )) %>% 
+  mutate(arousal = ifelse(str_detect(model,"arousal"),1,0 )) %>% 
+  arrange(desc(model))
+
+df <- df %>% 
+  mutate(emo_minus_arousal = emotion - arousal) %>% 
+  select(sub, model, emo_minus_arousal)
+
+# Create dummy variables using model.matrix
+dummy_vars <- model.matrix(~ sub - 1, data = df)  # The '-1' removes the intercept
+
+# Convert to a tibble and bind back to the original data
+df_dummies <- as_tibble(dummy_vars)
+df_with_dummies <- bind_cols(df, df_dummies)
+
+df_with_dummies
+```
+
+
+
+# Extract only the design.txt and write it to disk
+```{r}
+
+df_with_dummies %>%
+  select(-sub, -model) %>%
+  write_delim(
+    paste0(rd,"/design.txt"),
+    delim = " ",
+    col_names = FALSE
+  )
+
+```
+
+
+# Create the contrast contrasts.txt
+```{r}
+
+df_contrast <- tribble(
+  ~contrast_name,  ~x, 
+  "emotion_bigger_than_arousal", 1,
+  "arousal_bigger_than_emotion", -1,
+)
+
+
+N_sub <- df$sub %>% unique %>% length
+
+dummy_contrasts <- matrix(0, nrow(df_contrast), ncol = N_sub ) %>% as_tibble()
+
+df_contrast_with_dummies <- cbind(df_contrast, dummy_contrasts)
+df_contrast_with_dummies
+
+
+# Write the matrix to a file
+df_contrast_with_dummies %>% 
+  select(!c("contrast_name")) %>% 
+  write_delim(
+    paste0(rd,"/contrasts.txt"),
+    delim = " ",
+    col_names = FALSE
+  )
+
+```
+
+
+# Prepare the list of niis to be put in the 4D
+
+**BE VERY CAREFUL!** The order should match that in the
+`design.mat` and `design.con`. 
+
+That's why we use the order in the `df_with_dummies`, which was
+used to create `design.mat`
+
+Also, we create sysenv vars so that we can use them in the subsequent bash
+cell to run randomise
+```{r}
+
+nii_list <- df_with_dummies %>% 
+  select(sub,model) %>% 
+  mutate(filename = glue('sub_{sub}_RSA_{model}')) %>% 
+  select(filename) %>% pull %>% paste(collapse = " ")
+
+Sys.setenv(NII_LIST = nii_list)
+Sys.setenv(RESULTS_DIR=rd)
+Sys.setenv(MASK_FILE=mask_file)
+```
+
+
+
+
+```{bash}
+FSLDIR=/data00/leonardo/warez/fsl
+
+PATH=${FSLDIR}/share/fsl/bin:${PATH}
+export FSLDIR PATH
+. ${FSLDIR}/etc/fslconf/fsl.sh
+
+echo cd to ${RESULTS_DIR} 
+cd ${RESULTS_DIR}
+
+echo creating the 4D file for randomise
+fslmerge -t emotion_arousal_4D ${NII_LIST}
+
+Text2Vest design.txt design.mat
+Text2Vest contrasts.txt contrasts.con
+
+time randomise \
+  -i emotion_arousal_4D.nii.gz \
+  -o stats \
+  -d design.mat \
+  -t contrasts.con \
+  -m ${MASK_FILE} \
+  -T -n 5000 \
+  --quiet
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
