@@ -1,0 +1,11 @@
+
+Using arousal rating
+
+Calculating RSA for every voxel in the HO_subcortical mask
+using a searchlight of 4 mm
+
+Ratings RDM to be calculated with : euclidean
+fMRI RDM to be calculated with : euclidean
+
+Only the 14 top raters
+

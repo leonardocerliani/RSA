@@ -1,12 +1,25 @@
----
-title: "do_RSA_v10_Searchlight"
-author: "LC"
-date: "2024-05-03"
-output: html_document
----
+#' ---
+#' title: "do_RSA_v10_Searchlight"
+#' author: "LC"
+#' date: "2024-05-03"
+#' output: html_document
+#' ---
 
-# Load libraries
-```{r load_libraries, message=F}
+# Get command line arguments
+args <- commandArgs(trailingOnly = TRUE)
+
+# Check if the number of arguments is not exactly three
+if (length(args) != 3) {
+  cat("\n")
+  cat("Usage: Rscript do_RSA.R [ratings_type] [gm_mask] [TOP_RATERS/ALLSUBS]\n\n")
+  cat("e.g.: Rscript do_RSA.R emotion test_mask TOP_RATERS\n")
+  cat("\n")
+  quit(status = 1)
+}
+
+
+#' # Load libraries
+## ----load_libraries, message=F----------------------------------------------------------------
 library(tidyverse)
 library(future)
 library(furrr)
@@ -18,32 +31,33 @@ library(DT)
 library(formattable)
 
 source("funs_V10_Searchlight.R")
-```
 
 
+#' # Set the following paramters manually
+## ---------------------------------------------------------------------------------------------
 
-# Set the following paramters manually
-```{r}
+# # ratings_type can be emotion, arousal, valence
+# ratings_type <- "emotion"
+ratings_type <- args[1]
 
-# ratings_type can be emotion, arousal, valence
-ratings_type <- "emotion"
-
-# must be one of the masks in rsa/masks
-gm_file <- "test_mask"
+# # must be one of the masks in rsa/masks
+# gm_file <- "test_mask"
+gm_file <- args[2]
 
 # Define searchlight radius in mm
 r_mm <- 4
 
-# if set to TOP_RATERS, it will use only the subs below
-subs_selection = "TOP_RATERS"
+# # if set to TOP_RATERS, it will use only the subs below
+# subs_selection = "TOP_RATERS"
+subs_selection <- args[3]
 top_raters_subs <- c("02","03","12","11","22","09","29","28","26","32","23","15","20","19")
 
-```
 
-
-# Other parameters
-Do not touch unless you know what you are doing
-```{r}
+#' 
+#' 
+#' # Other parameters
+#' Do not touch unless you know what you are doing
+## ---------------------------------------------------------------------------------------------
 bd="/data00/leonardo/RSA/analyses"
 
 # the following is our contrast of interest and it's always the same
@@ -74,13 +88,19 @@ ncomp_svd = 3
 subs_file <- "/data00/leonardo/RSA/sub_list.txt"
 subs <- sprintf("%02d",readLines(subs_file) %>% as.numeric)
 
-```
+# Subset if TOP_RATERS since we need the length(sub) for the
+# pathname of results_dir
+if (subs_selection == "TOP_RATERS") {
+  subs <- top_raters_subs
+}
 
 
-# Create the directory where the results will be stored
-This will allow us also to store a text file with all the info about the analysis
-
-```{r}
+#' 
+#' 
+#' # Create the directory where the results will be stored
+#' This will allow us also to store a text file with all the info about the analysis
+#' 
+## ---------------------------------------------------------------------------------------------
 results_flavour <- generate_results_flavour(
   gm_file, dist_method_rating, dist_method_fmri, dist_method_rsa, subs
 )
@@ -96,16 +116,16 @@ if (!dir.exists(results_dir)) {
 } else {
   print(paste0(results_dir, " already exists"))
 }
-```
 
-
-Store important information about the parameters for the analysis in a text file
-
-```{r}
+#' 
+#' 
+#' Store important information about the parameters for the analysis in a text file
+#' 
+## ---------------------------------------------------------------------------------------------
 
 # redirect the cat msgs to the logfile
 logfile <- paste0(results_dir, "/", ratings_type, "_log.txt")
-sink(logfile, split = TRUE)
+sink(logfile)
 
 
 cat("\n")
@@ -118,7 +138,7 @@ cat(paste0("fMRI RDM to be calculated with : ", dist_method_fmri, "\n\n"))
 # If subs_selection is TOP_RATERS only the subs with highest movie/emotion
 # congruency - defined above - will be included
 if (subs_selection == "TOP_RATERS") {
-  subs <- top_raters_subs
+  # subsetting subs <- top_raters_subs already done above
   cat("Only the", length(subs), "top raters")
 } else {
   cat("All", length(subs), "subs")
@@ -129,28 +149,28 @@ cat("\n\n")
 # stop sinking the cat msgs into the logfile
 sink()
 
-```
 
-
-
-
-
-
-# Aux functions
-```{r}
+#' 
+#' 
+#' 
+#' 
+#' 
+#' 
+#' # Aux functions
+## ---------------------------------------------------------------------------------------------
 # plot_heatmap(D %>% as.matrix)
 plot_heatmap <- function(M) {
   heatmap(M, Rowv = NA, Colv = NA, symm=T, revC = T)
 }
-```
 
-
-# Create a df_path_copes with the location of the 56 cope niis from the one_movie_per_ev model
-Extract the pathname of all copes using the `list.files()` function.
-Also define a copes_numba vector with all the copes numbers.
-
-NB: The cope numbers in the `cope` column are NOT zeropadded since this is how they come out from FSL Feat
-```{r, message=FALSE}
+#' 
+#' 
+#' # Create a df_path_copes with the location of the 56 cope niis from the one_movie_per_ev model
+#' Extract the pathname of all copes using the `list.files()` function.
+#' Also define a copes_numba vector with all the copes numbers.
+#' 
+#' NB: The cope numbers in the `cope` column are NOT zeropadded since this is how they come out from FSL Feat
+## ----message=FALSE----------------------------------------------------------------------------
 
 copes_location_csv <- paste0(bd,"/rsa/copes_location.csv")
 
@@ -164,23 +184,23 @@ copes_numba <- df_path_copes$cope %>% unique
 
 # df_path_copes
 
-```
 
-
-
-
-
-# Calculate RATINGS RDMs
-We do this first since the RDM for the ratings will be the same for whatever
-atlas will be used. Also, it's much faster than the RDM_fmri and can be done
-for all the sub_ids at once.
-
-
-- **tril** : The final RDMs_rats has 40040 nrows : 26 sub_ids * 1540, where the latter
-derives from ((56^2)-56)/2 = 1540, i.e. tril from the D matrix of 56 movies
-- **svd** : The final RDMs_rats has 4368 nrows : 26 sub_ids * 168, where the latter
-derives from 56*3, i.e. the first three components from svd of the D matrix
-```{r, message=FALSE}
+#' 
+#' 
+#' 
+#' 
+#' 
+#' # Calculate RATINGS RDMs
+#' We do this first since the RDM for the ratings will be the same for whatever
+#' atlas will be used. Also, it's much faster than the RDM_fmri and can be done
+#' for all the sub_ids at once.
+#' 
+#' 
+#' - **tril** : The final RDMs_rats has 40040 nrows : 26 sub_ids * 1540, where the latter
+#' derives from ((56^2)-56)/2 = 1540, i.e. tril from the D matrix of 56 movies
+#' - **svd** : The final RDMs_rats has 4368 nrows : 26 sub_ids * 168, where the latter
+#' derives from 56*3, i.e. the first three components from svd of the D matrix
+## ----message=FALSE----------------------------------------------------------------------------
 
 bd_ratings = paste0(bd,"/RATINGS")
 ratings_path <- paste0(bd_ratings,"/",ratings_type,"_ratings.csv")
@@ -199,27 +219,27 @@ RDMs_rats <- RDMs_rats_wider %>%
   arrange(sub)
 
 RDMs_rats
-```
 
-
-# Calculate fMRI RDMs
-
-## Create SEARCHLIGHT regions
-
-This code cell yields two outputs:
-
-- `idx` : the index of each voxel in the mask, i.e. an integer from 1 to 91x109x91
-
-- `idx_within_radius` : a list of list: each inner list contains the index of the
-voxels which are within the defined radius, i.e. within the searchlight having that
-voxel as a 'center'. 
-
-Note that not all voxels have the same numba of other voxels
-within their searchlight. The histogram below shows the distribution
-of numba of voxels in the searchlight for each voxel in the mask.
-
-
-```{r}
+#' 
+#' 
+#' # Calculate fMRI RDMs
+#' 
+#' ## Create SEARCHLIGHT regions
+#' 
+#' This code cell yields two outputs:
+#' 
+#' - `idx` : the index of each voxel in the mask, i.e. an integer from 1 to 91x109x91
+#' 
+#' - `idx_within_radius` : a list of list: each inner list contains the index of the
+#' voxels which are within the defined radius, i.e. within the searchlight having that
+#' voxel as a 'center'. 
+#' 
+#' Note that not all voxels have the same numba of other voxels
+#' within their searchlight. The histogram below shows the distribution
+#' of numba of voxels in the searchlight for each voxel in the mask.
+#' 
+#' 
+## ---------------------------------------------------------------------------------------------
 
 # 1. Read the gm mask and get voxel size, get idx of voxels in gm and their
 #    xyz coordinates
@@ -272,13 +292,13 @@ plan(sequential)
 idx_within_radius %>% map_dbl(length) %>% hist
 
 
-```
 
-
-
-## Fn to carry out the RMDs Searchlight calculation for one sub
-
-```{r, message=FALSE}
+#' 
+#' 
+#' 
+#' ## Fn to carry out the RMDs Searchlight calculation for one sub
+#' 
+## ----message=FALSE----------------------------------------------------------------------------
 
 # In order to test for one sub, I need to load the corresponding df_copes.
 # In the next cells the df_copes of each sub are dynamically loaded
@@ -322,12 +342,12 @@ one_RDM_fmri <- calculate_fmri_RDMs_Searchlight(df_copes, idx[1:N], idx_within_r
 
 one_RDM_fmri
 
-```
 
-
-
-## Furrr the RDMs Searchlight calculation across subs
-```{r, message=FALSE}
+#' 
+#' 
+#' 
+#' ## Furrr the RDMs Searchlight calculation across subs
+## ----message=FALSE----------------------------------------------------------------------------
 
 # for testing on a subset of idx
 N = length(idx)
@@ -354,14 +374,14 @@ RDMs_fmri <- subs %>% future_map_dfr(~{
 toc()
 
 plan(sequential)
-```
 
-
-
-# RSA Searchlight
-
-## Calculate RSA and mean RSA across subs inside a tibble
-```{r}
+#' 
+#' 
+#' 
+#' # RSA Searchlight
+#' 
+#' ## Calculate RSA and mean RSA across subs inside a tibble
+## ---------------------------------------------------------------------------------------------
 
 rdms_fmri_nested <- RDMs_fmri %>% 
   pivot_longer(cols = !starts_with("sub"), names_to = "region") %>% 
@@ -406,25 +426,25 @@ avg_RSA <- RSA %>%
   arrange(desc(mean_similarity))
 
 avg_RSA %>% datatable()
-```
 
-
-## Write the RSA results to niis
-
-Two types of results are written in nii images, for each voxel in the mask:
-- the RSA for each sub
-- the average RSA across subs
-
-### Define `results_flavor` and create `results_dir` 
-
-The following chunk is all to create an informative name for the results dir for this 
-particular mask, rating type and distance methods, as well as to create the 
-directory if it does not exist yet
-
-**NB: The following section was moved to the very top in order to be able to** 
-**write a text file with the parameters of the analysis**
-
-```{r}
+#' 
+#' 
+#' ## Write the RSA results to niis
+#' 
+#' Two types of results are written in nii images, for each voxel in the mask:
+#' - the RSA for each sub
+#' - the average RSA across subs
+#' 
+#' ### Define `results_flavor` and create `results_dir` 
+#' 
+#' The following chunk is all to create an informative name for the results dir for this 
+#' particular mask, rating type and distance methods, as well as to create the 
+#' directory if it does not exist yet
+#' 
+#' **NB: The following section was moved to the very top in order to be able to** 
+#' **write a text file with the parameters of the analysis**
+#' 
+## ---------------------------------------------------------------------------------------------
 
 # # NB: [results_flavour].nii.gz will also be the name of the avg RSA across subs
 # results_flavour <- generate_results_flavour(
@@ -443,12 +463,12 @@ directory if it does not exist yet
 #   print(paste0(results_dir, " already exists"))
 # }
 
-```
 
-
-### Write the RSA nii for each sub - these will be used by `randomise`
-
-```{r}
+#' 
+#' 
+#' ### Write the RSA nii for each sub - these will be used by `randomise`
+#' 
+## ---------------------------------------------------------------------------------------------
 
 # Using the function write_RSA_results_to_nii. Documentation in the funs_[Vx]_Searchlight.R
 
@@ -457,14 +477,14 @@ RSA %>%
   group_split(sub) %>% 
   walk(~ write_RSA_results_to_nii(.x, ratings_type, results_dir, gm))
 
-```
 
-
-
-
-### Write the avg_RSA nii - for viz
-
-```{r}
+#' 
+#' 
+#' 
+#' 
+#' ### Write the avg_RSA nii - for viz
+#' 
+## ---------------------------------------------------------------------------------------------
 
 write_avg_RSA_to_nii <- function(avg_RSA, results_flavour, 
                                  ratings_type, rsa_results_path, gm) {
@@ -483,13 +503,13 @@ write_avg_RSA_to_nii <- function(avg_RSA, results_flavour,
 
 write_avg_RSA_to_nii(avg_RSA, results_flavour, ratings_type, rsa_results_path, gm)
 
-```
 
-
-
-
-
-
-
-
-
+#' 
+#' 
+#' 
+#' 
+#' 
+#' 
+#' 
+#' 
+#' 

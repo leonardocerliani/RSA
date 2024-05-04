@@ -8,6 +8,8 @@ usage() {
     echo "  mask_name   : any of the files inside /data00/leonardo/RSA/analyses/rsa/masks without the .nii.gz extension"
     echo "  nperms      : a number, typically between 1000-5000"
     echo
+    echo "Example: ./do_randomise_simple.sh N14_test_mask_EER test_mask 1000"
+    echo
     exit 1
 }
 
