@@ -1,0 +1,283 @@
+---
+title: "Emotion Ratings Analysis"
+author: "LC"
+date: "2024-05-13"
+output: html_document
+---
+
+```{r, message=FALSE}
+library(tidyverse)
+
+bd <- "/data00/leonardo/RSA/analyses/RATINGS"
+
+subs_file <- "/data00/leonardo/RSA/sub_list.txt"
+subs <- sprintf("%02d",readLines(subs_file) %>% as.numeric)
+
+# Load the preprocessed emotion ratings file
+# which was prepared with the 02_prepare_ratings_EMOTION.Rmd
+# located in /data00/leonardo/RSA/prep_scripts/05_prepare_ratings
+df <- read_csv(paste0(bd,"/","emotion_ratings.csv"))
+
+```
+
+# Examine movie/rating congruence
+Each movie displays a specific emotion, however the participant is requested to rate each movie for all the 6 emotions, using a scale from 1 to 10.
+
+Congruence is defined in a very simple way: 
+
+- the subject's rating is congruent if - in each trial - the highest score is given to the emotion which is actually displayed in the movie.
+
+- congruence is therefore here defined as a binary variable. 
+
+
+```{r, message=FALSE, warning=FALSE}
+
+calculate_congruence <- function(df, highlow_flag = "ALL") {
+  
+  cat("highlow_flag = ", highlow_flag, "\n")
+
+  if (highlow_flag %in% c("high","low")) {
+    df <- df %>% filter(str_detect(high_low_code, highlow_flag))
+  }
+      
+  df_congruence <- df %>%
+    select(sub,original_code, emotion, starts_with("r_")) %>%
+    pivot_longer(starts_with("r_"), names_to = "rating") %>%
+    group_by(sub, original_code, emotion) %>%
+    filter(value == max(value)) %>%
+    filter(value != 0) %>%
+    mutate(rating = str_remove(rating,"r_")) %>%
+    mutate(consistent = ifelse(emotion==rating,1,0)) %>%
+    ungroup %>% 
+    group_by(sub) %>%  # here you could also group by emotion
+    summarise(
+      congruence = round(sum(consistent)/n(),2)
+    )   
+  
+  return(df_congruence)
+}
+
+# # OLE plot, suitable only for one of ALL, high, low at the time
+# df_congruence %>%
+#   ggplot(aes(x = reorder(sub, congruence), y = congruence)) +
+#   geom_bar(stat = "identity", color = "grey", fill = "lightblue") +
+#   theme_minimal() +
+#   labs(title = "Congruence between displayed emotion and max rated emotion", x = "sub")
+
+
+# calculate congruence for ALL, high, low, using the fn above
+df_congruence <- calculate_congruence(df,"ALL") %>% 
+  rename(ALL = congruence) %>% 
+  inner_join(calculate_congruence(df,"high"), by="sub") %>% 
+  rename(high = congruence) %>% 
+  inner_join(calculate_congruence(df,"low"), by="sub") %>% 
+  rename(low = congruence)
+
+
+df_congruence %>%
+  pivot_longer(cols = c("ALL", "high", "low"), names_to = "intensity", values_to = "value") %>%
+  ggplot(aes(x = reorder(sub, value), y = value, fill = intensity)) +
+  geom_bar(stat = "identity", position = "dodge") + 
+  theme_minimal() +
+  theme(legend.position = "top") +
+  labs(x = "Subject", y = "Value", title = "Congruence across subs")
+
+
+df_congruence %>% 
+  pivot_longer(cols = c("ALL", "high", "low"), names_to = "intensity") %>% 
+  ggstatsplot::ggbetweenstats(
+    x = intensity,
+    y = value,
+    type = "nonparametric"
+  )
+
+df_congruence %>% 
+  pivot_longer(cols = c("ALL", "high", "low"), names_to = "intensity", values_to = "value") %>% 
+  group_by(intensity) %>% 
+  summarise(
+    mean = round(mean(value, na.rm = T),2),
+    median = round(median(value, na.rm = T),2),
+    sd = round(sd(value, na.rm = T),2)
+  )
+
+```
+
+# Now examine the same but for the validation data by Rune
+Here is like having ONE subject
+```{r, message=FALSE}
+
+rune_df <- read_csv(paste0(bd,"/RUNE_validation/","allEMO_validation_CLEAN.csv"))
+  
+
+
+rune_df %>%
+    select(video, emotion, starts_with("r_")) %>%
+    pivot_longer(starts_with("r_"), names_to = "rating") %>%
+    group_by(video, emotion) %>%
+    filter(value == max(value)) %>%
+    filter(value != 0) %>%
+    mutate(rating = str_remove(rating,"r_")) %>%
+    mutate(consistent = ifelse(emotion==rating,1,0)) %>%
+    ungroup %>% 
+    # group_by(emotion) %>%  # uncomment here to have the congruence by emotion
+    summarise(
+      congruence = round(sum(consistent)/n(),2)
+    )
+
+
+```
+
+
+
+# Calculate deviations of each subject from the validation data
+
+This should be done with RSA, that is: 
+- we take all the 56 x 6 rows of each sub, 
+- calculate the distance matrix
+- get the tril
+- calculate the distance matrix and the tril also for the validation data
+- calculate 1 - R between each sub and the validation
+
+First we need to import a few funs
+```{r}
+# ----------- DDOS - Do Distance Or Similarity -----------
+# The input matrix should be observations-by-variables, that is:
+# - rows index observations
+# - columns index variables
+# This is the format required by dist(), while for cor() is the
+# opposite, so when using the cor() function we pass t(X) 
+
+library(proxy)
+
+DDOS <- function(X, method) {
+  
+  X[is.na(X)] = 0
+  
+  switch(method,
+         pearson = {
+           D <- 1 - cor(t(X), method = "pearson") %>% as.dist()
+         },
+         
+         spearman = {
+           D <- 1 - cor(t(X), method = "spearman") %>% as.dist()
+         },
+         
+         euclidean = {
+           D <- dist(X, method = "euclidean")
+         },
+         
+         cosine = {
+           D <- 1 - simil(X, method = "cosine")
+         },
+         
+         mahalanobis = {
+           D <- dist(X, method = "mahalanobis")
+         },
+         stop("Supported methods: 'pearson', 'spearman', 'euclidean', 'cosine' or 'mahalanobis'.")
+  )
+  return(D)
+}
+
+# # example usage:
+# DDOS(Y, method = "cosine")
+
+
+
+
+# ------------------- Ratings RDM calculation --------------------
+
+# # Function to calculate the ratings RDM for one sub
+# sub_id = "02"
+# dist_method_rating <- "euclidean"
+# rats <- read_csv(ratings_path)
+# ncomp_svd = 3
+
+do_RDM_ratings_one_sub <- function(rats, dist_method_rating) {
+  
+  rats_one_sub <- rats %>% select(starts_with("r_"))
+  
+  D_rats <- DDOS(rats_one_sub, method = dist_method_rating)
+  D_rats[is.na(D_rats)] <- 0
+  
+  D_feature_vector <- D_rats[!is.na(D_rats)]
+
+  return(D_feature_vector)
+  
+}
+
+
+test_tril <- do_RDM_ratings_one_sub(rune_df,dist_method_rating = "euclidean")
+
+
+```
+
+
+
+
+**VERY IMPORTANT** to make the comparison correct, we need to have the same order
+of movies!! Therefore us group_by(sub) and arrange(video)
+
+```{r}
+
+# first calculate the RDM_validation
+# NB: we nest it so that we can have the same df structure of the RDM_subs and 
+# easily join them
+RDM_validation <- rune_df %>% 
+  arrange(video) %>% 
+  nest %>% 
+  mutate(RDM_validation = map(data, ~ do_RDM_ratings_one_sub(.x, dist_method_rating = "euclidean"))) %>% 
+  select(RDM_validation)
+
+
+# calculate the RDM_subs
+RDM_subs <- df %>% 
+  group_by(sub) %>% 
+  arrange(sub,video) %>% 
+  nest %>%
+  mutate(RDM_subs = map(data, ~ do_RDM_ratings_one_sub(.x, dist_method_rating = "euclidean"))) %>% 
+  select(sub, RDM_subs)
+  
+
+# Put them together with a cross_join and finally calculate the similarity of each sub rating
+# to the reference estimated by Rune
+similarity_sub_rating_reference <- cross_join(RDM_subs,RDM_validation) %>%
+  mutate(
+    similarity_2_reference = list(RDM_subs, RDM_validation) %>% pmap_dbl(~ cor(.x, .y, method = "pearson"))  
+  ) %>% 
+  mutate(similarity_2_reference = round(similarity_2_reference, 2)) %>%
+  select(!starts_with("RDM")) %>% 
+  arrange(desc(similarity_2_reference))
+
+similarity_sub_rating_reference
+```
+
+
+# Relationship between congruence and similarity to the validation set
+
+This is interesting, since it's not trivial the fact that the similarity of each sub to the 
+normative rating data is proportional to the congruence. But actually it is!
+
+```{r, message=FALSE}
+congruence_and_similarity_to_reference <- inner_join(similarity_sub_rating_reference, df_congruence, by = "sub") 
+
+congruence_and_similarity_to_reference %>% 
+  ggplot(aes(x = ALL, y = similarity_2_reference)) +
+  geom_point() +
+  geom_label(aes(color = ALL, label = sub)) +
+  geom_smooth(method = "lm", se = F, color = "lightblue") +
+  theme_minimal() +
+  labs(
+    title = "Association between congruence and similarity to the reference",
+    x = "Congruence between highest rated emotion and video content",
+    y = "Similarity of each subject rating to the reference rating"
+  ) +
+  scale_color_gradient(low = "blue", high = "coral")
+
+fit <- lm(ALL ~ similarity_2_reference, data = congruence_and_similarity_to_reference)
+
+jtools::summ(fit)
+```
+
+
+
+

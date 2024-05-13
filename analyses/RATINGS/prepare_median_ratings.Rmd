@@ -1,0 +1,44 @@
+---
+title: "Prepare Median Ratings"
+author: "LC"
+date: "2024-04-29"
+output: html_document
+---
+
+This nb is to prepare a ratings csv which contains for each sub the median ratings across
+all subs.
+
+This should be used instead of the ratings file where the scores of each individual sub are recorded.
+
+This was an idea of Christian to cope with the variability in the congruence of the ratings across participants. We previously observed that more clear results were obtained when retaining only participants with high congruency. However this leads to discarding 35-45% of the participants.
+
+
+```{r, message=FALSE}
+library(tidyverse)
+
+bd_ratings <- "/data00/leonardo/RSA/analyses/RATINGS"
+
+ratings_type = "emotion"
+
+ratings_filename <- paste0(bd_ratings,"/",ratings_type,"_ratings.csv")
+
+ratings_median_filename <- str_replace(
+  ratings_filename, ratings_type, paste0(ratings_type,"_median")
+)
+
+df <- read_csv(paste0(bd_ratings,"/",ratings_type,"_ratings.csv"))
+
+ff <- df %>%
+  group_by(video) %>%
+  mutate(across(starts_with("r_"), median))
+
+# # just to test
+# ff %>% 
+#   select(sub, video, starts_with("r_")) %>% 
+#   group_by(video) %>%
+#   group_split()
+  
+write_csv(ff, ratings_median_filename)
+
+```
+

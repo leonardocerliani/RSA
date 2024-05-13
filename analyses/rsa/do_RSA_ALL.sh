@@ -52,4 +52,17 @@ for ratings_type in emotion arousal; do
 done
 
 
+# -------------------------------------------------------------------------------
 
+gm_mask=insula_HO_GM
+for ratings_type in emotion arousal; do
+    for subs_set in TOP_RATERS ALL_SUBS; do
+        Rscript do_RSA_V10_Searchlight.R ${ratings_type} ${gm_mask} ${subs_set} &
+    done
+done
+
+wait
+
+# Subsequent randomise
+./do_randomise_simple.sh N14_insula_HO_GM_EER insula_HO_GM 5000
+./do_randomise_simple.sh N26_insula_HO_GM_EER insula_HO_GM 5000

@@ -263,5 +263,3 @@ df_second_highest_congruence %>%
 
 
 
-
-
