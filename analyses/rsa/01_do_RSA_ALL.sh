@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Launch with :
-# nohup ./do_RSA_ALL.sh > nohup_RSA_ALL.out &
+# nohup ./01_do_RSA_ALL.sh > nohup_RSA_ALL.out &
 
 # NB: keep in mind that each loop starts 10 * ratings_type * subs_set processes
 # e.g. a loop with ratings_type = (emotion, arousal) and subs_set = (TOP_RATERS, ALL_SUBS)
@@ -28,7 +28,7 @@
 # - ALL_SUBS
 
 
-------------- REAL DEAL -----------
+# ------------- REAL DEAL -----------
 
 # TOP RATERS LH
 gm_mask=GM_clean_LH

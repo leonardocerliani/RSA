@@ -1,0 +1,272 @@
+---
+title: "rats RDM viz"
+author: "LC"
+date: "2024-05-21"
+output: html_document
+---
+
+```{r load_libraries, message=F}
+library(tidyverse)
+library(future)
+library(furrr)
+library(tictoc)
+library(RNifti)
+library(proxy) # distances
+library(profvis)
+library(DT)
+library(formattable)
+
+source("funs_V8_ROIs.R")
+
+bd="/data00/leonardo/RSA/analyses"
+
+bd_ratings = paste0(bd,"/RATINGS")
+
+# Choose the distance metric to use for fmri RDM
+# Supported methods: 'pearson', 'spearman', 'euclidean', 'cosine' or 'mahalanobis'
+dist_method_rating <- "euclidean"
+dist_method_fmri = "euclidean"
+dist_method_rsa = "pearson"
+
+# Vector of zeropadded sub_ids
+subs_file <- "/data00/leonardo/RSA/sub_list.txt"
+subs <- sprintf("%02d",readLines(subs_file) %>% as.numeric)
+
+# ---------- ONLY TOP RATERS BELOW ------------
+subs <- c("02","03","12","11","22","09","29","28","26","32","23","15","20","19")
+```
+
+
+# Aux functions
+```{r}
+# plot_heatmap(D %>% as.matrix)
+plot_heatmap <- function(M) {
+  heatmap(M, Rowv = NA, Colv = NA, symm=T, revC = T)
+}
+```
+
+
+# Rats RDM
+
+## Function to calculate model-specific mean_rats RDM matrix
+
+**NB**: the reordering should be provided in the output in order to 
+differentiate emotion, arousal and valence model
+
+```{r, message=FALSE}
+
+get_rats_RDM <- function(ratings_type, dist_method_rating) {
+
+  bd_ratings = paste0(bd,"/RATINGS")
+  ratings_path <- paste0(bd_ratings,"/",ratings_type,"_ratings.csv")
+  rats <- read_csv(ratings_path)
+  
+  # mean rats
+  rats_mean <- rats %>% 
+    select(sub, emotion, video, starts_with("r_")) %>% 
+    filter(sub %in% subs) %>% 
+    group_by(video) %>% 
+    summarise(
+      emotion = max(emotion),
+      across(starts_with("r_"), ~ round(mean(.x, na.rm = TRUE), 2))
+    )
+  
+  # get the reordering vector for increasing arousal
+  idx_sort <- switch(
+    ratings_type,
+    "emotion" = order(rats_mean$emotion),
+    "arousal" = order(rats_mean$r_arousal),
+    "valence" = order(rats_mean$r_valence)
+  )    
+  
+  # calculate rats RDM
+  rats_RDM <- DDOS(
+    rats_mean %>% select(starts_with("r_")),
+    method = dist_method_rating
+  ) %>% as.matrix()
+  
+  
+  return(
+    list(idx_sort, rats_mean, rats_RDM)
+  )
+
+}
+```
+
+
+## Get the reordered rats RDM for all three models
+The idx_sort_[model] will be used to reorder the fmri_RDM
+```{r, message=FALSE}
+
+# AROUSAL
+out_arousal <- get_rats_RDM("arousal", dist_method_rating)
+idx_sort_arousal <- out_arousal[[1]]
+rats_mean_arousal <- out_arousal[[2]]
+RDM_arousal <- out_arousal[[3]]
+
+
+# EMOTION
+out_emotion <- get_rats_RDM("emotion", dist_method_rating)
+idx_sort_emotion <- out_emotion[[1]]
+rats_mean_emotion <- out_emotion[[2]][idx_sort_emotion,]
+RDM_emotion <- out_emotion[[3]]
+
+
+# VALENCE
+out_valence <- get_rats_RDM("valence", dist_method_rating)
+idx_sort_valence <- out_valence[[1]]
+rats_mean_valence <- out_valence[[2]]
+RDM_valence <- out_valence[[3]]
+
+```
+
+
+
+# fmri RDM
+
+## Get copes location
+NB: The cope numbers in the `cope` column are NOT zeropadded since this is how they come out from FSL Feat
+
+```{r,message=FALSE}
+
+# the following is our contrast of interest and it's always the same
+copes_type <- "one_ev_per_movie"
+
+copes_location_csv <- paste0(bd,"/rsa/copes_location.csv")
+
+df_path_copes <- if (file.exists(copes_location_csv) ) {
+  df_path_copes <- read_csv(copes_location_csv)
+} else {
+  df_path_copes <- import_df_path_copes(bd, copes_type)
+}
+
+copes_numba <- df_path_copes$cope %>% unique
+ncopes <- length(copes_numba)
+
+```
+
+
+
+## Read in the ROI(s) for which you want to calculate RDMs
+NB: there can be multiple ROIs in one nii
+
+```{r}
+
+bd_ROI <- "/data00/leonardo/RSA/analyses/rsa/rsa_viz/"
+ROI_filename <- "roi_099.nii.gz"
+
+ROI_nii <- readNifti(paste0(bd_ROI, "/", ROI_filename))
+# view(ROI_nii)
+
+region_labels <- ROI_nii[ROI_nii > 0] %>% unique %>% sort
+
+```
+
+
+## Calculate RDMs
+```{r}
+
+# 5 workers give the best performance
+plan(multisession, workers = 5)
+
+tic()
+RDMs_fmri <- subs %>% future_map_dfr(~{
+  
+  paste0("Calculating RDMs for sub ",.x,"\n") %>% cat
+  
+  df_copes <- load_sub_copes(.x, copes_numba, df_path_copes)
+  
+  one_RDM_fmri <- calculate_fmri_RDMs(
+    df_copes,
+    ROI_nii,
+    dist_method_fmri,
+    RDM_type = "tril"
+  )
+
+  one_RDM_fmri %>% mutate(sub = .x) %>% relocate(sub)
+  
+})
+toc()
+
+
+plan(sequential)
+
+```
+
+## Calculate mean triu
+```{r}
+
+mean_triu <- RDMs_fmri %>% 
+  group_by(sub) %>% 
+  mutate(triu_cell = row_number()) %>% 
+  ungroup() %>% 
+  group_by(triu_cell) %>% 
+  summarise(mean_triu_cell = mean(RDM_region_1)) %>% 
+  select(mean_triu_cell) %>% pull
+
+mean_triu
+
+reconstruct_similarity_matrix <- function(lower_triangular_data) {
+  n <- ncopes
+  full_matrix <- matrix(0, nrow = n, ncol = n)
+  full_matrix[lower.tri(full_matrix)] <- lower_triangular_data
+  full_matrix <- t(full_matrix) + full_matrix
+  diag(full_matrix) <- 0  # Set diagonal to 1 if needed
+  return(full_matrix)
+}
+
+RDM_full <- reconstruct_similarity_matrix(mean_triu)
+
+plot_heatmap(RDM_full[idx_sort_arousal, idx_sort_arousal])
+
+hist(mean_triu)
+
+```
+
+
+## Calculate percentiles and plot
+
+```{r}
+
+# estimate empirical cumulative distribution function
+ecdf_func <- ecdf(mean_triu)
+# convert each value to percentile
+pctiles <- ecdf_func(mean_triu)
+
+RDM_full <- reconstruct_similarity_matrix(pctiles)
+
+plot_heatmap(RDM_full[idx_sort_arousal, idx_sort_arousal])
+
+plot_heatmap(RDM_full[idx_sort_emotion, idx_sort_emotion])
+
+plot_heatmap(RDM_full[idx_sort_valence, idx_sort_valence])
+
+# heatmap(RDM_full, symm = TRUE)
+
+
+custom_palette <- colorRampPalette(c("blue", "white", "red"))(n = 256)
+
+heatmap(
+  RDM_full[idx_sort_arousal, idx_sort_arousal], 
+  Rowv = NA, Colv = NA, symm = TRUE, revC = TRUE, col = custom_palette
+)
+
+
+```
+
+# rats and fmri RDM
+
+```{r}
+
+vec_rats <- RDM_arousal[lower.tri(RDM_arousal, diag = FALSE)]
+
+vec_fmri <- RDM_full[lower.tri(RDM_full, diag = FALSE)]
+
+cor(vec_rats, vec_fmri)
+plot(vec_rats, vec_fmri)
+
+```
+
+
+
+

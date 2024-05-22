@@ -1,9 +1,10 @@
 #!/bin/bash
 
+bd="/data00/leonardo/RSA/analyses/rsa/rsa_results"
+
+
 # choose nsub : either N14 or N26
 nsub="N14"
-
-bd="/data00/leonardo/RSA/analyses/rsa/rsa_results"
 
 # The original name is N[14/26]_GM_clean_[LH/RH]_EER, but the destination dir 
 # can be anything
@@ -14,6 +15,7 @@ LH=${nsub}_GM_clean_LH_EER
 RH=${nsub}_GM_clean_RH_EER
 dest=${bd}/${nsub}_GM_clean_bilat
 originals_storage=${bd}/single_hemispheres
+
 
 # ----------- DO NOT MODIFY ANYTHING BELOW HERE -----------------
 
@@ -33,8 +35,8 @@ for sub in ${subs}; do
         echo Merging LH RH in sub-${sub}_RSA_${rating} 
 
         fslmaths ${bd}/${LH}/sub_${sub}_RSA_${rating}.nii.gz \
-         -add ${bd}/${RH}/sub_${sub}_RSA_${rating}.nii.gz \
-         ${dest}/sub_${sub}_RSA_${rating}.nii.gz
+            -add ${bd}/${RH}/sub_${sub}_RSA_${rating}.nii.gz \
+            ${dest}/sub_${sub}_RSA_${rating}.nii.gz
 
 
     done
@@ -49,7 +51,7 @@ for rating in emotion arousal valence; do
 
 done
 
-# move the original single-hemispheres to the 
+# move the original single-hemispheres dirs to the 
 # storage directory
 mv ${bd}/${LH}* ${originals_storage}
 mv ${bd}/${RH}* ${originals_storage}

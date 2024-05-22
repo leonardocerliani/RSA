@@ -1,0 +1,260 @@
+---
+title: "RSA results"
+subtitle: "Inferential stats with permutation testing"
+author: "Leonardo Cerliani"
+date: "20/5/2023"
+output:
+  html_document:
+    self_contained: true
+    code_folding: hide
+    highlight: pygments
+    theme: cerulean
+    css: styles.css
+---
+
+Libs and bd_results
+```{r, message=FALSE}
+# install.packages("papayaWidget")
+# devtools::install_github("muschellij2/papayaWidget")
+
+library(papayaWidget)
+library(RNifti)
+library(tidyverse)
+
+# papaya widget github : https://github.com/muschellij2/papayaWidget
+# app code here: https://github.com/muschellij2/linked_viewer/blob/master/app.R
+
+bd_results = "/data00/leonardo/RSA/analyses/rsa/rsa_results"
+
+pthr = 0.95
+
+```
+
+
+Some defs/fns to make strings to pass to Papaya concise
+```{r, message=FALSE}
+# define the MNI and the Dummy (for transparency of the MNI)
+MNI=paste0(bd_results,"/","MNI152_T1_2mm_brain.nii.gz")
+Dummy <- paste0(bd_results,"/","Dummy.nii.gz")
+
+stat_type = "_tfce_corrp_tstat1.nii.gz"
+
+# this function takes the contrast name and the params above to
+# build the pathname of the contrast of interest to be fed
+# into papaya
+#
+# E.g: f("Arousal"); f("Arousal_vs_Emotion")
+f <- function(contrast_name) {
+  template <- paste0(bd,"/stats_CONTRAST",stat_type)
+  contrast_path <- str_replace(template, "CONTRAST", contrast_name)
+  return(contrast_path)
+}
+```
+
+
+# N14
+```{r, message=FALSE}
+flavour = "N14_GM_clean_bilat"
+bd=paste0(bd_results,"/",flavour)
+```
+
+
+## N14 Arousal, Emotion, Valence > 0
+- Arousal : Red
+- Emotion : Blue
+- Valence : Green
+```{r, message=FALSE}
+
+papaya(
+  c(Dummy, MNI, f("Arousal"), f("Emotion"), f("Valence")),
+  options = list(
+    papayaOptions(alpha = 1, lut = "Grayscale"),
+    papayaOptions(alpha = 0.5, lut = "Grayscale"),
+    papayaOptions(alpha = 1, lut = "Red Overlay", min = pthr, max = 1),
+    papayaOptions(alpha = 1, lut = "Blue Overlay", min = pthr, max = 1),
+    papayaOptions(alpha = 1, lut = "Green Overlay", min = pthr, max = 1)
+  )
+)
+
+```
+
+<br><br>
+
+## N14 Arousal > Emotion/Valence
+- Arousal > Emotion : Red
+- Arousal > Valence : Blue
+```{r}
+
+papaya(
+  c(Dummy, MNI, f("Arousal_vs_Emotion"), f("Arousal_vs_Valence")),
+    options = list(
+    papayaOptions(alpha = 1, lut = "Grayscale"),
+    papayaOptions(alpha = 0.5, lut = "Grayscale"),
+    papayaOptions(alpha = 1, lut = "Red Overlay", min = pthr, max = 1),
+    papayaOptions(alpha = 1, lut = "Blue Overlay", min = pthr, max = 1)
+  )
+)
+
+```
+
+<br><br>
+
+## N14 Emotion > Arousal/Valence
+- Emotion > Arousal : Red
+- Emotion > Valence : Blue
+```{r}
+
+papaya(
+  c(Dummy, MNI, f("Emotion_vs_Arousal"), f("Emotion_vs_Valence")),
+    options = list(
+    papayaOptions(alpha = 1, lut = "Grayscale"),
+    papayaOptions(alpha = 0.5, lut = "Grayscale"),
+    papayaOptions(alpha = 1, lut = "Red Overlay", min = pthr, max = 1),
+    papayaOptions(alpha = 1, lut = "Blue Overlay", min = pthr, max = 1)
+  )
+)
+
+```
+
+
+
+<br><br>
+
+## N14 Valence > Emotion/Arousal
+- Valence > Arousal : Red
+- Valence > Emotion : Blue
+```{r}
+
+papaya(
+  c(Dummy, MNI, f("Valence_vs_Arousal"), f("Valence_vs_Emotion")),
+    options = list(
+    papayaOptions(alpha = 1, lut = "Grayscale"),
+    papayaOptions(alpha = 0.5, lut = "Grayscale"),
+    papayaOptions(alpha = 1, lut = "Red Overlay", min = pthr, max = 1),
+    papayaOptions(alpha = 1, lut = "Blue Overlay", min = pthr, max = 1)
+  )
+)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<br><br>
+
+# N26
+```{r, message=FALSE}
+flavour = "N26_GM_clean_bilat"
+bd=paste0(bd_results,"/",flavour)
+```
+
+
+## N26 Arousal, Emotion, Valence > 0
+- Arousal : Red
+- Emotion : Blue
+- Valence : Green
+```{r, message=FALSE}
+
+papaya(
+  c(Dummy, MNI, f("Arousal"), f("Emotion"), f("Valence")),
+  options = list(
+    papayaOptions(alpha = 1, lut = "Grayscale"),
+    papayaOptions(alpha = 0.5, lut = "Grayscale"),
+    papayaOptions(alpha = 1, lut = "Red Overlay", min = pthr, max = 1),
+    papayaOptions(alpha = 1, lut = "Blue Overlay", min = pthr, max = 1),
+    papayaOptions(alpha = 1, lut = "Green Overlay", min = pthr, max = 1)
+  )
+)
+
+```
+
+<br><br>
+
+## N26 Arousal > Emotion/Valence
+- Arousal > Emotion : Red
+- Arousal > Valence : Blue
+```{r}
+
+papaya(
+  c(Dummy, MNI, f("Arousal_vs_Emotion"), f("Arousal_vs_Valence")),
+    options = list(
+    papayaOptions(alpha = 1, lut = "Grayscale"),
+    papayaOptions(alpha = 0.5, lut = "Grayscale"),
+    papayaOptions(alpha = 1, lut = "Red Overlay", min = pthr, max = 1),
+    papayaOptions(alpha = 1, lut = "Blue Overlay", min = pthr, max = 1)
+  )
+)
+
+```
+
+<br><br>
+
+## N26 Emotion > Arousal/Valence
+- Emotion > Arousal : Red
+- Emotion > Valence : Blue
+```{r}
+
+papaya(
+  c(Dummy, MNI, f("Emotion_vs_Arousal"), f("Emotion_vs_Valence")),
+    options = list(
+    papayaOptions(alpha = 1, lut = "Grayscale"),
+    papayaOptions(alpha = 0.5, lut = "Grayscale"),
+    papayaOptions(alpha = 1, lut = "Red Overlay", min = pthr, max = 1),
+    papayaOptions(alpha = 1, lut = "Blue Overlay", min = pthr, max = 1)
+  )
+)
+
+```
+
+
+
+<br><br>
+
+## N26 Valence > Emotion/Arousal
+- Valence > Arousal : Red
+- Valence > Emotion : Blue
+```{r}
+
+papaya(
+  c(Dummy, MNI, f("Valence_vs_Arousal"), f("Valence_vs_Emotion")),
+    options = list(
+    papayaOptions(alpha = 1, lut = "Grayscale"),
+    papayaOptions(alpha = 0.5, lut = "Grayscale"),
+    papayaOptions(alpha = 1, lut = "Red Overlay", min = pthr, max = 1),
+    papayaOptions(alpha = 1, lut = "Blue Overlay", min = pthr, max = 1)
+  )
+)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
