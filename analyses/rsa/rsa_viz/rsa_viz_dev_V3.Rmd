@@ -1,11 +1,22 @@
 ---
-title: "rats RDM viz"
-author: "LC"
-date: "2024-05-21"
-output: html_document
+title: "RSA ROI analysis"
+subtitle: "rating and fmri RDMs for a given roi.nii.gz"
+author: "Leonardo Cerliani"
+date: "23/5/2023"
+output:
+  html_document:
+    self_contained: true
+    code_folding: hide
+    highlight: pygments
+    theme: cerulean
+    css: styles.css
 ---
 
-```{r load_libraries, message=F}
+
+# Initialization
+
+## Load libraries
+```{r message=F}
 library(tidyverse)
 library(future)
 library(furrr)
@@ -27,6 +38,27 @@ bd_ratings = paste0(bd,"/RATINGS")
 dist_method_rating <- "euclidean"
 dist_method_fmri = "euclidean"
 dist_method_rsa = "pearson"
+```
+
+
+## Read in the ROI(s) for which you want to calculate RDMs
+NB: there can be multiple ROIs in one nii
+
+```{r}
+
+bd_ROI <- "/data00/leonardo/RSA/analyses/rsa/rsa_viz/"
+ROI_filename <- "roi_099.nii.gz"
+
+ROI_nii <- readNifti(paste0(bd_ROI, "/", ROI_filename))
+# view(ROI_nii)
+
+region_labels <- ROI_nii[ROI_nii > 0] %>% unique %>% sort
+
+```
+
+
+## Define subs set
+```{r message=F}
 
 # Vector of zeropadded sub_ids
 subs_file <- "/data00/leonardo/RSA/sub_list.txt"
@@ -34,15 +66,47 @@ subs <- sprintf("%02d",readLines(subs_file) %>% as.numeric)
 
 # ---------- ONLY TOP RATERS BELOW ------------
 subs <- c("02","03","12","11","22","09","29","28","26","32","23","15","20","19")
+
+# load emotion labels
+emotion_labels <- read_csv(paste0(bd,"/RATINGS/emotion_ratings.csv")) %>% 
+  filter(sub == "02") %>% select(emotion) %>% pull
+
 ```
 
 
-# Aux functions
+## Aux functions
 ```{r}
 # plot_heatmap(D %>% as.matrix)
-plot_heatmap <- function(M) {
-  heatmap(M, Rowv = NA, Colv = NA, symm=T, revC = T)
+plot_heatmap <- function(M, title=NULL) {
+  heatmap(M, Rowv = NA, Colv = NA, symm=T, revC = T, main=title)
 }
+
+# The following is to plot also side colors for emotion
+# NB:   # The input matrix MUST already have rownames for emotions
+plot_heatmap_sides <- function(M, title=NULL) {
+  
+  emo_names <- rownames(M)
+  
+  # Define a blue to red color palette for the heatmap
+  blue_to_red <- colorRampPalette(c("blue", "white", "red"))(n = 100)
+  
+  # Define the palette for emotions
+  paletta_emotions <- c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3", "#FF7F00", "#FFFF33", "#FFFFFF")
+  emo_labels <-       c("anger",   "pain",    "disgust", "sad",     "fear",    "happy",   "neutral")
+  
+  # Map each unique emotion to a color
+  label_colors <- setNames(paletta_emotions, emo_labels)
+  
+  # Create vectors of colors for row and column side colors based on emo_labels_reord
+  row_side_colors <- col_side_colors <- label_colors[emo_names]
+  
+  # Plot it
+  heatmap(M, Rowv = NA, Colv = NA, symm=T, revC = T, col = blue_to_red,
+          RowSideColors = row_side_colors, ColSideColors = col_side_colors, 
+          main = title)
+}
+
+
 ```
 
 
@@ -85,6 +149,8 @@ get_rats_RDM <- function(ratings_type, dist_method_rating) {
     method = dist_method_rating
   ) %>% as.matrix()
   
+  rownames(rats_RDM) <- rats_mean$emotion
+  colnames(rats_RDM) <- rats_mean$emotion
   
   return(
     list(idx_sort, rats_mean, rats_RDM)
@@ -118,7 +184,58 @@ idx_sort_valence <- out_valence[[1]]
 rats_mean_valence <- out_valence[[2]]
 RDM_valence <- out_valence[[3]]
 
+
+plot_heatmap_sides(RDM_emotion[idx_sort_emotion,idx_sort_emotion], "emotion") 
+plot_heatmap_sides(RDM_arousal[idx_sort_arousal,idx_sort_arousal], "arousal")
+plot_heatmap_sides(RDM_valence[idx_sort_valence,idx_sort_valence], "valence")
+
 ```
+
+
+
+
+```{r, eval=FALSE, include=FALSE}
+# RDM_ratings dimred
+
+library(umap)
+library(patchwork)
+
+umap_result <- umap::umap(RDM_valence, input="dist", n_components=5)
+
+paletta_emotions <- c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3", "#FF7F00", "#FFFF33", "#FFFFFF")
+
+# plot pc1,2 and pc2,3
+do_UMAP_lowdim_plots <- function(umap_result, lowdim_x, lowdim_y) {
+  
+  umap_lowdim <- data.frame(
+    pc_x = umap_result$layout[,lowdim_x], 
+    pc_y = umap_result$layout[,lowdim_y], 
+    emotion_labels
+  )
+  
+  p <- ggplot(umap_lowdim, aes(x = pc_x, y = pc_y, color = emotion_labels)) +
+    geom_point(size = 3, alpha = 0.7) +  # Open circles for points
+    scale_color_manual(values = paletta_emotions) +
+    scale_shape_manual(values = c(1, 3)) +  # Assign specific shapes
+    labs(
+      title = "UMAP Projection", 
+      x = paste0("lowdim ",lowdim_x), 
+      y = paste0("lowdim ",lowdim_y)
+    ) +
+    theme_minimal() +
+    guides(color = guide_legend(override.aes = list(shape = 16)))  # Filled circles in the legend
+  
+  return(p)
+}
+
+
+p <- list(c(1,2),c(2,3)) %>% pmap(~ do_UMAP_lowdim_plots(umap_result, lowdim_x = .x, lowdim_y = .y))
+
+p[[1]] + p[[2]]
+```
+
+
+
 
 
 
@@ -145,22 +262,6 @@ ncopes <- length(copes_numba)
 
 ```
 
-
-
-## Read in the ROI(s) for which you want to calculate RDMs
-NB: there can be multiple ROIs in one nii
-
-```{r}
-
-bd_ROI <- "/data00/leonardo/RSA/analyses/rsa/rsa_viz/"
-ROI_filename <- "roi_099.nii.gz"
-
-ROI_nii <- readNifti(paste0(bd_ROI, "/", ROI_filename))
-# view(ROI_nii)
-
-region_labels <- ROI_nii[ROI_nii > 0] %>% unique %>% sort
-
-```
 
 
 ## Calculate RDMs
@@ -193,7 +294,9 @@ plan(sequential)
 
 ```
 
-## Calculate mean triu
+
+
+## Calculate mean triu and plot full
 ```{r}
 
 mean_triu <- RDMs_fmri %>% 
@@ -204,59 +307,113 @@ mean_triu <- RDMs_fmri %>%
   summarise(mean_triu_cell = mean(RDM_region_1)) %>% 
   select(mean_triu_cell) %>% pull
 
-mean_triu
+# mean_triu
+hist(mean_triu)
 
-reconstruct_similarity_matrix <- function(lower_triangular_data) {
-  n <- ncopes
-  full_matrix <- matrix(0, nrow = n, ncol = n)
-  full_matrix[lower.tri(full_matrix)] <- lower_triangular_data
-  full_matrix <- t(full_matrix) + full_matrix
-  diag(full_matrix) <- 0  # Set diagonal to 1 if needed
-  return(full_matrix)
+
+# reconstruct full matrix and assign row/colnames
+reconstruct_full <- function(triu, ncopes, emotion_labels) {
+  RDM_full <- matrix(0, nrow = ncopes, ncol = ncopes)
+  RDM_full[lower.tri(RDM_full, diag = F)] = triu
+  RDM_full = RDM_full + t(RDM_full)
+  diag(RDM_full) <- NA
+  rownames(RDM_full) <- colnames(RDM_full) <- emotion_labels
+  return(RDM_full)
 }
 
-RDM_full <- reconstruct_similarity_matrix(mean_triu)
+RDM_full <- reconstruct_full(mean_triu, ncopes, emotion_labels)
 
-plot_heatmap(RDM_full[idx_sort_arousal, idx_sort_arousal])
-
-hist(mean_triu)
+plot_heatmap_sides(RDM_full[idx_sort_arousal, idx_sort_arousal], "arousal")
+plot_heatmap_sides(RDM_full[idx_sort_emotion, idx_sort_emotion], "emotion")
+plot_heatmap_sides(RDM_full[idx_sort_valence, idx_sort_valence], "valence")
 
 ```
 
 
-## Calculate percentiles and plot
+## UMAPs on RDM_full
+```{r fig.fullwidth=TRUE}
 
-```{r}
+p1 <- do_umap(RDM_full, "arousal", emotion_labels, rats_mean_arousal, rats_mean_valence)
+p2 <- do_umap(RDM_full, "emotion", emotion_labels, rats_mean_arousal, rats_mean_valence)
+p3 <- do_umap(RDM_full, "valence", emotion_labels, rats_mean_arousal, rats_mean_valence)
+
+p1
+p2
+p3
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Garbage collection
+
+# Same plot but with percentiles
+
+```{r, include=FALSE, eval=FALSE}
+# Same plot but with percentiles (like in K2008 plots)
 
 # estimate empirical cumulative distribution function
 ecdf_func <- ecdf(mean_triu)
 # convert each value to percentile
 pctiles <- ecdf_func(mean_triu)
 
-RDM_full <- reconstruct_similarity_matrix(pctiles)
+RDM_full <- reconstruct_full(pctiles, ncopes, emotion_labels)
 
-plot_heatmap(RDM_full[idx_sort_arousal, idx_sort_arousal])
-
-plot_heatmap(RDM_full[idx_sort_emotion, idx_sort_emotion])
-
-plot_heatmap(RDM_full[idx_sort_valence, idx_sort_valence])
-
-# heatmap(RDM_full, symm = TRUE)
-
-
-custom_palette <- colorRampPalette(c("blue", "white", "red"))(n = 256)
-
-heatmap(
-  RDM_full[idx_sort_arousal, idx_sort_arousal], 
-  Rowv = NA, Colv = NA, symm = TRUE, revC = TRUE, col = custom_palette
-)
-
+plot_heatmap_sides(RDM_full[idx_sort_arousal, idx_sort_arousal], "arousal")
+plot_heatmap_sides(RDM_full[idx_sort_emotion, idx_sort_emotion], "emotion")
+plot_heatmap_sides(RDM_full[idx_sort_valence, idx_sort_valence], "valence")
 
 ```
 
-# rats and fmri RDM
 
-```{r}
+
+## Rats and fmri RDM corr
+
+```{r, include=FALSE, eval=FALSE}
 
 vec_rats <- RDM_arousal[lower.tri(RDM_arousal, diag = FALSE)]
 
@@ -266,6 +423,21 @@ cor(vec_rats, vec_fmri)
 plot(vec_rats, vec_fmri)
 
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

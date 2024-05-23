@@ -255,3 +255,102 @@ create_filename_results <- function(atlas_filename, ratings_type, dist_method_ra
 
 
 
+
+
+
+# UMAP
+# (sorry for the horrible code, I cannot look at this anymore)
+library(umap)
+library(patchwork)
+
+do_umap <- function(RDM_full, rating_type, emotion_labels, rats_mean_arousal, rats_mean_valence) {
+  
+  umap_result <- umap::umap(RDM_full, input="dist", n_components=5)
+  
+  paletta_emotions <- c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3", "#FF7F00", "#FFFF33", "brown")
+  
+  umap_lowdim <- data.frame(
+    pc_x = umap_result$layout[,1], 
+    pc_y = umap_result$layout[,2], 
+    emotion = emotion_labels,
+    mean_arousal = rats_mean_arousal$r_arousal,
+    mean_valence = rats_mean_valence$r_valence
+  )
+  
+  
+  if (rating_type == "emotion") {
+    p <- umap_lowdim %>% 
+      ggplot(aes(x = pc_x, y = pc_y)) +
+      geom_point(aes(color = emotion), size = 4) +
+      scale_color_manual(values = paletta_emotions)  +
+      labs(title = "Emotion") + theme_minimal() + theme(legend.position = "top")
+    return(p)
+  }
+  
+  if (rating_type == "arousal") {
+    p <- umap_lowdim %>% 
+      ggplot(aes(x = pc_x, y = pc_y)) + 
+      geom_point(aes(color = mean_arousal), size = 4) +
+      scale_color_viridis_c() +
+      labs(title = "Arousal") + theme_minimal() + theme(legend.position = "top")
+    return(p)
+  }
+  
+  if (rating_type == "valence") {
+    p <- umap_lowdim %>% 
+      ggplot(aes(x = pc_x, y = pc_y)) + 
+      geom_point(aes(color = mean_valence), size = 4) +
+      scale_color_viridis_c() +
+      labs(title = "Valence") + theme_minimal() + theme(legend.position = "top")
+    return(p)
+  }
+  
+}
+
+
+
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+
+
+
+
+
+
+
