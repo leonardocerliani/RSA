@@ -1,8 +1,17 @@
 ---
 title: "Emotion Ratings Analysis"
-author: "LC"
+subtitle: "Modelling the 10-years risk of coronary heart disease"
+author: "Leonardo Cerliani"
 date: "2024-05-13"
-output: html_document
+output:
+  html_document:
+    self_contained: true
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    code_folding: hide
+    theme: cerulean 
+image: "app_logistic.jpg"
 ---
 
 ```{r, message=FALSE}
@@ -83,9 +92,9 @@ df_congruence %>%
   labs(x = "Subject", y = "Value", title = "Congruence across subs")
 
 
-df_congruence %>% 
+df_congruence %>%
   pivot_longer(cols = c("ALL", "high", "low"), names_to = "intensity") %>% 
-  ggstatsplot::ggbetweenstats(
+  ggstatsplot::ggwithinstats(
     x = intensity,
     y = value,
     type = "nonparametric"
@@ -139,7 +148,7 @@ This should be done with RSA, that is:
 - calculate 1 - R between each sub and the validation
 
 First we need to import a few funs
-```{r}
+```{r, message=FALSE}
 # ----------- DDOS - Do Distance Or Similarity -----------
 # The input matrix should be observations-by-variables, that is:
 # - rows index observations
@@ -215,7 +224,7 @@ test_tril <- do_RDM_ratings_one_sub(rune_df,dist_method_rating = "euclidean")
 
 
 **VERY IMPORTANT** to make the comparison correct, we need to have the same order
-of movies!! Therefore us group_by(sub) and arrange(video)
+of movies!! Therefore use group_by(sub) and arrange(video)
 
 ```{r}
 
@@ -277,6 +286,65 @@ fit <- lm(ALL ~ similarity_2_reference, data = congruence_and_similarity_to_refe
 
 jtools::summ(fit)
 ```
+
+
+# Plot all ratings for participants above and below a given congruence
+
+This is a great plot because it shows the difference between people with
+high and low congruence:
+
+- people with low congruence tend to give > 0 ratings to different emotions
+  for each movie
+  
+- on average the rating for the congruent movie appears to be similar for both
+  people above and below congruence, although in some cases it is higher for
+  people with high congruence
+
+
+```{r}
+
+congruence_threshold <- 0.75
+
+# tmp <- df_congruence %>%
+#   count(is_congruent = ALL >= congruence_threshold)
+
+n_above <- which(df_congruence$ALL >= congruence_threshold) %>% length
+n_below <- length(df_congruence$sub) - n_above
+
+df %>%
+  select(sub, starts_with("r_"), emotion) %>% 
+  inner_join(df_congruence %>% select(sub, ALL), by = "sub") %>% 
+  mutate(is_congruent = ifelse(ALL >= congruence_threshold, "ABOVE", "BELOW")) %>%
+  mutate(is_congruent = factor(is_congruent)) %>% 
+  select(-ALL) %>% 
+  group_by(sub, emotion, is_congruent) %>%
+  reframe(
+    across(starts_with("r_"), ~ round(mean(.),2))
+  ) %>% 
+  pivot_longer(cols = starts_with("r_"), names_to = "rating_type", values_to = "rating") %>%
+  ggplot(aes(x = rating_type, y = rating, color = is_congruent, group = sub)) +
+  geom_line(linewidth = 0.5, alpha = 0.7) +
+  geom_point(color = "grey") +
+  scale_y_continuous(limits = c(0, 10), breaks = seq(0, 10, by = 2)) +  # Setting y-axis limits and breaks
+  facet_grid(emotion ~ is_congruent, axes = "all", axis.labels = "all") +  
+  theme_minimal() +
+  labs(
+    title = paste0("Ratings for participants above or below congruence of ", congruence_threshold),
+    subtitle = paste0("n_above: ", n_above, " n_below: ", n_below)
+  )
+  
+  
+
+
+```
+
+
+
+
+
+
+
+
 
 
 

@@ -1,0 +1,203 @@
+---
+title: "sketch"
+author: "LC"
+date: "2024-05-24"
+output: html_document
+---
+
+```{r, message=FALSE}
+
+library(tidyverse)
+library(RNifti)
+library(papayaWidget)
+
+```
+
+
+
+
+
+```{r}
+papaya("MNI152_T1_2mm_brain.nii.gz", interpolation = FALSE)
+```
+
+
+
+
+
+```{r}
+
+gm <- readNifti("GM_clean.nii.gz")
+voxel_size <- pixdim(gm) %>% mean   # voxel size of gm
+idx <- which(gm != 0)   # index of nonzero voxels
+coords <- which(gm != 0, arr.ind = TRUE)   # get coordinates
+
+```
+
+
+```{r}
+library(RNifti)
+
+MNI <- readNIfTI("MNI152_T1_2mm_brain.nii.gz")
+
+# Define the voxel coordinates
+coord <- c(68, 64, 45) + 1 
+cat("displayed as ",coord - 1,"\n")
+
+center <- c(45,54,45) + 1
+
+coord[1] <- center[1] - (coord[1] - center[1])
+coord[2] <- center[2] - (coord[2] - center[2])
+coord[3] <- center[3] - (coord[3] - center[3])
+
+# Get the dimensions of the volume
+dims <- dim(MNI)
+
+# Convert the voxel coordinates to a linear index
+ind <- coord[1] + (coord[2] - 1) * dims[1] + (coord[3] - 1) * dims[1] * dims[2]
+
+MNI[ind]
+
+
+ceiling((dim(MNI) / 2) - 1)
+
+```
+
+
+
+```{r, message=FALSE}
+library(RNifti)
+library(tidyverse)
+library(papayaWidget)
+
+MNI <- readNifti("MNI152_T1_2mm_brain.nii.gz")
+
+# Transform the coordinates displayed in papaya into
+# MNI indices
+coord_2_ind <- function(coord, MNI) {
+  coord = coord + 1
+  center_MNI <- ceiling((dim(MNI) / 2) - 1) + 1
+  
+  # pc stands for 'papaya_coord', i.e. the fact that the coordinates
+  # in the widget are completely messed up!
+  pc <- 2*center_MNI - coord
+  
+  dims <- dim(MNI)
+  ind <- pc[1] + (pc[2] - 1) * dims[1] + (pc[3] - 1) * dims[1] * dims[2]
+  return(ind)
+}
+
+
+coord <- c(28,18,45)
+ind <- coord_2_ind(coord, MNI)
+MNI[ind]
+```
+
+
+
+```{r, message=FALSE}
+
+# Papaya to real coordinates
+pap_2_real_coord <- function(coord, MNI) {
+  coord = coord + 1
+  center_MNI <- ceiling((dim(MNI) / 2) - 1) + 1
+  return(2*center_MNI - coord)
+}
+
+
+# Searchlight function
+searchlight <- function(ROI_COG, r_mm, MNI) {
+  
+  voxel_size <- pixdim(MNI) %>% mean 
+  ind <- which(MNI != 0)
+  coords <- which(MNI != 0, arr.ind = TRUE)
+
+  # Calculate distance of the given voxel from every other voxel, considering voxel size
+  distances <- sqrt(rowSums((t(t(coords) - ROI_COG) * voxel_size)^2))
+
+  # return the idx of the voxels in the searchlight
+  return(ind[distances <= r_mm])
+}
+
+
+ROI_COG <- pap_2_real_coord(  c(28,18,45), MNI  )
+
+ind_ball <- searchlight(ROI_COG, 4, MNI)
+
+
+# Write the nii
+nii <- MNI * 0
+nii[ind_ball] = 1
+writeNifti(nii, "ROI.nii.gz")
+
+```
+
+
+```{r}
+papaya(
+  c("MNI152_T1_2mm_brain.nii.gz","ROI.nii.gz"),
+  options = list(
+    papayaOptions(alpha = 1, lut = "Grayscale"),
+    papayaOptions(alpha = 1, lut = "Red Overlay", min = 0, max = 2)
+  ), interpolation = FALSE
+)
+```
+
+
+
+
+```{r}
+do_boxplot <- function(bd, directory, subs_set) {
+
+  
+  # Prepare fn to read the RSA values in the ROI for one rating
+  get_avg_ROI_values <- function(rat_type, bd, directory, subs_set) {
+    
+    if (subs_set == "N26") {
+      subs_file <- "/data00/leonardo/RSA/sub_list.txt"
+      subs <- sprintf("%02d",readLines(subs_file) %>% as.numeric)  
+    } else {
+      subs <- c("02","03","12","11","22","09","29","28","26","32","23","15","20","19")  
+    }
+    
+    ind_ROI <- which(readNifti("ROI.nii.gz") != 0)
+    
+    # read each sub RSA result for that condition
+    root <- file.path(bd, directory, paste0(subs_set,"_GM_clean_bilat"))
+    
+    subs %>% set_names %>% 
+      map(~ readNifti(paste0(root,"/sub_",.x,"_RSA_",rat_type,".nii.gz")) ) %>% 
+      map_dbl(~ mean(.x[ind_ROI]))
+    
+  }
+  
+  
+  # Use the fn above to get the mean vals across all ROI voxels for each rating
+  # and put everything in a tibble to prepare to plot
+  ROI_mean_vals <- tibble(
+    sub = subs,
+    arousal = get_avg_ROI_values("arousal", bd, directory, subs_set),
+    emotion = get_avg_ROI_values("emotion", bd, directory, subs_set),
+    valence = get_avg_ROI_values("valence", bd, directory, subs_set)
+  ) %>% 
+    pivot_longer(cols = c("emotion","arousal","valence"), names_to = "rat_type")
+  
+  
+  
+  # Do the actual plot
+  p <- ggstatsplot::ggwithinstats(
+    ROI_mean_vals,
+    x = rat_type,
+    y = value,
+    type = "nonparametric"
+  )
+  
+  return(p)
+  
+}
+```
+
+
+
+
+

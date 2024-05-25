@@ -8,7 +8,7 @@ usage() {
     echo "  mask_name   : any of the files inside /data00/leonardo/RSA/analyses/rsa/masks without the .nii.gz extension"
     echo "  nperms      : a number, typically between 1000-5000"
     echo
-    echo "Example: ./03_do_randomise.sh N14_GM_clean_bilat GM_clean 1000"
+    echo "Example: ./03_do_randomise.sh N14_GM_clean_bilat GM_clean 5000"
     echo
     exit 1
 }
@@ -30,10 +30,13 @@ nperms=$3
 results_path="rsa_results/${results_dir}"
 mask_path="/data00/leonardo/RSA/analyses/rsa/masks/${mask_name}.nii.gz"
 
-# Define the name of the .mat and .con files
+# Copy the model files (.mat and .con) to the results_dir 
+# to be able to use them in randomise
 nsubs=$(echo ${results_dir} | awk -F_ '{print $1}')
 mat_file=${nsubs}_covariates.mat
 con_file=${nsubs}_covariates.con
+cp randomise_models/${mat_file} ${results_path}/
+cp randomise_models/${con_file} ${results_path}/
 
 echo ${mat_file}
 echo ${con_file}
@@ -94,11 +97,11 @@ for contrast in \
     Emotion_vs_Valence Valence_vs_Emotion \
     Arousal_vs_Valence Valence_vs_Arousal; do
 
-    # # with variance smoothing
-    # nohup randomise -i ${contrast} -o stats_${contrast} -d ${mat_file} -t ${con_file} -m ${mask_path} -n ${nperms} -v 5 -T &
+    # with variance smoothing
+    nohup randomise -i ${contrast} -o stats_${contrast} -d ${mat_file} -t ${con_file} -m ${mask_path} -n ${nperms} -v 5 -T &
     
-    # NO COVARIATES
-    nohup randomise -i ${contrast} -o stats_${contrast} -m ${mask_path} -n ${nperms} -v 5 -1 -T &
+    # # NO COVARIATES
+    # nohup randomise -i ${contrast} -o stats_${contrast} -m ${mask_path} -n ${nperms} -v 5 -1 -T &
 
 done
 

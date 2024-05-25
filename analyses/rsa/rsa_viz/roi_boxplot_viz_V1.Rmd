@@ -1,0 +1,126 @@
+---
+title: "roi_boxplot_viz"
+author: "LC"
+date: "2024-05-24"
+output: html_document
+---
+
+```{r message=F}
+library(tidyverse)
+library(future)
+library(furrr)
+library(tictoc)
+library(RNifti)
+library(proxy) # distances
+library(profvis)
+library(DT)
+library(formattable)
+
+bd="/data00/leonardo/RSA/analyses/rsa"
+randomise_flavour <- "rsa_results_NO_VAR_SMOOTHING"
+subs_flavour <- "N26"  # N14 or N26
+
+ROI_filename <- "roi_099.nii.gz"
+
+
+# --------------------------------------------------------------------------
+
+root <- paste0(bd,"/",randomise_flavour,"/",subs_flavour,"_GM_clean_bilat")
+
+if (subs_flavour == "N26") {
+  subs_file <- "/data00/leonardo/RSA/sub_list.txt"
+  subs <- sprintf("%02d",readLines(subs_file) %>% as.numeric)  
+} else {
+  subs <- c("02","03","12","11","22","09","29","28","26","32","23","15","20","19")  
+}
+
+MNI <- readNifti("/data00/leonardo/RSA/analyses/rsa/masks/MNI152_T1_2mm_brain.nii.gz")
+
+```
+
+
+
+# Do all 
+Extract mean values across all voxels in the ROI and then 
+print the boxplot and carry out the comparison between rat_types
+```{r}
+
+ROI_nii <- readNifti(ROI_filename)
+ROI_idx <- which(ROI_nii != 0)
+
+# # run the following line from the terminal to have an interactive view
+RNifti::view(MNI, lyr(ROI_nii, scale = "viridis"), interactive = TRUE)
+
+
+get_avg_ROI_values <- function(rat_type, ROI_idx) {
+  out <- subs %>% set_names %>% 
+    map(~ readNifti(paste0(root,"/sub_",.x,"_RSA_",rat_type,".nii.gz")) ) %>% 
+    map_dbl(~ mean(.x[ROI_idx]))
+
+}
+
+ROI_mean_vals <- tibble(
+  sub = subs,
+  arousal = get_avg_ROI_values("arousal", ROI_idx),
+  emotion = get_avg_ROI_values("emotion", ROI_idx),
+  valence = get_avg_ROI_values("valence", ROI_idx)
+) %>% 
+  pivot_longer(cols = c("emotion","arousal","valence"), names_to = "rat_type")
+
+
+
+ggstatsplot::ggwithinstats(
+  ROI_mean_vals,
+  x = rat_type,
+  y = value,
+  type = "nonparametric"
+)
+
+```
+
+
+
+```{r}
+ggstatsplot::ggwithinstats(
+  ROI_mean_vals,
+  x = rat_type,
+  y = value,
+  type = "nonparametric"
+) +
+  ggplot2::theme(
+    text = ggplot2::element_text(size = 14)
+  )
+```
+
+
+
+```{r}
+
+setwd("/data00/leonardo/RSA/analyses/rsa/rsa_viz")
+
+library(RNifti)
+library(papayaWidget)
+
+
+papaya(
+  "MNI152_T1_2mm_brain.nii.gz",
+      options = list(
+        params = list(
+          xyz = c(45, 54, 45)  # Replace with your desired starting coordinate
+        )
+)
+)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
