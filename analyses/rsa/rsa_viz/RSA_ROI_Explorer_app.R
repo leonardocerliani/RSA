@@ -7,7 +7,7 @@ library(tidyverse)
 
 
 bd <- "/data00/leonardo/RSA/analyses/rsa"
-thr <- 0.05
+thr <- 0.05  # RSA value (!), NOT p value...
 
 MNI <- readNifti("MNI152_T1_2mm_brain.nii.gz")
 GM_clean <- readNifti("GM_clean.nii.gz")
@@ -132,8 +132,10 @@ do_boxplot <- function(bd, directory, subs_set) {
   if (subs_set == "N26") {
     subs_file <- "/data00/leonardo/RSA/sub_list.txt"
     subs <- sprintf("%02d",readLines(subs_file) %>% as.numeric)  
+    subs <- subs[subs != "20"]  # This is the outlier with very high R values
   } else {
-    subs <- c("02","03","12","11","22","09","29","28","26","32","23","15","20","19")  
+    # subs <- c("02","03","12","11","22","09","29","28","26","32","23","15","20","19")
+    subs <- c("02","03","12","11","22","09","29","28","26","32","23","15","19")
   }
   
   # Prepare fn to read the RSA values in the ROI for one rating
@@ -168,7 +170,7 @@ do_boxplot <- function(bd, directory, subs_set) {
       ROI_mean_vals,
       x = rat_type,
       y = value,
-      type = "nonparametric"
+      type = "parametric"
     ) +
     ggplot2::theme(
       text = ggplot2::element_text(size = 14) 

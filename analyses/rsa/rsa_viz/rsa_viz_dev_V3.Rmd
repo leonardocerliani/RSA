@@ -47,7 +47,9 @@ NB: there can be multiple ROIs in one nii
 ```{r}
 
 bd_ROI <- "/data00/leonardo/RSA/analyses/rsa/rsa_viz/"
-ROI_filename <- "roi_099.nii.gz"
+# ROI_filename <- "roi_099.nii.gz"
+ROI_filename <- "ROI.nii.gz"
+
 
 ROI_nii <- readNifti(paste0(bd_ROI, "/", ROI_filename))
 # view(ROI_nii)

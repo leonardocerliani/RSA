@@ -303,7 +303,7 @@ high and low congruence:
 
 ```{r}
 
-congruence_threshold <- 0.75
+congruence_threshold <- 0.84
 
 # tmp <- df_congruence %>%
 #   count(is_congruent = ALL >= congruence_threshold)

@@ -1,0 +1,135 @@
+---
+title: "Prepare all emotion models"
+author: "LC"
+date: "2024-04-29"
+output: html_document
+---
+
+This nb is to prepare a ratings csv which contains for each sub the median ratings across
+all subs.
+
+This should be used instead of the ratings file where the scores of each individual sub are recorded.
+
+This was an idea of Christian to cope with the variability in the congruence of the ratings across participants. We previously observed that more clear results were obtained when retaining only participants with high congruency. However this leads to discarding 35-45% of the participants.
+
+
+# Median model
+
+```{r, message=FALSE}
+library(tidyverse)
+
+bd_ratings <- "/data00/leonardo/RSA/analyses/RATINGS"
+
+ratings_type = "emotion"
+
+ratings_filename <- paste0(bd_ratings,"/",ratings_type,"_ratings.csv")
+
+
+df <- read_csv(paste0(bd_ratings,"/",ratings_type,"_ratings.csv"))
+
+median_model <- df %>%
+  group_by(video) %>%
+  mutate(across(starts_with("r_"), median))
+
+# # just to test that indeed now every sub was assigned the median
+# ff %>%
+#   select(sub, video, starts_with("r_")) %>%
+#   group_by(video) %>%
+#   group_split()
+  
+write_csv(median_model, "emotion_MEDIAN_ratings.csv")
+
+```
+
+
+# Rune validation model
+```{r, message=FALSE}
+
+rune_raw <- read_csv("RUNE_validation/allEMO_validation_CLEAN.csv")
+# rune_raw
+
+subs <- df$sub %>% unique
+
+subs_column <- tibble(
+  sub = subs
+)
+
+rune_model <- cross_join(subs_column, rune_raw)
+
+
+# add the remaining columns from df. Use sub + video to create a PK
+additional_cols <- df %>% 
+  select(sub, video, original_code, high_low_code, movie_cope_number, actor)
+
+rune_model_all_columns <- rune_model %>% 
+  inner_join(additional_cols, by=c("sub","video"))
+
+rune_model_all_columns
+
+write_csv(rune_model_all_columns, "emotion_RUNE_ratings.csv")
+
+```
+
+# Ideal model - so to say
+This is a model in which congruent emotions get 10 and all others get 0 for
+all movies and all subs. Except for neutral which is 0 anyway.
+
+```{r}
+
+emotion_ideal <- df %>%
+  mutate(r_pain = ifelse(emotion == "pain", 10, 0)) %>% 
+  mutate(r_happy = ifelse(emotion == "happy", 10, 0)) %>%
+  mutate(r_disgust = ifelse(emotion == "disgust", 10, 0)) %>% 
+  mutate(r_sad = ifelse(emotion == "sad", 10, 0)) %>% 
+  mutate(r_fear = ifelse(emotion == "fear", 10, 0)) %>% 
+  mutate(r_anger = ifelse(emotion == "anger", 10, 0))
+
+write_csv(emotion_ideal, "emotion_IDEAL_ratings.csv")
+
+```
+
+
+
+# Last check
+```{r, message=FALSE}
+
+emotion <- read_csv("emotion_ratings.csv")
+
+emotion_MEDIAN <- read_csv("emotion_MEDIAN_ratings.csv")
+
+emotion_RUNE <- read_csv("emotion_RUNE_ratings.csv")
+
+emotion_IDEAL <- read_csv("emotion_IDEAL_ratings.csv")
+
+
+show_heatmap <- function(df) {
+  df %>% 
+    arrange(emotion) %>%
+    select(starts_with("r_")) %>%
+    relocate("r_happy", "r_disgust", "r_sad", "r_fear", "r_anger", "r_pain") %>%
+    as.matrix() %>% 
+    heatmap(Rowv = NA, Colv = NA)
+}
+
+
+show_heatmap(emotion)
+show_heatmap(emotion_MEDIAN)
+show_heatmap(emotion_RUNE)
+show_heatmap(emotion_IDEAL)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
