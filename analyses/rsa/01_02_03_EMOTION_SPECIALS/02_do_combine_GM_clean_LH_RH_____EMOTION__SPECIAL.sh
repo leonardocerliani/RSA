@@ -4,7 +4,7 @@ bd="/data00/leonardo/RSA/analyses/rsa/rsa_results"
 
 
 # choose nsub : either N14 or N26
-nsub="N14"
+nsub="N26"
 
 # The original name is N[14/26]_GM_clean_[LH/RH]_EER, but the destination dir 
 # can be anything

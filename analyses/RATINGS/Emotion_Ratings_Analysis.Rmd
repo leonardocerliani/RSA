@@ -339,6 +339,39 @@ df %>%
 ```
 
 
+# Relation with Arousal and Valence
+
+The correlation between Arousal and Valence - calculated within subjects - ranges from -0.76 to 0. There is no apparent correlation between this and congruence.
+
+```{r, message=FALSE}
+
+df_A <- read_csv("arousal_ratings.csv") %>% 
+  select(sub,video,r_arousal,emotion)
+
+
+df_V <- read_csv("valence_ratings.csv") %>% 
+  select(sub,video,r_valence)
+  
+
+df_AV <- inner_join(df_A, df_V, by = c("sub","video")) %>% 
+  select(sub, r_arousal, r_valence, emotion)
+
+ff <- df_AV %>% 
+  select(sub, r_arousal, r_valence) %>% 
+  group_by(sub) %>% 
+  nest %>% 
+  mutate(cor_AV = map_dbl(data, ~ cor(.x$r_arousal, .x$r_valence, method = "spearman"))) %>% 
+  arrange(cor_AV) %>% 
+  inner_join(
+    df_congruence %>% select(sub, ALL) %>% rename(congruence = ALL), 
+    by = "sub"
+  )
+
+
+
+
+
+```
 
 
 

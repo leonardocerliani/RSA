@@ -8,7 +8,7 @@ usage() {
     echo "  mask_name   : any of the files inside /data00/leonardo/RSA/analyses/rsa/masks without the .nii.gz extension"
     echo "  nperms      : a number, typically between 1000-5000"
     echo
-    echo "Example: ./03_do_randomise____EMOTION__SPECIAL.sh N14_GM_clean_bilat GM_clean 5000"
+    echo "Example: ./03_do_randomise.sh N14_GM_clean_bilat GM_clean 5000"
     echo
     exit 1
 }
@@ -71,11 +71,19 @@ fi
 cd "${results_path}"
 
 # FSL merge operations
-fslmerge -t Emotion $(ls sub*emotion.nii.gz)
-fslmerge -t Emotion_MEDIAN $(ls sub*emotion_MEDIAN.nii.gz)
-fslmerge -t Emotion_RUNE $(ls sub*emotion_RUNE.nii.gz)
-fslmerge -t Emotion_IDEAL $(ls sub*emotion_IDEAL.nii.gz)
+fslmerge -t Emotion $(ls sub*emotion*)
+fslmerge -t Arousal $(ls sub*arousal*)
+fslmerge -t Valence $(ls sub*valence*)
 
+# FSL math operations
+fslmaths Emotion -sub Arousal Emotion_vs_Arousal
+fslmaths Arousal -sub Emotion Arousal_vs_Emotion
+
+fslmaths Emotion -sub Valence Emotion_vs_Valence
+fslmaths Valence -sub Emotion Valence_vs_Emotion
+
+fslmaths Arousal -sub Valence Arousal_vs_Valence
+fslmaths Valence -sub Arousal Valence_vs_Arousal 
 
 
 # Running randomise in background
@@ -84,9 +92,12 @@ fslmerge -t Emotion_IDEAL $(ls sub*emotion_IDEAL.nii.gz)
 
 # Running randomise with covariates in background
 for contrast in \
-    Emotion  Emotion_MEDIAN  Emotion_RUNE  Emotion_IDEAL; do
+    Arousal Emotion Valence \
+    Emotion_vs_Arousal Arousal_vs_Emotion \
+    Emotion_vs_Valence Valence_vs_Emotion \
+    Arousal_vs_Valence Valence_vs_Arousal; do
 
-    # with variance smoothing and covariates
+    # with variance smoothing
     nohup randomise -i ${contrast} -o stats_${contrast} -d ${mat_file} -t ${con_file} -m ${mask_path} -n ${nperms} -v 5 -T &
     
     # # NO COVARIATES
