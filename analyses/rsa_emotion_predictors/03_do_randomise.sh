@@ -97,8 +97,9 @@ for contrast in \
     Emotion_vs_Valence Valence_vs_Emotion \
     Arousal_vs_Valence Valence_vs_Arousal; do
 
-    # with variance smoothing
-    nohup randomise -i ${contrast} -o stats_${contrast} -d ${mat_file} -t ${con_file} -m ${mask_path} -n ${nperms} -v 5 -T &
+    # MODEL WITH COVARIATES
+    # nohup randomise -i ${contrast} -o stats_${contrast} -d ${mat_file} -t ${con_file} -m ${mask_path} -n ${nperms} -v 5 -T &
+    nohup randomise -i ${contrast} -o stats_${contrast} -d ${mat_file} -t ${con_file} -m ${mask_path} -n ${nperms} -T &
     
     # # NO COVARIATES
     # nohup randomise -i ${contrast} -o stats_${contrast} -m ${mask_path} -n ${nperms} -v 5 -1 -T &

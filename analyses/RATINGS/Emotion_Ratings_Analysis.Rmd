@@ -368,17 +368,124 @@ ff <- df_AV %>%
   )
 
 
-
+ff %>% 
+  ggplot(aes(x = congruence, y = cor_AV)) + 
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  theme_minimal()
 
 
 ```
 
 
+# RSA _between models_
+
+```{r, message=FALSE}
+
+# calculate the RDMs for Emotion
+df_Emotion <- read_csv(paste0(bd,"/","emotion_ratings.csv"))
+
+RDMs_Emotion <- df_Emotion %>% 
+  # filter(emotion != "neutral") %>%  # with this, n_movies = 48
+  group_by(sub) %>% 
+  arrange(sub,emotion,video) %>% 
+  nest %>%
+  mutate(Emotion_triu = map(
+    data, ~ do_RDM_ratings_one_sub(.x, dist_method_rating = "euclidean")
+  )) %>% 
+  select(sub, Emotion_triu)
 
 
+# calculate the RDMs for Arousal
+df_Arousal <- read_csv(paste0(bd,"/","arousal_ratings.csv"))
+
+RDMs_Arousal <- df_Arousal %>% 
+  # filter(emotion != "neutral") %>%  # with this, n_movies = 48
+  group_by(sub) %>% 
+  arrange(sub,emotion,video) %>% 
+  nest %>%
+  mutate(Arousal_triu = map(
+    data, ~ do_RDM_ratings_one_sub(.x, dist_method_rating = "euclidean")
+  )) %>% 
+  select(sub, Arousal_triu)
 
 
+# calculate corr between Emotion RDM and Arousal RDM
+btw_models_RSA <- inner_join(RDMs_Emotion, RDMs_Arousal, by="sub") %>% 
+  mutate(R = map2_dbl(Emotion_triu, Arousal_triu, ~ cor(.x, .y, method = "spearman")))
 
 
+# plot between-models RSA across subs
+btw_models_RSA$R %>% boxplot
+points(rep(1, length(btw_models_RSA$R)), btw_models_RSA$R, col = "blue", pch = 16)
+text(rep(1, length(btw_models_RSA$R)), btw_models_RSA$R, labels = btw_models_RSA$sub, pos = 4, cex = 0.8, col = "red")
+
+
+```
+
+```{r}
+# Checking out the matrices from the triu in each sub
+
+n_movies = 56
+
+# Function to reconstruct the symmetric matrix from the lower triangular part
+reconstruct_symmetric_matrix <- function(triu_values, n) {
+  # Create an empty nxn matrix
+  mat <- matrix(0, n, n)
+  
+  # Fill the lower triangular part of the matrix
+  mat[lower.tri(mat, diag = FALSE)] <- triu_values
+  
+  # Mirror the lower triangular part to the upper triangular part
+  mat <- mat + t(mat)
+  
+  return(mat)
+}
+
+plot_heatmap <- function(M) {
+  heatmap(M, Rowv = NA, Colv = NA, symm=T, revC = T)
+}
+
+mat <- reconstruct_symmetric_matrix(RDMs_Emotion$Emotion_triu[[1]],n=n_movies)
+
+mat <- reconstruct_symmetric_matrix(RDMs_Arousal$Arousal_triu[[1]],n=n_movies)
+
+plot_heatmap(mat)
+
+heatmap(mat, symm = T)
+
+
+```
+
+
+```{r}
+
+# correlation between the mean/median RDM of Emotion and Arousal
+
+n_movies = 56
+
+mean_RDMs <- inner_join(RDMs_Emotion, RDMs_Arousal, by="sub") %>% 
+  unnest(cols = c(Emotion_triu, Arousal_triu)) %>% 
+  group_by(sub) %>% 
+  mutate(element_n = row_number()) %>%
+  ungroup() %>% 
+  group_by(element_n) %>% 
+  summarise(
+    Emotion_triu = median(Emotion_triu),
+    Arousal_triu = median(Arousal_triu)
+  )
+
+reconstruct_symmetric_matrix(mean_RDMs$Emotion_triu,n=n_movies) %>% heatmap(symm = T)
+
+reconstruct_symmetric_matrix(mean_RDMs$Arousal_triu,n=n_movies) %>% heatmap(symm = T)
+
+cor(
+  mean_RDMs$Emotion_triu,
+  mean_RDMs$Arousal_triu,
+  method = "spearman"
+)
+
+
+```
 
 

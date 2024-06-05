@@ -28,10 +28,45 @@
 # - ALL_SUBS
 
 
-# ------------- TESTING -----------
 
-# TOP RATERS
-gm_mask=insula_HO_GM
+
+
+# # ------------- TESTING -----------
+
+# # TOP RATERS
+# gm_mask=insula_HO_GM
+# for ratings_type in emotion arousal valence; do
+#     for subs_set in TOP_RATERS; do
+#         nohup Rscript do_RSA_emotion_predictors_V10_Searchlight.R ${ratings_type} ${gm_mask} ${subs_set} &
+#     done
+# done
+
+# wait 
+
+
+# # ALL_SUBS
+# gm_mask=insula_HO_GM
+# for ratings_type in emotion arousal valence; do
+#     for subs_set in ALL_SUBS; do
+#         nohup Rscript do_RSA_emotion_predictors_V10_Searchlight.R ${ratings_type} ${gm_mask} ${subs_set} &
+#     done
+# done
+
+# wait 
+
+
+
+
+
+
+
+
+
+
+# ------------- REAL DEAL -----------
+
+# TOP RATERS LH
+gm_mask=GM_clean_LH
 for ratings_type in emotion arousal valence; do
     for subs_set in TOP_RATERS; do
         nohup Rscript do_RSA_emotion_predictors_V10_Searchlight.R ${ratings_type} ${gm_mask} ${subs_set} &
@@ -40,9 +75,18 @@ done
 
 wait 
 
+# TOP RATERS RH
+gm_mask=GM_clean_RH
+for ratings_type in emotion arousal valence; do
+    for subs_set in TOP_RATERS; do
+        nohup Rscript do_RSA_emotion_predictors_V10_Searchlight.R ${ratings_type} ${gm_mask} ${subs_set} &
+    done
+done
 
-# ALL_SUBS
-gm_mask=insula_HO_GM
+wait
+
+# ALL SUBS LH
+gm_mask=GM_clean_LH
 for ratings_type in emotion arousal valence; do
     for subs_set in ALL_SUBS; do
         nohup Rscript do_RSA_emotion_predictors_V10_Searchlight.R ${ratings_type} ${gm_mask} ${subs_set} &
@@ -51,45 +95,10 @@ done
 
 wait 
 
-
-
-
-# # ------------- REAL DEAL -----------
-
-# # TOP RATERS LH
-# gm_mask=GM_clean_LH
-# for ratings_type in emotion arousal valence; do
-#     for subs_set in TOP_RATERS; do
-#         nohup Rscript do_RSA_emotion_predictors_V10_Searchlight.R ${ratings_type} ${gm_mask} ${subs_set} &
-#     done
-# done
-
-# wait 
-
-# # TOP RATERS RH
-# gm_mask=GM_clean_RH
-# for ratings_type in emotion arousal valence; do
-#     for subs_set in TOP_RATERS; do
-#         nohup Rscript do_RSA_emotion_predictors_V10_Searchlight.R ${ratings_type} ${gm_mask} ${subs_set} &
-#     done
-# done
-
-# wait
-
-# # ALL SUBS LH
-# gm_mask=GM_clean_LH
-# for ratings_type in emotion arousal valence; do
-#     for subs_set in ALL_SUBS; do
-#         nohup Rscript do_RSA_emotion_predictors_V10_Searchlight.R ${ratings_type} ${gm_mask} ${subs_set} &
-#     done
-# done
-
-# wait 
-
-# # ALL SUBS RH
-# gm_mask=GM_clean_RH
-# for ratings_type in emotion arousal valence; do
-#     for subs_set in ALL_SUBS; do
-#         nohup Rscript do_RSA_emotion_predictors_V10_Searchlight.R ${ratings_type} ${gm_mask} ${subs_set} &
-#     done
-# done
+# ALL SUBS RH
+gm_mask=GM_clean_RH
+for ratings_type in emotion arousal valence; do
+    for subs_set in ALL_SUBS; do
+        nohup Rscript do_RSA_emotion_predictors_V10_Searchlight.R ${ratings_type} ${gm_mask} ${subs_set} &
+    done
+done
