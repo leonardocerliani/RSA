@@ -1,0 +1,94 @@
+---
+title: "prepare_model"
+author: "LC"
+date: "2024-05-17"
+output: html_document
+---
+
+# Order of the participants in the 4D
+To use randomise, we need to merge all the subs RSA volumes into a 4D. 
+This is a very delicate procedure, since the model will have to reflect the 
+order of the volumes in the 4D file.
+
+During the `03_prepare_4D_for_randomise.sh` a text file was created reflecting
+the order used in the creation of the 4D file. Of course there is one for the
+N14 and one for the N26 subs set. 
+
+A copy of those files is in the present directory:
+- N14_4D_order.csv
+- N26_4D_order.csv
+
+Since this is a repeated measurement, we need to add additional columns 
+modelling the mean for each participant across ratings. We try to do this
+programmatically here to avoid mistakes if this would be done manually.
+
+```{r, message=FALSE}
+library(tidyverse)
+
+filename_4D_order <- "N14_4D_order"
+
+# Vector of zeropadded sub_ids
+subs_file <- "/data00/leonardo/RSA/sub_list.txt"
+subs <- sprintf("%02d",readLines(subs_file) %>% as.numeric)
+
+```
+
+
+```{r, message=FALSE}
+
+# read the file
+df <- read_csv(paste0(filename_4D_order,".csv"), col_names = "filename") %>% 
+  
+  # extract sub and rating columns
+  mutate(sub = str_extract(filename, paste0(subs, collapse = "|"))) %>% 
+  mutate(rating = str_extract(filename, "arousal|emotion|valence")) %>% 
+  
+  # create columns for emotion, arousal, valence
+  mutate(arousal = ifelse(rating == "arousal",1,0)) %>% 
+  mutate(emotion = ifelse(rating == "emotion",1,0)) %>% 
+  mutate(valence = ifelse(rating == "valence",1,0)) 
+  
+```
+
+
+```{r}
+
+# create columns to model the mean of each sub
+df_means <- unique(df$sub) %>% map_dfc(~ ifelse(df$sub == .x, 1,0))
+colnames(df_means) <- unique(df$sub)
+
+```
+
+
+```{r}
+# column bind to get the final table
+df_model <- cbind(df, df_means)
+df_model
+
+write_csv(df_model, paste0(filename_4D_order,"_model.csv"))
+
+
+```
+
+
+
+
+
+
+```{r}
+# Define the subjects and conditions
+subjects &lt;- c("02", "03", "09", "11", "12", "15", "19", "20", "22", "23", "26", "28", "29", "32")
+conditions <- c("arousal", "emotion", "valence")
+
+
+# Generate the filenames using expand.grid and paste
+df <- expand.grid(sub = subs, condition = conditions)  %>% 
+  mutate(filename = paste0("sub_", sub, "_RSA_", condition, ".nii.gz")) %>%
+  select(filename)
+```
+
+
+
+
+
+
