@@ -1,0 +1,14 @@
+/ContrastName1	allMovies 
+/ContrastName2	arousal 
+/ContrastName3	emotion 
+/ContrastName4	valence 
+/NumWaves	4
+/NumContrasts	4
+/PPheights		1.000000e+00	1.000000e+00	1.000000e+00	1.000000e+00
+/RequiredEffect		0.375	3.769	3.769	3.769
+
+/Matrix
+1.000000e+00 0.000000e+00 0.000000e+00 0.000000e+00 
+0.000000e+00 1.000000e+00 0.000000e+00 0.000000e+00 
+0.000000e+00 0.000000e+00 1.000000e+00 0.000000e+00 
+0.000000e+00 0.000000e+00 0.000000e+00 1.000000e+00 
