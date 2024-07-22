@@ -24,11 +24,15 @@ source("funs_V10_Searchlight.R")
 
 # Set the following paramters manually
 ```{r}
+bd="/data00/leonardo/RSA/analyses"
+
+rsa_flavour="rsa"
+masks_dir=paste0(rsa_flavour,"/BRAIN_MASKS")
 
 # ratings_type can be emotion, arousal, valence
 ratings_type <- "emotion"
 
-# must be one of the masks in rsa/masks
+# must be one of the masks in [rsa_flavour]/masks
 gm_file <- "GM_clean"
 
 # Define searchlight radius in mm
@@ -44,13 +48,13 @@ top_raters_subs <- c("02","03","12","11","22","09","29","28","26","32","23","15"
 # Other parameters
 Do not touch unless you know what you are doing
 ```{r}
-bd="/data00/leonardo/RSA/analyses"
 
 # the following is our contrast of interest and it's always the same
 copes_type <- "one_ev_per_movie"
 
 # full path of the gm mask onto which the searchlight will be used
-gm_path <- paste0(bd,"/rsa/masks/", gm_file, ".nii.gz")
+# gm_path <- paste0(bd,"/rsa/masks/", gm_file, ".nii.gz") # OLE VERSION
+gm_path <- paste0(masks_dir,"/",gm_file,".nii.gz")
 
 
 # Choose the distance metric to use for fmri RDM
@@ -89,7 +93,7 @@ results_flavour <- generate_results_flavour(
   gm_file, dist_method_rating, dist_method_fmri, dist_method_rsa, subs
 )
 
-rsa_results_path <- paste0(bd, "/rsa/rsa_results")
+rsa_results_path <- paste0(bd, "/", rsa_flavour, "/rsa_results")
 results_dir <- paste0(rsa_results_path, "/", results_flavour)
 
 # Create the results if it does not exist
@@ -156,7 +160,8 @@ Also define a copes_numba vector with all the copes numbers.
 NB: The cope numbers in the `cope` column are NOT zeropadded since this is how they come out from FSL Feat
 ```{r, message=FALSE}
 
-copes_location_csv <- paste0(bd,"/rsa/copes_location.csv")
+# copes_location_csv <- paste0(bd,"/rsa/copes_location.csv") # OLE VERSION
+copes_location_csv <- paste0(bd,"/",rsa_flavour,"/copes_location.csv")
 
 df_path_copes <- if (file.exists(copes_location_csv) ) {
   df_path_copes <- read_csv(copes_location_csv)
@@ -435,7 +440,7 @@ directory if it does not exist yet
 #   gm_file, dist_method_rating, dist_method_fmri, dist_method_rsa, subs
 # )
 # 
-# rsa_results_path <- paste0(bd, "/rsa/rsa_results")
+# rsa_results_path <- paste0(bd, "/[rsa_flavour]/rsa_results")
 # results_dir <- paste0(rsa_results_path, "/", results_flavour)
 # 
 # # Create the results if it does not exist

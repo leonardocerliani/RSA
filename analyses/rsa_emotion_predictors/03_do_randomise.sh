@@ -1,5 +1,7 @@
 #!/bin/bash
 
+rsa_flavour="rsa_emotion_predictors"
+
 # Usage message function
 usage() {
     echo
@@ -28,7 +30,7 @@ nperms=$3
 
 # Define the paths
 results_path="rsa_results/${results_dir}"
-mask_path="/data00/leonardo/RSA/analyses/rsa/masks/${mask_name}.nii.gz"
+mask_path="/data00/leonardo/RSA/analyses/${rsa_flavour}/masks/${mask_name}.nii.gz"
 
 # Copy the model files (.mat and .con) to the results_dir 
 # to be able to use them in randomise
@@ -74,6 +76,7 @@ cd "${results_path}"
 fslmerge -t Emotion $(ls sub*emotion*)
 fslmerge -t Arousal $(ls sub*arousal*)
 fslmerge -t Valence $(ls sub*valence*)
+fslmerge -t Aroval $(ls sub*aroval*)
 
 # FSL math operations
 fslmaths Emotion -sub Arousal Emotion_vs_Arousal
@@ -85,6 +88,9 @@ fslmaths Valence -sub Emotion Valence_vs_Emotion
 fslmaths Arousal -sub Valence Arousal_vs_Valence
 fslmaths Valence -sub Arousal Valence_vs_Arousal 
 
+fslmaths Arousal -sub Aroval  Arousal_vs_Aroval
+fslmaths Aroval  -sub Arousal Aroval_vs_Arousal
+
 
 # Running randomise in background
 # NB: template syntax for 1 sample t-test with no confounds:
@@ -92,14 +98,15 @@ fslmaths Valence -sub Arousal Valence_vs_Arousal
 
 # Running randomise with covariates in background
 for contrast in \
-    Arousal Emotion Valence \
-    Emotion_vs_Arousal Arousal_vs_Emotion \
-    Emotion_vs_Valence Valence_vs_Emotion \
-    Arousal_vs_Valence Valence_vs_Arousal; do
+    Arousal Emotion Valence Aroval \
+    Emotion_vs_Arousal  Arousal_vs_Emotion \
+    Emotion_vs_Valence  Valence_vs_Emotion \
+    Arousal_vs_Valence  Valence_vs_Arousal \
+    Arousal_vs_Aroval   Aroval_vs_Arousal; do
 
-    # MODEL WITH COVARIATES
-    # nohup randomise -i ${contrast} -o stats_${contrast} -d ${mat_file} -t ${con_file} -m ${mask_path} -n ${nperms} -v 5 -T &
-    nohup randomise -i ${contrast} -o stats_${contrast} -d ${mat_file} -t ${con_file} -m ${mask_path} -n ${nperms} -T &
+
+    # with variance smoothing
+    nohup randomise -i ${contrast} -o stats_${contrast} -d ${mat_file} -t ${con_file} -m ${mask_path} -n ${nperms} -v 5 -T &
     
     # # NO COVARIATES
     # nohup randomise -i ${contrast} -o stats_${contrast} -m ${mask_path} -n ${nperms} -v 5 -1 -T &

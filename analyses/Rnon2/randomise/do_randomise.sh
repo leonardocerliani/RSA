@@ -10,7 +10,12 @@
 # MNI="/data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain.nii.gz"
 # fslmaths ${MNI} -div ${MNI} mask
 
-randomise -i 4d -o stats -d design.mat -t design.con -f design.fts -m mask -e design.grp -T -n 1000
+# randomise -i 4d -o stats -d design.mat -t design.con -f design.fts -m mask -e design.grp -T -n 1000
+
+randomise -i 4d -o stats -d design.mat -t design.con -f design.fts -m mask -e design.grp -T -x --uncorrp -n 1000
+
+
+# randomise -i 4d -o stats -d design.mat -t design.con -f design.fts -m mask -n 1000 -x --uncorrp
 
 
 

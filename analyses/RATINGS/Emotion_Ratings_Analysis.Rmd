@@ -379,6 +379,11 @@ ff %>%
 
 
 # RSA _between models_
+We find that the similarity is highly positive (0.4..0.6) and highly negative (-0.4..-0.6) in the **same locations** for arousal and emotion respectively.
+
+Is this a (mere) reflection that the two models are negatively correlated to each other? The simple analysis below shows that it is not the case.
+
+This opens the possibility that _different parts of the varibility in the fmri RDM are explained by emotion and arousal RDM_. If correct, this would be extremely interesting and valuable.
 
 ```{r, message=FALSE}
 
@@ -487,5 +492,27 @@ cor(
 
 
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

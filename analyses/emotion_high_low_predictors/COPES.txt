@@ -1,0 +1,8 @@
+# 1-2 anger      high/low
+# 3-4 disgust    high/low
+# 5-6 fear       high/low
+# 7-8 happy      high/low
+# 9-10 neutral   high/low
+# 11-12 pain     high/low
+# 13-14 sad      high/low
+

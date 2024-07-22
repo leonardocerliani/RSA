@@ -11,7 +11,10 @@ min_Arousal <- 0.5
 max_Arousal <- 0.6
 
 min_Emotion <- -0.4
-max_Emotion <- -0.6
+max_Emotion <- -0.5
+
+min_Valence <- 0.3
+max_Valence <- 0.4
 
 # ----------- Thresholds for Papaya ----------------
 
@@ -209,10 +212,10 @@ papaya_layout <- function(directory, subs_set) {
     ),
     options = list(
       papayaOptions(alpha = 1, lut = "Grayscale"),
-      papayaOptions(alpha = 0.5, lut = "Grayscale"),
+      papayaOptions(alpha = 0.3, lut = "Grayscale"),
       papayaOptions(alpha = 1, lut = "Red Overlay", min = min_Arousal, max = max_Arousal),
       papayaOptions(alpha = 1, lut = "Blue Overlay", min = min_Emotion, max = max_Emotion),
-      papayaOptions(alpha = 1, lut = "Green Overlay"),
+      papayaOptions(alpha = 1, lut = "Green Overlay", min = min_Valence, max = max_Valence),
       papayaOptions(alpha = 0.7, lut = "Green Overlay", min = 0, max = 2)
     ),
     interpolation = FALSE,

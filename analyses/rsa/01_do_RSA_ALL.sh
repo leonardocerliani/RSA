@@ -28,11 +28,9 @@
 # - ALL_SUBS
 
 
-# ------------- REAL DEAL -----------
-
 # TOP RATERS LH
 gm_mask=GM_clean_LH
-for ratings_type in emotion arousal valence; do
+for ratings_type in emotion arousal valence aroval; do
     for subs_set in TOP_RATERS; do
         nohup Rscript do_RSA_V10_Searchlight.R ${ratings_type} ${gm_mask} ${subs_set} &
     done
@@ -42,7 +40,7 @@ wait
 
 # TOP RATERS RH
 gm_mask=GM_clean_RH
-for ratings_type in emotion arousal valence; do
+for ratings_type in emotion arousal valence aroval; do
     for subs_set in TOP_RATERS; do
         nohup Rscript do_RSA_V10_Searchlight.R ${ratings_type} ${gm_mask} ${subs_set} &
     done
@@ -52,7 +50,7 @@ wait
 
 # ALL SUBS LH
 gm_mask=GM_clean_LH
-for ratings_type in emotion arousal valence; do
+for ratings_type in emotion arousal valence aroval; do
     for subs_set in ALL_SUBS; do
         nohup Rscript do_RSA_V10_Searchlight.R ${ratings_type} ${gm_mask} ${subs_set} &
     done
@@ -62,22 +60,11 @@ wait
 
 # ALL SUBS RH
 gm_mask=GM_clean_RH
-for ratings_type in emotion arousal valence; do
+for ratings_type in emotion arousal valence aroval; do
     for subs_set in ALL_SUBS; do
         nohup Rscript do_RSA_V10_Searchlight.R ${ratings_type} ${gm_mask} ${subs_set} &
     done
 done
-
-
-
-# # ------------ JUST TEST -----------
-# gm_mask=test_mask
-# for ratings_type in emotion_median; do
-#     for subs_set in TOP_RATERS; do
-#         nohup Rscript do_RSA_V10_Searchlight.R ${ratings_type} ${gm_mask} ${subs_set} &
-#     done
-# done
-
 
 
 

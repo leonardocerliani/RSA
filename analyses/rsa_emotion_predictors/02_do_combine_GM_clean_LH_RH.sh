@@ -1,9 +1,12 @@
 #!/bin/bash
 
-bd="/data00/leonardo/RSA/analyses/rsa_emotion_predictors/rsa_results"
+rsa_flavour="rsa_emotion_predictors"
+
+bd="/data00/leonardo/RSA/analyses/${rsa_flavour}/rsa_results"
+
 
 # choose nsub : either N14 or N26
-nsub="N14"
+nsub="N26"
 
 # The original name is N[14/26]_GM_clean_[LH/RH]_EER, but the destination dir 
 # can be anything
@@ -29,7 +32,7 @@ subs=$(ls ${bd}/${LH}/sub*emotion*.nii.gz | xargs -n1 basename | awk -F _ '{prin
 
 # join LH and RH
 for sub in ${subs}; do
-    for rating in emotion arousal valence; do
+    for rating in emotion arousal valence aroval; do
 
         echo Merging LH RH in sub-${sub}_RSA_${rating} 
 
@@ -42,7 +45,7 @@ for sub in ${subs}; do
 done
 
 # merge also the mean images
-for rating in emotion arousal valence; do
+for rating in emotion arousal valence aroval; do
 
     fslmaths ${bd}/${LH}_${rating} \
         -add ${bd}/${RH}_${rating} \

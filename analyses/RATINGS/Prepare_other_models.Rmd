@@ -1,0 +1,45 @@
+---
+title: "Prepare other models"
+author: "LC"
+date: "2024-06-14"
+output: html_document
+---
+
+
+```{r, message=FALSE}
+library(tidyverse)
+
+bd_ratings <- "/data00/leonardo/RSA/analyses/RATINGS"
+
+```
+
+
+
+Prepare Arousal + Valence ratings csv for model (aroval)
+```{r, message=FALSE}
+
+arousal <- read_csv(paste0(bd_ratings,"/","arousal_ratings.csv"))
+
+valence <- read_csv(paste0(bd_ratings,"/","valence_ratings.csv"))
+
+aroval <- arousal %>% 
+  inner_join(
+    valence %>% select(sub,video,"r_valence"),
+    by = c("sub","video")
+  ) %>% 
+  relocate(sub,video, starts_with("r_"))
+
+# for curiosity, check the association between arousal and valence
+cc_arousal_valence <- aroval %>%
+  select(sub, starts_with("r_")) %>% 
+  group_by(sub) %>% 
+  nest %>% 
+  mutate(CC = data %>% map_dbl(~ cor(.x$r_arousal, .x$r_valence)))
+
+cc_arousal_valence$CC %>% boxplot
+
+write_csv(aroval, paste0(bd_ratings,"/","aroval_ratings.csv"))
+
+```
+
+

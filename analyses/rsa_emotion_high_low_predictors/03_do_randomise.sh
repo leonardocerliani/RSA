@@ -1,5 +1,7 @@
 #!/bin/bash
 
+rsa_flavour="rsa_emotion_high_low_predictors"
+
 # Usage message function
 usage() {
     echo
@@ -8,7 +10,7 @@ usage() {
     echo "  mask_name   : any of the files inside /data00/leonardo/RSA/analyses/rsa/masks without the .nii.gz extension"
     echo "  nperms      : a number, typically between 1000-5000"
     echo
-    echo "Example: ./03_do_randomise.sh  N14_GM_clean_bilat  GM_clean  5000"
+    echo "Example: ./03_do_randomise.sh N14_GM_clean_bilat GM_clean 5000"
     echo
     exit 1
 }
@@ -28,7 +30,7 @@ nperms=$3
 
 # Define the paths
 results_path="rsa_results/${results_dir}"
-mask_path="/data00/leonardo/RSA/analyses/rsa/masks/${mask_name}.nii.gz"
+mask_path="/data00/leonardo/RSA/analyses/${rsa_flavour}/masks/${mask_name}.nii.gz"
 
 # Copy the model files (.mat and .con) to the results_dir 
 # to be able to use them in randomise
@@ -86,8 +88,8 @@ fslmaths Valence -sub Emotion Valence_vs_Emotion
 fslmaths Arousal -sub Valence Arousal_vs_Valence
 fslmaths Valence -sub Arousal Valence_vs_Arousal 
 
-fslmaths Aroval  -sub Arousal Aroval_vs_Arousal
 fslmaths Arousal -sub Aroval  Arousal_vs_Aroval
+fslmaths Aroval  -sub Arousal Aroval_vs_Arousal
 
 
 # Running randomise in background
@@ -97,14 +99,14 @@ fslmaths Arousal -sub Aroval  Arousal_vs_Aroval
 # Running randomise with covariates in background
 for contrast in \
     Arousal Emotion Valence Aroval \
-    Emotion_vs_Arousal Arousal_vs_Emotion \
-    Emotion_vs_Valence Valence_vs_Emotion \
-    Arousal_vs_Valence Valence_vs_Arousal\
-    Arousal_vs_Aroval Aroval_vs_Arousal; do
+    Emotion_vs_Arousal  Arousal_vs_Emotion \
+    Emotion_vs_Valence  Valence_vs_Emotion \
+    Arousal_vs_Valence  Valence_vs_Arousal \
+    Arousal_vs_Aroval   Aroval_vs_Arousal; do
 
-    # MODEL WITH COVARIATES
-    # nohup randomise -i ${contrast} -o stats_${contrast} -d ${mat_file} -t ${con_file} -m ${mask_path} -n ${nperms} -v 5 -T &
-    nohup randomise -i ${contrast} -o stats_${contrast} -d ${mat_file} -t ${con_file} -m ${mask_path} -n ${nperms} -T &
+
+    # with variance smoothing
+    nohup randomise -i ${contrast} -o stats_${contrast} -d ${mat_file} -t ${con_file} -m ${mask_path} -n ${nperms} -v 5 -T &
     
     # # NO COVARIATES
     # nohup randomise -i ${contrast} -o stats_${contrast} -m ${mask_path} -n ${nperms} -v 5 -1 -T &

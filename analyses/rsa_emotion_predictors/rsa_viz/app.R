@@ -6,7 +6,7 @@ library(tidyverse)
 
 
 
-bd <- "/data00/leonardo/RSA/analyses/rsa"
+bd <- "/data00/leonardo/RSA/analyses/rsa_emotion_predictors"
 thr <- 0.05
 
 MNI <- readNifti("MNI152_T1_2mm_brain.nii.gz")
@@ -197,9 +197,9 @@ papaya_layout <- function(directory, subs_set) {
     options = list(
       papayaOptions(alpha = 1, lut = "Grayscale"),
       papayaOptions(alpha = 0.5, lut = "Grayscale"),
-      papayaOptions(alpha = 1, lut = "Red Overlay", min = thr, max = 0.09),
-      papayaOptions(alpha = 1, lut = "Blue Overlay", min = thr, max = 0.09),
-      papayaOptions(alpha = 1, lut = "Green Overlay", min = thr, max = 0.09),
+      papayaOptions(alpha = 1, lut = "Red Overlay", min = 0.4, max = 0.6),
+      papayaOptions(alpha = 1, lut = "Blue Overlay", min = -0.4, max = -0.6),
+      papayaOptions(alpha = 1, lut = "Green Overlay", min = 0.4, max = 0.6),
       papayaOptions(alpha = 0.7, lut = "Green Overlay", min = 0, max = 2)
     ),
     interpolation = FALSE,

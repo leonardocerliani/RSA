@@ -36,11 +36,13 @@ source("funs_V10_emotion_high_low_predictors_Searchlight.R")
 #' # Set the following paramters manually
 ## ---------------------------------------------------------------------------------------------
 
+rsa_flavour="rsa_emotion_high_low_predictors"
+
 # # ratings_type can be emotion, arousal, valence
 # ratings_type <- "emotion"
 ratings_type <- args[1]
 
-# # must be one of the masks in rsa/masks
+# # must be one of the masks in [rsa_flavour]/masks
 # gm_file <- "test_mask"
 gm_file <- args[2]
 
@@ -64,7 +66,7 @@ bd="/data00/leonardo/RSA/analyses"
 copes_type <- "emotion_high_low_predictors"
 
 # full path of the gm mask onto which the searchlight will be used
-gm_path <- paste0(bd,"/rsa/masks/", gm_file, ".nii.gz")
+gm_path <- paste0(bd,"/",rsa_flavour,"/masks/", gm_file, ".nii.gz")
 
 
 # Choose the distance metric to use for fmri RDM
@@ -105,7 +107,7 @@ results_flavour <- generate_results_flavour(
   gm_file, dist_method_rating, dist_method_fmri, dist_method_rsa, subs
 )
 
-rsa_results_path <- paste0(bd, "/rsa_emotion_high_low_predictors/rsa_results")
+rsa_results_path <- paste0(bd, "/",rsa_flavour,"/rsa_results")
 results_dir <- paste0(rsa_results_path, "/", results_flavour)
 
 # Create the results if it does not exist
@@ -476,7 +478,7 @@ avg_RSA %>% datatable()
 #   gm_file, dist_method_rating, dist_method_fmri, dist_method_rsa, subs
 # )
 # 
-# rsa_results_path <- paste0(bd, "/rsa/rsa_results")
+# rsa_results_path <- paste0(bd, "/[rsa_flavour]/rsa_results")
 # results_dir <- paste0(rsa_results_path, "/", results_flavour)
 # 
 # # Create the results if it does not exist
