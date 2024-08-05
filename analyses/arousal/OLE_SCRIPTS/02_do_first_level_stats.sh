@@ -59,11 +59,20 @@ for run in $(seq 8); do
   # __ANATBRAINIMAGE__
   anat_brain_image="${RSA_dir}/prep_data/sub-${sub}/anat/sub-${sub}_T1w_brain"
 
-  # __CUSTOM_EV_FILE_PATH__
-  custom_ev_file_path="sub-${sub}/fmri/${model}/sub-${sub}_run-${run}"
+  # __EV_1__
+  ev_1="${RSA_dir}/prep_data/sub-${sub}/fmri/${model}/sub-${sub}_run-${run}.mat"
 
-  for var in tr total_volumes MNI_template total_voxels feat_dir \
-             anat_brain_image custom_ev_file_path; do
+  # __NAME_EV_1__
+  name_ev_1=${model}
+
+  # __NAME_CON_REAL_1__
+  name_con_real_1="${model}_con"
+
+  # __NAME_CON_ORIG_1__
+  name_con_orig_1="${model}_con"
+
+  for var in tr total_volumes MNI_template total_voxels feat_dir anat_brain_image \
+             ev_1 name_ev_1 name_con_real_1 name_con_orig_1; do
 
         # indirect variable referencing, cool.
         echo "${var} : ${!var} "
@@ -77,29 +86,19 @@ for run in $(seq 8); do
       -e "s@__TOTALNUMBAVOXELS__@${total_voxels}@g" \
       -e "s@__FEATDIR__@${feat_dir}@g" \
       -e "s@__ANATBRAINIMAGE__@${anat_brain_image}@g" \
-      -e "s@__CUSTOM_EV_FILE_PATH__@${custom_ev_file_path}@g" \
+      -e "s@__EV_1__@${ev_1}@g" \
+      -e "s@__NAME_EV_1__@${name_ev_1}@g" \
+      -e "s@__NAME_CON_REAL_1__@${name_con_real_1}@g" \
+      -e "s@__NAME_CON_ORIG_1__@${name_con_orig_1}@g" \
       ${fsf_template} > ${fsf_sub_run}
 
   echo
   echo
 done
 
-
 # create a bash array with all the 8 fsf and then run it in parallel
 fsf_paths=("${sub_fmri_dir}/${model}/design_sub-${sub}_run-"{1..8}".fsf")
 
-# NB: the && wait makes sure that the subsequent rm command is launched only
-# when all the background feat processes are completed
-printf "%s\n" "${fsf_paths[@]}" | xargs -P 8 -I{} feat {} && wait
-
-# tentative: remove all the .mat and .fsf files because in any case 
-# they are copied inside the .feat directory
-# I decided to leave them for the moment so that I can check the design with Feat
-# rm ${sub_fmri_dir}/${model}/*.mat
-# rm ${sub_fmri_dir}/${model}/*.fsf
-
+printf "%s\n" "${fsf_paths[@]}" | xargs -P 8 -I{} feat {}
 
 #EOF
-
-
-# rm -rf *.feat; rm *.fsf

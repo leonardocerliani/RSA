@@ -33,10 +33,10 @@ set fmri(sscleanup_yn) 0
 set fmri(outputdir) ""
 
 # TR(s)
-set fmri(tr) __TR__
+set fmri(tr) 1.816679
 
 # Total volumes
-set fmri(npts) __TOTALVOLUMES__
+set fmri(npts) 275
 
 # Delete volumes
 set fmri(ndelete) 0
@@ -245,7 +245,7 @@ set fmri(regstandard_yn) 1
 set fmri(alternateReference_yn) 0
 
 # Standard image
-set fmri(regstandard) "__MNITEMPLATE__"
+set fmri(regstandard) "/data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brain"
 
 # Search space for registration to standard space
 # 0   : No search
@@ -266,20 +266,20 @@ set fmri(regstandard_nonlinear_warpres) 10
 set fmri(paradigm_hp) 60
 
 # Total voxels
-set fmri(totalVoxels) __TOTALNUMBAVOXELS__
+set fmri(totalVoxels) 495616000
 
 
 # Number of lower-level copes feeding into higher-level analysis
 set fmri(ncopeinputs) 0
 
 # 4D AVW data or FEAT directory (1)
-set feat_files(1) "__FEATDIR__"
+set feat_files(1) "/data00/leonardo/RSA/prep_data/sub-02/fmri/arousal/sub-02_run-1_preproc_reg.feat"
 
 # Add confound EVs text file
 set fmri(confoundevs) 0
 
 # Subject's structural image for analysis 1
-set highres_files(1) "__ANATBRAINIMAGE__"
+set highres_files(1) "/data00/leonardo/RSA/prep_data/sub-02/anat/sub-02_T1w_brain"
 
 # EV 1 title
 set fmri(evtitle1) "arousal"
@@ -314,7 +314,7 @@ set fmri(tempfilt_yn1) 1
 set fmri(deriv_yn1) 1
 
 # Custom EV file (EV 1)
-set fmri(custom1) "/data00/leonardo/RSA/prep_data/__CUSTOM_EV_FILE_PATH___arousal_rating.mat"
+set fmri(custom1) "/data00/leonardo/RSA/prep_data/sub-02/fmri/arousal/sub-02_run-1_arousal_rating.mat"
 
 # Gamma sigma (EV 1)
 set fmri(gammasigma1) 3
@@ -364,7 +364,7 @@ set fmri(tempfilt_yn2) 1
 set fmri(deriv_yn2) 1
 
 # Custom EV file (EV 2)
-set fmri(custom2) "/data00/leonardo/RSA/prep_data/__CUSTOM_EV_FILE_PATH___allMovies.mat"
+set fmri(custom2) "/data00/leonardo/RSA/prep_data/sub-02/fmri/arousal/sub-02_run-1_allMovies.mat"
 
 # Gamma sigma (EV 2)
 set fmri(gammasigma2) 3
