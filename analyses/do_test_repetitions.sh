@@ -4,9 +4,9 @@
 # erroneously hard-coded in some of the $model-specific scripts
 # If it returns nothing, it means that everything is ok
 
-for model in allMovies arousal emotion valence emotion_predictors emotion_high_low_predictors; do
+for model in allMovies arousal emotion valence; do
 
-    for directory in allMovies arousal emotion valence emotion_predictors emotion_high_low_predictors; do
+    for directory in allMovies arousal emotion valence; do
 
         if [ ${model} != ${directory} ]; then
 

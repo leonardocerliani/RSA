@@ -46,10 +46,20 @@ for model in allMovies emotion arousal valence; do
         # Bring in MNI space
         # NB: the --premat should *not* be used (check the Feat logs)
         regdir=${source_bd}/sub-${sub}/fmri/${model}/sub-${sub}_run-${run}_preproc_reg.feat/reg
+
+        # # Initial version, not good MNI transformation
+        # applywarp --ref=${MNI_2mm} \
+        #           --in=${CC_native_space} \
+        #           --warp=${regdir}/example_func2standard_warp.nii.gz \
+        #           --out=${CC_MNI_space}
+
+        # Revised transformation, based on Feat log
         applywarp --ref=${MNI_2mm} \
                   --in=${CC_native_space} \
-                  --warp=${regdir}/example_func2standard_warp.nii.gz \
-                  --out=${CC_MNI_space}
+                  --out=${CC_MNI_space} \
+                  --warp=${regdir}/highres2standard_warp \
+                  --premat=${regdir}/example_func2highres.mat \
+                  --interp=spline
 
     done
 

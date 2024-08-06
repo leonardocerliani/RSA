@@ -5,6 +5,8 @@
 # I will modify it later to accept a new list of subs
 
 export model="valence"
+# copes : valence | allMovies
+export ncopes=2
 
 export nruns=8  # input how many runs to process, e.g. 5 for runs 1..5
 
@@ -22,6 +24,9 @@ export MNI_template="/data00/leonardo/warez/fsl/data/standard/MNI152_T1_2mm_brai
 
 sub_list="/data00/leonardo/RSA/sub_list.txt"
 # cat $sub_list  | xargs -I{} printf "%02d\n" {}
+
+
+# -------- second level analyses (across runs within sub) ----------------------
 
 run_sub_2nd_level() {
 
@@ -93,22 +98,30 @@ analyses_dir=${RSA_dir}/analyses/${model}
 
 fsf_grouplevel_template="${analyses_dir}/grouplevel_template.fsf"
 
-fsf_grouplevel_model="${analyses_dir}/results/grouplevel_${model}.fsf"
-group_outputdir="${analyses_dir}/results/grouplevel_${model}.gfeat"
+for i in $(seq ${ncopes}); do
 
-for var in fsf_grouplevel_template fsf_grouplevel_model group_outputdir; do
-    echo ${var} = ${!var}
+    ncope="cope${i}"
+
+    fsf_grouplevel_model="${analyses_dir}/results/grouplevel_${model}_${ncope}.fsf"
+    group_outputdir="${analyses_dir}/results/grouplevel_${model}_${ncope}.gfeat"
+
+    for var in fsf_grouplevel_template fsf_grouplevel_model group_outputdir; do
+        echo ${var} = ${!var}
+    done
+
+    sed -e "s@__GROUP_OUTPUTDIR__@${group_outputdir}@g" \
+        -e "s@__MNI_TEMPLATE__@${MNI_template}@g"  \
+        -e "s@__MODEL__@${model}@g" \
+        -e "s@__NCOPE__@${ncope}@g" \
+        ${fsf_grouplevel_template} > ${fsf_grouplevel_model}
+
 done
 
-sed -e "s@__GROUP_OUTPUTDIR__@${group_outputdir}@g" \
-    -e "s@__MNI_TEMPLATE__@${MNI_template}@g"  \
-    -e "s@__MODEL__@${model}@g" \
-    ${fsf_grouplevel_template} > ${analyses_dir}/results/grouplevel_${model}.fsf
+
+# run all the ${ncopes} grouplevel copes at once
+eval "grouplevel_fsfs=(\"$PWD/results/grouplevel_${model}_cope\"{1..$ncopes}\".fsf\")"
+
+printf "%s\n" "${grouplevel_fsfs[@]}" | xargs -P ${ncopes} -I{} feat {}
 
 
-feat ${analyses_dir}/results/grouplevel_${model}.fsf
-
-
-
-
-#EOF
+# EOF

@@ -7,11 +7,11 @@ library(tidyverse)
 
 # ----------- Thresholds for Papaya ----------------
 
-min_Arousal <- 0.5
+min_Arousal <- 0.4
 max_Arousal <- 0.6
 
 min_Emotion <- -0.4
-max_Emotion <- -0.5
+max_Emotion <- -0.6
 
 min_Valence <- 0.3
 max_Valence <- 0.4

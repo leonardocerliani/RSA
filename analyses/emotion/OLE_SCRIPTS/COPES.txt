@@ -1,0 +1,6 @@
+anger,disgust,fear,happy,pain,sad
+
+you can check it in the 01_do_prepare_mat_emotion.R
+
+
+

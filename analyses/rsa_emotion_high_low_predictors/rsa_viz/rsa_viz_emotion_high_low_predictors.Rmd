@@ -1,0 +1,587 @@
+---
+title: "RSA ROI analysis"
+subtitle: "rating and fmri RDMs for a given roi.nii.gz"
+author: "Leonardo Cerliani"
+date: "29/7/2023"
+output:
+  html_document:
+    self_contained: true
+    code_folding: hide
+    highlight: pygments
+    theme: cerulean
+    css: styles.css
+---
+
+
+# Initialization
+
+## Load libraries
+```{r message=F}
+library(tidyverse)
+library(future)
+library(furrr)
+library(tictoc)
+library(RNifti)
+library(proxy) # distances
+library(profvis)
+library(DT)
+library(formattable)
+library(gplots) # heatmap.2
+library(umap)
+library(patchwork)
+
+
+source("funs_V8_ROIs.R")
+
+bd="/data00/leonardo/RSA/analyses"
+bd_ratings = paste0(bd,"/RATINGS")
+
+# Manually modify according to the rsa flavour
+# rsa                     :   one_ev_per_movie
+# rsa_emotion_predictors  :   emotion_predictors
+# rsa_emotion_high_low_predictors   :   emotion_high_low_predictors
+rsa_flavour <- "rsa_emotion_high_low_predictors"
+copes_type <- "emotion_high_low_predictors"
+
+
+# Choose the distance metric to use for fmri RDM
+# Supported methods: 'pearson', 'spearman', 'euclidean', 'cosine' or 'mahalanobis'
+dist_method_rating <- "euclidean"
+dist_method_fmri = "euclidean"
+dist_method_rsa = "pearson"
+
+
+bd_ROI <- paste0("/data00/leonardo/RSA/analyses/",rsa_flavour,"/rsa_viz/")
+ROI_filename <- "ROI.nii.gz"
+
+
+```
+
+
+## Read in the ROI(s) for which you want to calculate RDMs
+NB: there can be multiple ROIs in one nii
+
+```{r}
+
+ROI_nii <- readNifti(paste0(bd_ROI, "/", ROI_filename))
+# view(ROI_nii)
+
+# just in case there is more than one label (with ROI.nii.gz it is not the case)
+region_labels <- ROI_nii[ROI_nii > 0] %>% unique %>% sort
+
+```
+
+
+## Define subs set
+```{r message=F}
+
+# Vector of zeropadded sub_ids
+subs_file <- "/data00/leonardo/RSA/sub_list.txt"
+subs <- sprintf("%02d",readLines(subs_file) %>% as.numeric)
+
+# ---------- ONLY TOP RATERS BELOW ------------
+subs <- c("02","03","12","11","22","09","29","28","26","32","23","15","20","19")
+
+# load emotion labels
+emotion_labels <- read_csv(paste0(bd,"/RATINGS/emotion_ratings.csv")) %>% 
+  filter(sub == "02") %>% select(emotion) %>% pull
+
+```
+
+
+## Heatmap plot functions
+```{r}
+# plot_heatmap(D %>% as.matrix)
+plot_heatmap <- function(M, title=NULL) {
+  heatmap(M, Rowv = NA, Colv = NA, symm=T, revC = T, main=title)
+}
+
+# The following is to plot also side colors for emotion
+# NB:   # The input matrix MUST already have rownames for emotions
+plot_heatmap_sides <- function(M, title=NULL) {
+  
+  emo_names <- rownames(M)
+  
+  # Define a blue to red color palette for the heatmap
+  blue_to_red <- colorRampPalette(c("blue", "white", "red"))(n = 100)
+  
+  # Define the palette for emotions
+  paletta_emotions <- c(
+    "#eb1414", "#f7a1a1",  # anger_high, anger_low
+    "#0066ff", "#99c2ff",  # pain_high, pain_low
+    "#00cc00", "#99ff99",  # disgust_high, disgust_low
+    "#ff00ff", "#ff99ff",  # sad_high, sad_low
+    "#ff5500", "#ffbb99",  # fear_high, fear_low
+    "#ffff00", "#ffff99",  # happy_high, happy_low
+    "#000000", "#cccccc"   # neutral_high, neutral_low
+  )
+  
+  # Define the extended labels for emotions with "_high" and "_low" variations
+  emo_labels <- c(
+    "anger_high", "anger_low", 
+    "pain_high", "pain_low", 
+    "disgust_high", "disgust_low", 
+    "sad_high", "sad_low", 
+    "fear_high", "fear_low", 
+    "happy_high", "happy_low", 
+    "neutral_high", "neutral_low"
+  )
+  
+  # Map each unique emotion to a color
+  label_colors <- setNames(paletta_emotions, emo_labels)
+  
+  # Create vectors of colors for row and column side colors based on emo_labels_reord
+  row_side_colors <- col_side_colors <- label_colors[emo_names]
+  
+  # Plot the heatmap
+  heatmap.2(M, Rowv = NA, Colv = NA, symm=T, revC = F, col = blue_to_red,
+            RowSideColors = row_side_colors, ColSideColors = col_side_colors, 
+            main = title, trace='none', cellnote=round(M, 2), notecol="black", notecex=0.03, 
+            dendrogram='none', margins=c(10,10), key = TRUE)
+}
+
+
+
+```
+
+
+# Rats RDM
+
+## Function to calculate model-specific mean_rats RDM matrix (tril of the median RDM)
+```{r, message=FALSE}
+
+# in get_rats_median_RDM : ratings_type is one of arousal, emotion, valence
+# for testing the function:
+ratings_type="arousal"
+
+get_rats_median_RDM <- function(ratings_type, dist_method_rating) {
+
+  bd_ratings = paste0(bd,"/RATINGS")
+  ratings_path <- paste0(bd_ratings,"/",ratings_type,"_ratings.csv")
+  rats <- read_csv(ratings_path)
+  
+  
+  # EMOTION_HIGH_LOW_PREDICTORS VARIANT
+  rats <- rats %>%
+    filter(sub %in% subs) %>%
+    # EMOTION COL HERE *MUST* ALSO SPECIFY HIGH AND LOW
+    mutate(HI_LO = str_extract(high_low_code, "high|low")) %>%
+    mutate(emotion = paste0(emotion,"_",HI_LO)) %>% 
+    select(sub, emotion, starts_with("r_")) %>% 
+    # IMPORTANT : AVG ACROSS EMOTION *AND* HIGH/LOW (12 + 2 predictors)
+    group_by(sub, emotion) %>%
+    reframe(across(starts_with("r_"), median, na.rm = TRUE)) %>% 
+    ungroup %>% 
+    arrange(sub, emotion)
+  
+  
+  # get rats_median
+  rats_median <- rats %>% 
+    group_by(emotion) %>% 
+    summarise(
+      emotion = max(emotion),
+      across(starts_with("r_"), ~ round(median(.x, na.rm = TRUE), 2))
+    ) 
+  
+  # calculate median RDM
+  # NB: this is the median of the sub-specific RDM, 
+  # *not* the RDM of the median rats (for concordance with median fMRI RDM)
+  RDMs_rats_wider <- subs %>% map_dfc(~ {
+    do_RDM_ratings_one_sub(.x, dist_method_rating, rats, RDM_type =  'tril')
+  })
+  
+  RDMs_rats <- RDMs_rats_wider %>% 
+    pivot_longer(cols = everything(), names_to = "sub") %>% 
+    arrange(sub)
+  
+  # average across subs - for this we need to group across subs
+  # and add a tril_element
+  df_median_RDMs_rats <- RDMs_rats %>%
+    group_by(sub) %>% 
+    mutate(tril_element = row_number()) %>%
+    ungroup %>% 
+    group_by(tril_element) %>% 
+    reframe(median_value = median(value, na.rm = TRUE))
+  
+  # calculate the number of elements on each side of the matrix (careful here)
+  dim_matrix <- rats$emotion %>% unique %>% length
+  
+  m = matrix(0, dim_matrix, dim_matrix)
+  m[lower.tri(m)] <- df_median_RDMs_rats$median_value
+  m <- m + t(m)
+  diag(m) <- NA
+
+  rownames(m) <- rats_median$emotion
+  colnames(m) <- rats_median$emotion
+  
+  median_RDMs_rats <- m
+  
+    
+  # get the reordering vector for different emotion 
+  #  OR increasing arousal OR increasing valence
+  idx_sort <- switch(
+    ratings_type,
+    "emotion" = order(rats_median$emotion),
+    "arousal" = order(rats_median$r_arousal),
+    "valence" = order(rats_median$r_valence)
+  )
+  
+  # just to check
+  rats_median[idx_sort,]
+  
+  return(
+    list(idx_sort, rats_median, median_RDMs_rats)
+  )
+  
+}
+
+
+```
+
+
+## Calculate and Plot the reordered median rats RDM for all three models
+The idx_sort_[model] will be used to reorder the fmri_RDM
+```{r, message=FALSE}
+# AROUSAL
+out_arousal <- get_rats_median_RDM("arousal", dist_method_rating)
+idx_sort_arousal <- out_arousal[[1]]
+rats_median_arousal <- out_arousal[[2]]
+RDM_arousal <- out_arousal[[3]]
+
+
+# EMOTION
+out_emotion <- get_rats_median_RDM("emotion", dist_method_rating)
+idx_sort_emotion <- out_emotion[[1]]
+rats_median_emotion <- out_emotion[[2]]
+RDM_emotion <- out_emotion[[3]]
+
+
+# VALENCE
+out_valence <- get_rats_median_RDM("valence", dist_method_rating)
+idx_sort_valence <- out_valence[[1]]
+rats_median_valence <- out_valence[[2]]
+RDM_valence <- out_valence[[3]]
+
+
+# AROVAL
+out_aroval <- get_rats_median_RDM("aroval", dist_method_rating)
+idx_sort_aroval <- out_aroval[[1]]
+rats_median_aroval <- out_aroval[[2]]
+RDM_aroval <- out_aroval[[3]]
+
+
+# plot_heatmap_sides(RDM_emotion[idx_sort_emotion,idx_sort_emotion], "emotion") 
+# plot_heatmap_sides(RDM_arousal[idx_sort_arousal,idx_sort_arousal], "arousal")
+# plot_heatmap_sides(RDM_valence[idx_sort_valence,idx_sort_valence], "valence")
+
+plot_heatmap_sides(RDM_emotion, "emotion") 
+plot_heatmap_sides(RDM_arousal, "arousal")
+plot_heatmap_sides(RDM_valence, "valence")
+plot_heatmap_sides(RDM_aroval, "aroval")
+```
+
+
+## Alternative method : RDM of the median tril
+```{r, message=FALSE}
+# Just to check, here are the median RDM calculated on the median tril
+
+m_arousal <- rats_median_arousal %>% 
+  select(starts_with("r_")) %>% 
+  as.matrix %>% 
+  DDOS(method = "euclidean") %>% as.matrix
+
+rownames(m_arousal) <- colnames(m_arousal) <- rownames(RDM_arousal)
+diag(m_arousal) <- NA
+plot_heatmap_sides(m_arousal, "arousal")
+
+
+m_emotion <- rats_median_emotion %>% 
+  select(starts_with("r_")) %>% 
+  as.matrix %>% 
+  DDOS(method = "euclidean") %>% as.matrix
+
+rownames(m_emotion) <- colnames(m_emotion) <- rownames(RDM_arousal)
+diag(m_emotion) <- NA
+plot_heatmap_sides(m_emotion, "emotion")
+
+
+```
+
+
+
+## UMAP plot
+```{r, eval=TRUE, include=TRUE, message=FALSE}
+# RDM_ratings dimred
+
+
+
+umap_result <- umap::umap(RDM_emotion, input="dist", n_neighbors = 3, n_components=2)
+
+paletta_emotions <- c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3", "#FF7F00", "#FFFF33", "#FFFFFF")
+
+paletta_emotions <- c(
+  "#eb1414", "#f7a1a1",  # anger_high, anger_low
+  "#0066ff", "#99c2ff",  # pain_high, pain_low
+  "#00cc00", "#99ff99",  # disgust_high, disgust_low
+  "#ff00ff", "#ff99ff",  # sad_high, sad_low
+  "#ff5500", "#ffbb99",  # fear_high, fear_low
+  "#ffff00", "#ffff99",  # happy_high, happy_low
+  "#000000", "#cccccc"   # neutral_high, neutral_low
+)
+
+
+  emotion_labels <- c(
+    "anger_high", "anger_low", 
+    "pain_high", "pain_low", 
+    "disgust_high", "disgust_low", 
+    "sad_high", "sad_low", 
+    "fear_high", "fear_low", 
+    "happy_high", "happy_low", 
+    "neutral_high", "neutral_low"
+  )
+
+# plot pc1,2 and pc2,3
+do_UMAP_lowdim_plots <- function(umap_result, lowdim_x, lowdim_y) {
+  
+  umap_lowdim <- data.frame(
+    pc_x = umap_result$layout[,lowdim_x], 
+    pc_y = umap_result$layout[,lowdim_y], 
+    emotion_labels
+  )
+  
+  p <- ggplot(umap_lowdim, aes(x = pc_x, y = pc_y, color = emotion_labels)) +
+    geom_point(size = 3, alpha = 0.7) +  # Open circles for points
+    scale_color_manual(values = paletta_emotions) +
+    scale_shape_manual(values = c(1, 3)) +  # Assign specific shapes
+    labs(
+      title = "UMAP Projection", 
+      x = paste0("lowdim ",lowdim_x), 
+      y = paste0("lowdim ",lowdim_y)
+    ) +
+    theme_minimal() +
+    guides(color = guide_legend(override.aes = list(shape = 16)))  # Filled circles in the legend
+  
+  return(p)
+}
+
+
+p <- do_UMAP_lowdim_plots(umap_result, lowdim_x = 1, lowdim_y = 2)
+p
+
+```
+
+
+
+
+
+
+# fmri RDM
+
+## Get copes location
+NB: The cope numbers in the `cope` column are NOT zeropadded since this is how they come out from FSL Feat
+
+```{r,message=FALSE}
+
+copes_location_csv <- paste0(bd,"/",rsa_flavour,"/copes_location.csv")
+
+df_path_copes <- if (file.exists(copes_location_csv) ) {
+  df_path_copes <- read_csv(copes_location_csv)
+} else {
+  df_path_copes <- import_df_path_copes(bd, copes_type)
+}
+
+copes_numba <- df_path_copes$cope %>% unique
+ncopes <- length(copes_numba)
+
+```
+
+
+
+## Calculate RDMs
+```{r}
+
+# 5 workers give the best performance
+plan(multisession, workers = 5)
+
+tic()
+RDMs_fmri <- subs %>% future_map_dfr(~{
+  
+  paste0("Calculating RDMs for sub ",.x,"\n") %>% cat
+  
+  df_copes <- load_sub_copes(.x, copes_numba, df_path_copes)
+  
+  one_RDM_fmri <- calculate_fmri_RDMs(
+    df_copes,
+    ROI_nii,
+    dist_method_fmri,
+    RDM_type = "tril"
+  )
+
+  one_RDM_fmri %>% mutate(sub = .x) %>% relocate(sub)
+  
+})
+toc()
+
+
+plan(sequential)
+
+```
+
+
+
+## Calculate median triu and plot full
+```{r}
+
+mean_triu <- RDMs_fmri %>% 
+  group_by(sub) %>% 
+  mutate(triu_cell = row_number()) %>% 
+  ungroup() %>% 
+  group_by(triu_cell) %>% 
+  summarise(mean_triu_cell = median(RDM_region_1)) %>% 
+  select(mean_triu_cell) %>% pull
+
+# mean_triu
+hist(mean_triu)
+
+
+# reconstruct full matrix and assign row/colnames
+reconstruct_full <- function(triu, ncopes, emotion_labels) {
+  RDM_full <- matrix(0, nrow = ncopes, ncol = ncopes)
+  RDM_full[lower.tri(RDM_full, diag = F)] = triu
+  RDM_full = RDM_full + t(RDM_full)
+  diag(RDM_full) <- NA
+  rownames(RDM_full) <- colnames(RDM_full) <- rownames(RDM_emotion)  # careful here!!
+  return(RDM_full)
+}
+
+RDM_full <- reconstruct_full(mean_triu, ncopes, emotion_labels)
+
+# plot_heatmap_sides(RDM_full[idx_sort_arousal, idx_sort_arousal], "arousal")
+# plot_heatmap_sides(RDM_full[idx_sort_emotion, idx_sort_emotion], "emotion")
+# plot_heatmap_sides(RDM_full[idx_sort_valence, idx_sort_valence], "valence")
+
+plot_heatmap_sides(RDM_full, "fmri")
+
+```
+
+
+## Scatterplot rats fmri
+```{r}
+
+triu_fmri <- RDM_full[lower.tri(RDM_full)]
+
+triu_arousal <- RDM_arousal[lower.tri(RDM_arousal)]
+triu_emotion <- RDM_emotion[lower.tri(RDM_emotion)]
+
+cor(triu_fmri, triu_arousal, method = "spearman")
+plot(triu_fmri, triu_arousal, main = "fmri vs arousal")
+
+cor(triu_fmri, triu_emotion, method = "spearman")
+plot(triu_fmri, triu_emotion, main = "fmri vs emotion")
+
+
+```
+
+
+
+
+
+## Test for distances
+```{r, include=FALSE, eval=FALSE}
+emo_labels <- rats_median_emotion$emotion
+
+# Arousal
+m_arousal <- rats_median_arousal %>% 
+  select(starts_with("r_")) %>% 
+  as.matrix 
+
+rownames(m_arousal) <- emo_labels
+m_arousal
+
+D_arousal <- dist(m_arousal) %>% as.matrix
+diag(D_arousal) <- NA
+rownames(D_arousal) <- colnames(D_arousal) <- emo_labels
+plot_heatmap_sides(D_arousal, "arousal")
+
+
+# Emotion
+m_emotion <- rats_median_emotion %>% 
+  select(starts_with("r_")) %>% 
+  as.matrix 
+
+rownames(m_emotion) <- emo_labels
+m_emotion
+
+
+D_emotion <- dist(m_emotion) %>% as.matrix
+diag(D_emotion) <- NA
+rownames(D_emotion) <- colnames(D_emotion) <- emo_labels
+plot_heatmap_sides(D_emotion, "emotion")
+```
+
+
+
+
+## Difference between unidimensional arousal and multidimensional emotion rating
+
+```{r, include=T, eval=T}
+v1 = 1
+v5 = 5
+v6 = 6
+
+all <- rbind(v1,v5,v6)
+
+D <- dist(all) %>% as.matrix %>% round()
+diag(D) = NA
+
+heatmap.2(D, Rowv = NA, Colv = NA, symm=T, revC = F, dendrogram = 'none',
+          cellnote = D, notecol = 'black',notecex = 1.0, trace = 'none', key = F)
+
+```
+
+
+```{r, include=T, eval=T}
+v1 = c(1,0,0)
+v5 = c(0,5,0)
+v6 = c(0,0,6)
+
+all <- rbind(v1,v5,v6)
+
+D <- dist(all) %>% as.matrix %>% round()
+diag(D) = NA
+
+
+heatmap.2(D, Rowv = NA, Colv = NA, symm=T, revC = F, dendrogram = 'none',
+          cellnote = D, notecol = 'black',notecex = 1.0, trace = 'none', key = F)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

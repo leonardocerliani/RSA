@@ -1,3 +1,4 @@
-Rnon2_imgs/
+*.nii.gz
 venv/
 MRGNCY/
+

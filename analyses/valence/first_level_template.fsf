@@ -135,7 +135,7 @@ set fmri(prewhiten_yn) 1
 # Add motion parameters to model
 # 0 : No
 # 1 : Yes
-set fmri(motionevs) 2
+set fmri(motionevs) 0
 set fmri(motionevsbeta) ""
 set fmri(scriptevsbeta) ""
 
@@ -153,13 +153,13 @@ set fmri(mixed_yn) 2
 set fmri(randomisePermutations) 5000
 
 # Number of EVs
-set fmri(evs_orig) 1
-set fmri(evs_real) 2
+set fmri(evs_orig) 2
+set fmri(evs_real) 4
 set fmri(evs_vox) 0
 
 # Number of contrasts
-set fmri(ncon_orig) 1
-set fmri(ncon_real) 1
+set fmri(ncon_orig) 2
+set fmri(ncon_real) 2
 
 # Number of F-tests
 set fmri(nftests_orig) 0
@@ -282,7 +282,7 @@ set fmri(confoundevs) 0
 set highres_files(1) "__ANATBRAINIMAGE__"
 
 # EV 1 title
-set fmri(evtitle1) "__NAME_EV_1__"
+set fmri(evtitle1) "valence"
 
 # Basic waveform shape (EV 1)
 # 0 : Square
@@ -314,7 +314,7 @@ set fmri(tempfilt_yn1) 1
 set fmri(deriv_yn1) 1
 
 # Custom EV file (EV 1)
-set fmri(custom1) "__EV_1__"
+set fmri(custom1) "/data00/leonardo/RSA/prep_data/__CUSTOM_EV_FILE_PATH___valence_rating.mat"
 
 # Gamma sigma (EV 1)
 set fmri(gammasigma1) 3
@@ -328,6 +328,59 @@ set fmri(ortho1.0) 0
 # Orthogonalise EV 1 wrt EV 1
 set fmri(ortho1.1) 0
 
+# Orthogonalise EV 1 wrt EV 2
+set fmri(ortho1.2) 0
+
+# EV 2 title
+set fmri(evtitle2) "allMovies"
+
+# Basic waveform shape (EV 2)
+# 0 : Square
+# 1 : Sinusoid
+# 2 : Custom (1 entry per volume)
+# 3 : Custom (3 column format)
+# 4 : Interaction
+# 10 : Empty (all zeros)
+set fmri(shape2) 3
+
+# Convolution (EV 2)
+# 0 : None
+# 1 : Gaussian
+# 2 : Gamma
+# 3 : Double-Gamma HRF
+# 4 : Gamma basis functions
+# 5 : Sine basis functions
+# 6 : FIR basis functions
+# 8 : Alternate Double-Gamma
+set fmri(convolve2) 2
+
+# Convolve phase (EV 2)
+set fmri(convolve_phase2) 0
+
+# Apply temporal filtering (EV 2)
+set fmri(tempfilt_yn2) 1
+
+# Add temporal derivative (EV 2)
+set fmri(deriv_yn2) 1
+
+# Custom EV file (EV 2)
+set fmri(custom2) "/data00/leonardo/RSA/prep_data/__CUSTOM_EV_FILE_PATH___allMovies.mat"
+
+# Gamma sigma (EV 2)
+set fmri(gammasigma2) 3
+
+# Gamma delay (EV 2)
+set fmri(gammadelay2) 6
+
+# Orthogonalise EV 2 wrt EV 0
+set fmri(ortho2.0) 0
+
+# Orthogonalise EV 2 wrt EV 1
+set fmri(ortho2.1) 0
+
+# Orthogonalise EV 2 wrt EV 2
+set fmri(ortho2.2) 0
+
 # Contrast & F-tests mode
 # real : control real EVs
 # orig : control original EVs
@@ -338,7 +391,7 @@ set fmri(con_mode) orig
 set fmri(conpic_real.1) 1
 
 # Title for contrast_real 1
-set fmri(conname_real.1) "__NAME_CON_REAL_1__"
+set fmri(conname_real.1) "valence_con"
 
 # Real contrast_real vector 1 element 1
 set fmri(con_real1.1) 1
@@ -346,17 +399,62 @@ set fmri(con_real1.1) 1
 # Real contrast_real vector 1 element 2
 set fmri(con_real1.2) 0
 
+# Real contrast_real vector 1 element 3
+set fmri(con_real1.3) 0
+
+# Real contrast_real vector 1 element 4
+set fmri(con_real1.4) 0
+
+# Display images for contrast_real 2
+set fmri(conpic_real.2) 1
+
+# Title for contrast_real 2
+set fmri(conname_real.2) "allMovies"
+
+# Real contrast_real vector 2 element 1
+set fmri(con_real2.1) 0
+
+# Real contrast_real vector 2 element 2
+set fmri(con_real2.2) 0
+
+# Real contrast_real vector 2 element 3
+set fmri(con_real2.3) 1
+
+# Real contrast_real vector 2 element 4
+set fmri(con_real2.4) 0
+
 # Display images for contrast_orig 1
 set fmri(conpic_orig.1) 1
 
 # Title for contrast_orig 1
-set fmri(conname_orig.1) "__NAME_CON_ORIG_1__"
+set fmri(conname_orig.1) "valence_con"
 
 # Real contrast_orig vector 1 element 1
 set fmri(con_orig1.1) 1
 
+# Real contrast_orig vector 1 element 2
+set fmri(con_orig1.2) 0
+
+# Display images for contrast_orig 2
+set fmri(conpic_orig.2) 1
+
+# Title for contrast_orig 2
+set fmri(conname_orig.2) "allMovies"
+
+# Real contrast_orig vector 2 element 1
+set fmri(con_orig2.1) 0
+
+# Real contrast_orig vector 2 element 2
+set fmri(con_orig2.2) 1
+
 # Contrast masking - use >0 instead of thresholding?
 set fmri(conmask_zerothresh_yn) 0
+
+# Mask real contrast/F-test 1 with real contrast/F-test 2?
+set fmri(conmask1_2) 0
+
+# Mask real contrast/F-test 2 with real contrast/F-test 1?
+set fmri(conmask2_1) 0
 
 # Do contrast masking at all?
 set fmri(conmask1_1) 0

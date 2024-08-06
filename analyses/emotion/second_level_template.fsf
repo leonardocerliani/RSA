@@ -265,8 +265,12 @@ set fmri(regstandard_nonlinear_warpres) 10
 # High pass filter cutoff
 set fmri(paradigm_hp) 100
 
+
+
+
+
 # Number of lower-level copes feeding into higher-level analysis
-set fmri(ncopeinputs) 6
+set fmri(ncopeinputs) 7
 
 # Use lower-level cope 1 for higher-level analysis
 set fmri(copeinput.1) 1
@@ -285,6 +289,11 @@ set fmri(copeinput.5) 1
 
 # Use lower-level cope 6 for higher-level analysis
 set fmri(copeinput.6) 1
+
+# Use lower-level cope 7 for higher-level analysis
+set fmri(copeinput.7) 1
+
+
 
 
 

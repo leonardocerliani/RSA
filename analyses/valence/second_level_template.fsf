@@ -266,10 +266,16 @@ set fmri(regstandard_nonlinear_warpres) 10
 set fmri(paradigm_hp) 100
 
 # Number of lower-level copes feeding into higher-level analysis
-set fmri(ncopeinputs) 1
+set fmri(ncopeinputs) 2
 
 # Use lower-level cope 1 for higher-level analysis
 set fmri(copeinput.1) 1
+
+# Use lower-level cope 2 for higher-level analysis
+set fmri(copeinput.2) 1
+
+
+
 
 
 
@@ -329,7 +335,7 @@ set fmri(con_mode) real
 set fmri(conpic_real.1) 1
 
 # Title for contrast_real 1
-set fmri(conname_real.1) "group mean"
+set fmri(conname_real.1) "runs_mean"
 
 # Real contrast_real vector 1 element 1
 set fmri(con_real1.1) 1
@@ -359,4 +365,6 @@ set fmri(init_standard) ""
 set fmri(overwrite_yn) 1
 
 
-# ------------- Added lines below ----------------
+
+# ------------------ Additional lines below --------------------
+

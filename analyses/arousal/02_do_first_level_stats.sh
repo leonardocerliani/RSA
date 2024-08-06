@@ -61,6 +61,7 @@ for run in $(seq 8); do
 
   # __CUSTOM_EV_FILE_PATH__
   custom_ev_file_path="sub-${sub}/fmri/${model}/sub-${sub}_run-${run}"
+  
 
   for var in tr total_volumes MNI_template total_voxels feat_dir \
              anat_brain_image custom_ev_file_path; do

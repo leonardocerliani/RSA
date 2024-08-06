@@ -6,6 +6,7 @@
 sub=$(printf "%02d" $1)
 
 model="emotion"
+# copes: anger | disgust | fear | happy | pain | sad | allMovies
 
 RSA_dir="/data00/leonardo/RSA"
 sub_fmri_dir="${RSA_dir}/prep_data/sub-${sub}/fmri"
@@ -61,8 +62,7 @@ for run in $(seq 8); do
 
   # __CUSTOM_EV_FILE_PATH__
   custom_ev_file_path="sub-${sub}/fmri/${model}/sub-${sub}_run-${run}"
-  # sub-02/fmri/emotion/sub-02_run-1
-  # sub-02/fmri/emotion/sub-02_run-1
+
 
   for var in tr total_volumes MNI_template total_voxels feat_dir \
              anat_brain_image custom_ev_file_path; do

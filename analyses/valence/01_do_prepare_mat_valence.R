@@ -58,15 +58,33 @@ read_onsets_write_mat <- function(sub_id, run_id, dest, show_test = FALSE) {
     select(sub, run, starts_with("r_"), high_low_code) %>% 
     inner_join(fmri_log, by = c("sub","run","high_low_code"))
   
+  
+  # --------- allMovies + [model] parametric modulation ------------------------
+  
   # select onset_sec, duration and intensity to prepare the .mat file
   mat_4_feat <- joined_ratings_fmri_logs %>% 
     mutate(duration = movie_duration) %>% 
     select(onset_sec, duration, starts_with("r_")) %>% 
+    # remove the mean of all predictors starting with "r_" (required for parametric modulation)
+    mutate(across(starts_with("r_"), ~ . - mean(.x, na.rm = TRUE))) %>% 
     arrange(onset_sec)
   
+  
   # write the .mat file for that sub and run
-  mat_path <- paste0(dest, "/sub-", sub_id, "_run-", run_id, ".mat")
+  mat_path <- paste0(dest, "/sub-", sub_id, "_run-", run_id, "_", model,"_rating", ".mat")
   write_tsv(mat_4_feat, col_names = FALSE, mat_path)
+  
+  
+  # create the mat for allMovies
+  mat_allMovies <- mat_4_feat %>% 
+    select(onset_sec, duration) %>% 
+    mutate(allMovies_intensity = 1)
+  
+  mat_allMovies_path <- paste0(dest, "/sub-", sub_id, "_run-", run_id, "_allMovies", ".mat")
+  write_tsv(mat_allMovies, col_names = FALSE, mat_allMovies_path)
+  
+  # --------- allMovies + [model] parametric modulation ------------------------  
+  
   
   # testing that same movies have same rating across runs but
   # different onset_sec
