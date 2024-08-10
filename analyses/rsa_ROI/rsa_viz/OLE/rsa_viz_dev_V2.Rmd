@@ -1,0 +1,321 @@
+---
+title: "RSA viz dev"
+author: "LC"
+date: "2024-05-15"
+output: html_document
+---
+
+# Motivation
+Here we develop the logic for post-hoc viz of RSA results.
+By viz we mean the MDS and reordered matrices for the fmri RDMs
+which are commonly found in Kriegekorte papers.
+
+Specifically, the code below is meant to be used in the following way:
+
+- Carry out the RSA on the desired mask
+- Identify regions for which you would like to have the viz
+- Define an ROI - e.g. in fslview - and save it
+- Feed the ROI in the code below
+
+Basically, this code carries out the first part of the ROI-based RSA, that is, 
+the calculation of the fmri RDMs.
+
+Once we have the RDMs for each sub for ROI, we take the average across subs
+and then we replot the MDS/UMAP and reordered matrix. 
+The mask is also used to extract the RSA values from the saved NIFTI - in the main
+RSA analysis - and plot the corresponding barplots
+
+This means that the code below must contain functions to call the fmri RDMs
+construction mutliple times (for emotion, arousal, valence)
+
+
+```{r load_libraries, message=F}
+library(tidyverse)
+library(future)
+library(furrr)
+library(tictoc)
+library(RNifti)
+library(proxy) # distances
+library(profvis)
+library(DT)
+library(formattable)
+
+source("funs_V8_ROIs.R")
+
+bd="/data00/leonardo/RSA/analyses"
+
+# can be emotion, arousal, valence
+ratings_type <- "valence"
+
+# the following is our contrast of interest and it's always the same
+copes_type <- "one_ev_per_movie"
+
+# Choose the distance metric to use for fmri RDM
+# Supported methods: 'pearson', 'spearman', 'euclidean', 'cosine' or 'mahalanobis'
+dist_method_rating <- "euclidean"
+dist_method_fmri = "euclidean"
+dist_method_rsa = "pearson"
+
+RDM_type = "tril"     
+
+# Vector of zeropadded sub_ids
+subs_file <- "/data00/leonardo/RSA/sub_list.txt"
+subs <- sprintf("%02d",readLines(subs_file) %>% as.numeric)
+
+# ---------- ONLY TOP RATERS BELOW ------------
+subs <- c("02","03","12","11","22","09","29","28","26","32","23","15","20","19")
+
+```
+
+
+# Aux functions
+```{r}
+# plot_heatmap(D %>% as.matrix)
+plot_heatmap <- function(M) {
+  heatmap(M, Rowv = NA, Colv = NA, symm=T, revC = T)
+}
+```
+
+
+# Create a df_path_copes with the location of the 56 cope niis from the one_movie_per_ev model
+Extract the pathname of all copes using the `list.files()` function.
+Also define a copes_numba vector with all the copes numbers.
+
+NB: The cope numbers in the `cope` column are NOT zeropadded since this is how they come out from FSL Feat
+```{r, message=FALSE}
+
+copes_location_csv <- paste0(bd,"/rsa/copes_location.csv")
+
+df_path_copes <- if (file.exists(copes_location_csv) ) {
+  df_path_copes <- read_csv(copes_location_csv)
+} else {
+  df_path_copes <- import_df_path_copes(bd, copes_type)
+}
+
+copes_numba <- df_path_copes$cope %>% unique
+ncopes <- length(copes_numba)
+
+```
+
+
+
+# Read in the ROI(s) for which you want to calculate RDMs
+NB: there can be multiple ROIs in one nii
+
+```{r}
+
+bd_ROI <- "/data00/leonardo/RSA/analyses/rsa/rsa_viz/"
+ROI_filename <- "roi_099.nii.gz"
+
+ROI_nii <- readNifti(paste0(bd_ROI, "/", ROI_filename))
+# view(ROI_nii)
+
+region_labels <- ROI_nii[ROI_nii > 0] %>% unique %>% sort
+
+```
+
+
+# Calculate RDMs
+```{r}
+
+# 5 workers give the best performance
+plan(multisession, workers = 5)
+
+tic()
+RDMs_fmri <- subs %>% future_map_dfr(~{
+  
+  paste0("Calculating RDMs for sub ",.x,"\n") %>% cat
+  
+  df_copes <- load_sub_copes(.x, copes_numba, df_path_copes)
+  
+  one_RDM_fmri <- calculate_fmri_RDMs(
+    df_copes,
+    ROI_nii,
+    dist_method_fmri,
+    RDM_type = RDM_type
+  )
+
+  one_RDM_fmri %>% mutate(sub = .x) %>% relocate(sub)
+  
+})
+toc()
+
+
+plan(sequential)
+```
+
+
+
+
+```{r}
+
+mean_triu <- RDMs_fmri %>% 
+  group_by(sub) %>% 
+  mutate(triu_cell = row_number()) %>% 
+  ungroup() %>% 
+  group_by(triu_cell) %>% 
+  summarise(mean_triu_cell = mean(RDM_region_1)) %>% 
+  select(mean_triu_cell) %>% pull
+
+mean_triu
+
+
+reconstruct_similarity_matrix <- function(lower_triangular_data) {
+  n <- ncopes
+  full_matrix <- matrix(0, nrow = n, ncol = n)
+  full_matrix[lower.tri(full_matrix)] <- lower_triangular_data
+  full_matrix <- t(full_matrix) + full_matrix
+  diag(full_matrix) <- 0  # Set diagonal to 1 if needed
+  return(full_matrix)
+}
+
+RDM_full <- reconstruct_similarity_matrix(mean_triu)
+
+plot_heatmap(RDM_full)
+
+heatmap(RDM_full, symm = TRUE)
+
+hist(mean_triu)
+
+```
+
+```{r}
+# try plotting percentiles
+
+# estimate empirical cumulative distribution function
+ecdf_func <- ecdf(mean_triu)
+# convert each value to percentile
+pctiles <- ecdf_func(mean_triu)
+
+RDM_full <- reconstruct_similarity_matrix(pctiles)
+
+plot_heatmap(RDM_full)
+
+heatmap(RDM_full, symm = TRUE)
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+
+# Function to reconstruct full similarity matrix
+reconstruct_similarity_matrix <- function(lower_triangular_data) {
+  n <- ncopes
+  full_matrix <- matrix(0, nrow = n, ncol = n)
+  full_matrix[lower.tri(full_matrix)] <- lower_triangular_data
+  full_matrix <- t(full_matrix) + full_matrix
+  diag(full_matrix) <- 0  # Set diagonal to 1 if needed
+  return(full_matrix)
+}
+
+
+RDMS_FULL <- RDMs_fmri %>% 
+  group_by(sub) %>% 
+  nest %>%
+  mutate(D = map(data, ~ reconstruct_similarity_matrix( unlist(.x) )))
+
+
+# Step 1: Extract the full_matrix column
+full_matrices <- RDMS_FULL$D
+
+# Step 2: Sum up all the matrices
+summed_matrix <- reduce(full_matrices, `+`)
+
+# Step 3: Divide by the number of rows to get the average
+average_matrix <- summed_matrix / nrow(RDMS_FULL)
+
+plot_heatmap(average_matrix)
+
+```
+
+
+
+```{r}
+
+nROI <- 1
+
+RDMs_fmri %>% 
+  select(sub, paste0("RDM_region_", nROI)) %>% 
+  rename_with(~ "ROI_tril", starts_with("RDM_region_")) %>% 
+  group_by(sub) %>% 
+  summarise(
+    mean_tril = mean(ROI_tril),
+    sd_tril = sd(ROI_tril)
+  )
+
+
+# Function to reconstruct full similarity matrix
+reconstruct_similarity_matrix <- function(tril,ncopes) {
+  n <- ncopes
+  full_matrix <- matrix(0, nrow = n, ncol = n)
+  full_matrix[lower.tri(full_matrix)] <- tril
+  full_matrix <- t(full_matrix) + full_matrix
+  diag(full_matrix) <- 0  # Set diagonal to 1 if needed
+  return(full_matrix)
+}
+
+reconstruct_similarity_matrix()
+
+
+RDMs_fmri %>% 
+  group_by(sub) %>% 
+  mutate(row_numba = row_number()) %>% 
+  ungroup %>% 
+  group_by(row_numba) %>% 
+  mutate(mean = mean(RDM_region_1))
+  
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
