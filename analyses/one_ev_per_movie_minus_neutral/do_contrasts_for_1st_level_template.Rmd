@@ -1,0 +1,178 @@
+---
+title: "do contrasts for 1st level template"
+author: "LC"
+date: "2024-08-12"
+output: html_document
+---
+
+```{r, message=FALSE}
+library(tidyverse)
+```
+
+
+```{r, message=FALSE}
+bd_ratings="/data00/leonardo/RSA/analyses/RATINGS"
+
+rat <- read_csv(paste0(bd_ratings,"/emotion_ratings.csv"))
+
+rat %>% 
+  filter(sub=="02") %>% 
+  select(movie_cope_number, actor, high_low_code, emotion) %>% 
+  rename(cope = movie_cope_number) %>% 
+  mutate(high_low = str_extract(high_low_code, "high|low")) %>% 
+  select(-high_low_code) %>% 
+  mutate(E_mean = paste0("set fmri(con_orig",cope,".",cope,") 1")) %>% 
+  group_by(actor, high_low) %>% 
+  mutate(cope_neutral = cope[emotion == "neutral"]) %>% 
+  mutate(E_minus_N = paste0("set fmri(con_orig", cope, ".", cope_neutral, ") -1")) %>% 
+  mutate(E_minus_N = ifelse(emotion == "neutral", str_replace(E_minus_N, "-1","1"), E_minus_N)) %>% 
+  select(!c(cope_neutral)) %>% 
+  ungroup() %>% 
+  mutate(movie = paste(actor, emotion, high_low, sep = "_"))
+
+
+```
+
+
+```{r}
+df <- rat %>% 
+  filter(sub=="02") %>% 
+  select(movie_cope_number, actor, high_low_code, emotion) %>% 
+  rename(cope = movie_cope_number) %>% 
+  mutate(high_low = str_extract(high_low_code, "high|low")) %>% 
+  select(-high_low_code) %>% 
+  mutate(movie = paste(actor, emotion, high_low, sep = "_"))
+
+ff <- df %>% 
+  cross_join(df) %>%
+  janitor::clean_names() %>% 
+  mutate(E_orig = case_when(
+    movie_x == movie_y ~ paste0("set fmri(con_orig", cope_x, ".", cope_y, ") 1"),
+    actor_x == actor_y & emotion_x != "neutral" & emotion_y == "neutral" & high_low_x == high_low_y ~ 
+      paste0("set fmri(con_orig", cope_x, ".", cope_y, ") -1"),
+    TRUE ~ paste0("set fmri(con_orig", cope_x, ".", cope_y, ") 0")
+  )) %>% 
+  select(movie_x, movie_y, E_orig)
+
+
+# Process the DataFrame
+contrast_matrix <- ff %>%
+  mutate(
+    x = as.numeric(str_extract(E_orig, "(?<=con_orig)[0-9]+")),
+    y = as.numeric(str_extract(E_orig, "(?<=\\.)[0-9]+(?=\\)\\s)")),
+    val = as.numeric(str_extract(E_orig, "(?<=\\)\\s)[-0-9]+"))
+  ) %>%
+  select(x, y, val) %>%
+  pivot_wider(names_from = y, values_from = val, values_fill = list(val = NA)) %>%
+  column_to_rownames(var = "x") %>%
+  as.matrix()
+
+
+# library(pheatmap)
+
+names <- rat %>% 
+  filter(sub=="02") %>% 
+  select(high_low_code) %>% pull
+
+colnames(contrast_matrix) <- names
+rownames(contrast_matrix) <- names
+
+# Adjust margins to allow space for row and column names
+par(mar = c(5, 10, 4, 2) + 0.1) # Adjust the values as needed
+
+# Plot the heatmap
+heatmap(contrast_matrix,
+        Rowv = NA,        # Disable row clustering
+        Colv = NA,        # Disable column clustering
+        na.rm = TRUE,     # Remove NA values from the plot
+        col = colorRampPalette(c("blue", "white", "red"))(50), # Color gradient
+        main = "Heatmap of Matrix Values", # Title of the heatmap
+        xlab = "Y",       # X-axis label
+        ylab = "X",       # Y-axis label
+        revC = TRUE,      # Reverse the row order
+        cexRow = 0.8,     # Adjust the text size for row names
+        cexCol = 0.8      # Adjust the text size for column names
+)
+```
+
+
+
+```{r}
+library(reshape2)
+library(plotly)
+
+
+# Convert the matrix to a data frame
+df_long <- melt(contrast_matrix, varnames = c("x", "y"), value.name = "val")
+
+# Add row and column names to the data frame
+df_long$x_name <- rownames(contrast_matrix)[df_long$x]
+df_long$y_name <- colnames(contrast_matrix)[df_long$y]
+
+# Create a ggplot heatmap
+p <- ggplot(df_long, aes(x = y_name, y = x_name, fill = val, text = paste('Row:', x_name, '<br>Col:', y_name, '<br>Value:', val))) +
+  geom_tile() +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0) +
+  theme_minimal() +
+  labs(x = "Y", y = "X", fill = "Value", title = "Interactive Heatmap of Matrix Values") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+
+# Convert to an interactive plot
+ggplotly(p, tooltip = "text")
+
+```
+
+
+
+```{r}
+ff
+
+do_contrast_real <- function(n_orig) {
+  n_contrast_real <- (n_orig * 2) - 1
+  return(n_contrast_real)
+}
+
+# add con_real
+
+ff_con_all <- ff %>%
+  mutate(
+    # Extract the first number before the dot
+    first_num = str_extract(E_orig, "(?<=con_orig)\\d+"),
+    
+    # Extract the second number after the dot
+    second_num = str_extract(E_orig, "(?<=\\.)\\d+"),
+    
+    # Calculate the new second number using n_contrast_real logic
+    new_second_num = (as.integer(second_num) * 2) - 1,
+    
+    # Construct the new E_real string
+    E_real = str_replace(
+      E_orig, 
+      "con_orig\\d+\\.\\d+", 
+      paste0("con_real", first_num, ".", new_second_num)
+    )
+  ) %>%
+  select(-first_num, -second_num, -new_second_num)  # Remove intermediate columns
+
+ff_con_all
+
+# Write to file
+# Open a connection to the file
+file_conn <- file("/data00/leonardo/RSA/analyses/one_ev_per_movie_minus_neutral/contrast_lines.txt")
+
+# Write the E_orig and E_real columns to the file
+writeLines(
+  c(
+    unlist(ff_con_all$E_orig), # Convert E_orig to a character vector
+    unlist(ff_con_all$E_real)  # Convert E_real to a character vector
+  ),
+  con = file_conn
+)
+
+# Close the file connection
+close(file_conn)
+
+```
+
+
+
