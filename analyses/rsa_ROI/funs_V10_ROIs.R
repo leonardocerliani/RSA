@@ -12,24 +12,36 @@
 # subs <- sprintf("%02d",readLines(subs_file) %>% as.numeric)
 
 
+# ---------- Plot_heatmap(D %>% as.matrix) ---------------
+plot_heatmap <- function(M) {
+  heatmap(M, Rowv = NA, Colv = NA, symm=T, revC = T)
+}
+
+
 # ----------- Plot full matrix from tril -----------------
-plot_tril <- function(tril, n_copes, reord="NO") {
+plot_tril <- function(tril, n_copes=length(copes_numba), reord="NO") {
+  # Create a full symmetric matrix from the lower triangular input
   full_matrix <- matrix(0, n_copes, n_copes)
   full_matrix[lower.tri(full_matrix, diag = FALSE)] <- unlist(tril)
   full_matrix <- full_matrix + t(full_matrix)
+  # # demean
+  # full_matrix <- full_matrix - mean(full_matrix)
+  # # set diagonal to NA
+  diag(full_matrix) <- NA
   
+  # Define the color map
+  color_map <- colorRampPalette(c("blue", "white", "red"))(100)
+  
+  # Plot the heatmap with or without reordering
   if (reord == "YES") {
-    heatmap(full_matrix, scale = "none", 
-            symm = T, revC = T, 
-            col = colorRampPalette(c("blue", "white", "red"))(100))  
+    heatmap(full_matrix, scale = "none", symm = T, revC = T, col = color_map)  
   } else {
     heatmap(full_matrix, Rowv = NA, Colv = NA, scale = "none", 
-            symm = T, revC = T, 
-            col = colorRampPalette(c("blue", "white", "red"))(100))
+            symm = T, revC = T, col = color_map)
   }
-  
-  
 }
+
+
 
 
 
@@ -106,8 +118,8 @@ import_df_path_copes <- function(bd, copes_type, rsa_flavour) {
 
 
 
-# Loads the nii for all 56 copes for one sub, and returns a df of (91x109x91) rows
-# and 56 (length(copes_numba)) columns, each one named with the cope numba
+# Loads the nii.gz for all n copes for one sub, and returns a df of (91x109x91) rows
+# and n (length(copes_numba)) columns, each one named with the cope numba
 #
 # Test with
 # sub_id = "02"
