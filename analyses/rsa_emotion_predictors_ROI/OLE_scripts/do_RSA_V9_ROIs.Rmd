@@ -1,0 +1,313 @@
+---
+title: "do_RSA_v9"
+author: "LC"
+date: "2024-08-10"
+output: html_document
+---
+
+# Load libraries and define parameters
+
+NB: this Rmd can be used for all types of ratings: emotion, arousal, valence
+
+Abbreviations:
+- sub : subjects(s)
+- rat : rating(s)
+
+```{r load_libraries, message=F}
+library(tidyverse)
+library(future)
+library(furrr)
+library(tictoc)
+library(RNifti)
+library(proxy) # distances
+library(profvis)
+library(DT)
+library(formattable)
+
+source("funs_V9_ROIs.R")
+
+bd="/data00/leonardo/RSA/analyses"
+
+rsa_flavour="rsa_ROI"
+
+# can be emotion, arousal, valence
+ratings_type <- "emotion"
+
+# the following is our contrast of interest and it's always the same
+copes_type <- "one_ev_per_movie"
+
+
+# Choose one atlas among:
+# Schaefer100_2mm.nii.gz
+# Schaefer200_2mm.nii.gz
+atlas_filename <- "Schaefer100_2mm.nii.gz"
+
+
+# Choose the distance metric to use for fmri RDM
+# The metric for ratings RDM *should be* euclidean, since arousal and valence
+# ratings have only one value
+# Supported methods: 'pearson', 'spearman', 'euclidean', 'cosine' or 'mahalanobis'
+dist_method_rating <- "euclidean"
+dist_method_fmri = "euclidean"
+dist_method_rsa = "pearson"
+
+cat(paste0("Ratings RDM to be calculated with : ", dist_method_rating, "\n"))
+cat(paste0("fMRI RDM to be calculated with : ", dist_method_fmri, "\n"))
+
+
+# for RDM_type use:
+# - tril for the lower triangular of the D matrix
+RDM_type = "tril"
+
+# Vector of zeropadded sub_ids
+subs_file <- "/data00/leonardo/RSA/sub_list.txt"
+subs <- sprintf("%02d",readLines(subs_file) %>% as.numeric)
+
+# ---------- ONLY TOP RATERS BELOW ------------
+subs <- c("02","03","12","11","22","09","29","28","26","32","23","15","20","19")
+
+```
+
+
+
+
+# Aux functions
+```{r}
+# plot_heatmap(D %>% as.matrix)
+plot_heatmap <- function(M) {
+  heatmap(M, Rowv = NA, Colv = NA, symm=T, revC = T)
+}
+```
+
+
+# Create a df_path_copes with the location of the 56 cope niis from the one_movie_per_ev model
+Extract the pathname of all copes using the `list.files()` function.
+Also define a copes_numba vector with all the copes numbers.
+
+NB: The cope numbers in the `cope` column are NOT zeropadded since this is how they come out from FSL Feat
+```{r, message=FALSE}
+
+copes_location_csv <- paste0(bd,"/",rsa_flavour,"/copes_location.csv")
+
+df_path_copes <- if (file.exists(copes_location_csv) ) {
+  read_csv(copes_location_csv)
+} else {
+  import_df_path_copes(bd, copes_type, rsa_flavour)
+}
+
+copes_numba <- df_path_copes$cope %>% unique
+
+# df_path_copes
+
+```
+
+
+# Read atlas and create a vector of atlas labels
+```{r}
+
+bd_atlases = paste0("/data00/leonardo/RSA/analyses/",rsa_flavour,"/atlases")
+
+atlas_path <- paste0(bd_atlases,"/",atlas_filename)
+
+atlas_nii <- readNifti(paste0(bd_atlases,"/",atlas_filename))
+region_labels <- atlas_nii[atlas_nii > 0] %>% unique %>% sort
+
+```
+
+
+
+# Calculate RATINGS RDMs -- NEEDS UPDATE TO CALCULATE FOR EVERY RATINGS_TYPE
+```{r, message=FALSE}
+
+bd_ratings = paste0(bd,"/RATINGS")
+ratings_path <- paste0(bd_ratings,"/",ratings_type,"_ratings.csv")
+rats <- read_csv(ratings_path)
+
+
+RDMs_rats <- rats %>%
+  filter(sub %in% subs) %>%
+  select(sub, starts_with("r_")) %>%
+  group_by(sub) %>%
+  nest %>%
+  mutate(!!paste0("RDM_",ratings_type) := data %>% map(~ DDOS_vec(.x, dist_method_rating))) %>%
+  select(!data)
+
+
+# one_tril <- RDMs_rats[1,]$RDM_emotion
+# plot_tril(one_tril, length(copes_numba), reord = "YES")
+
+```
+
+
+
+
+
+# Calculate FMRI RDMs
+
+## For one sub - for dev purposes
+```{r, eval=FALSE}
+
+sub_id = "03"  # subs[1]
+
+# load all the copes nii.gz into a df
+df_copes <- load_sub_copes(sub_id, copes_numba, df_path_copes)
+
+# the code below does the calculation of the tril of RDM_fmri for all rois for one sub
+
+one_sub_RDM_fmri <- tibble(
+  sub = sub_id,
+  roi = region_labels
+) %>%
+
+  # extract idx_roi for atlas voxels in that roi
+  mutate(idx_roi = roi %>% map(~ which(atlas_nii == .x)) ) %>%
+  
+  # extract the df_copes for the voxels in that region (idx_roi)
+  mutate(df_copes_region = idx_roi %>% map(~ df_copes[.x,]) ) %>%
+  
+  # calculate tril of RDM_roi (output as numeric vector)
+  mutate(RDM_roi = df_copes_region %>% map(~ DDOS_vec(t(.x), dist_method_fmri)) ) %>% 
+  
+  # select only sub, roi (numba) and RDM_roi
+  select(sub, roi, RDM_roi)
+  
+```
+
+
+
+## For multiple subs - furrred
+This blows my mind: ~10 seconds for 14 subs (!)
+```{r}
+
+plan(multisession, workers = 5)
+
+RDMs_fmri <- future_map_dfr(
+  
+  subs, ~ {
+    paste0("Calculating RDMs for sub ",.x,"\n") %>% cat
+  
+    # 1. load all the copes nii.gz into a df
+    df_copes <- load_sub_copes(.x, copes_numba, df_path_copes)
+    
+    # 2. calculate RDM fmri for each roi
+    tibble(
+      sub = .x,
+      roi = region_labels
+    ) %>% 
+
+      # extract idx_roi for atlas voxels in that roi
+      mutate(idx_roi = roi %>% map(~ which(atlas_nii == .x)) ) %>%
+      
+      # extract the df_copes for the voxels in that region (idx_roi)
+      mutate(df_copes_region = idx_roi %>% map(~ df_copes[.x,]) ) %>%
+      
+      # calculate tril of RDM_roi (output as numeric vector)
+      mutate(RDM_roi = df_copes_region %>% map(~ DDOS_vec(t(.x), dist_method_fmri)) ) %>% 
+      
+      # select only sub, roi (numba) and RDM_roi
+      select(sub, roi, RDM_roi)
+    
+  }
+)
+
+plan(sequential)
+
+# RDMs_fmri %>%
+#   group_by(sub) %>%
+#   group_split()
+
+```
+
+
+
+# RSA
+Basically right-join the RDMs_fmri with the RDMs_rating for each sub in order to create a copy of the
+rating RDM for each roi.
+Then calculate RSA using pmap
+```{r}
+# can be pearson, spearman
+dist_method_rsa <- "spearman"
+
+# join fmri and rats RDMs and create a copy of the rat RDM for each sub/roi
+RSA <- right_join(RDMs_fmri,RDMs_rats,by = "sub") %>% 
+  group_by(sub) %>% 
+  # calculate RSA
+  mutate(
+    similarity = list(RDM_roi, RDM_emotion) %>% pmap_dbl(~ cor(.x,.y, method = dist_method_rsa))
+  ) %>%
+  mutate(similarity = round(similarity,3)) %>% 
+  ungroup
+
+
+# Get the mean RSA for each roi
+RSA_mean <- RSA %>% 
+  select(roi, similarity) %>% 
+  group_by(roi) %>% 
+  reframe(
+    mean_similarity = round(mean(similarity),2),
+    sd_similarity = round(sd(similarity),2)
+  ) %>% 
+  arrange(desc(mean_similarity))
+
+RSA_mean %>% datatable()
+
+```
+
+
+
+
+# TOBEDONE -- Write the map with the values -- TOBEDONE
+```{r, eval=FALSE}
+
+results_to_map <- RSA %>% 
+  mutate(region = as.integer(str_replace(region, "RDM_region_",""))) %>% 
+  select(region, mean_similarity)
+
+results_to_map
+
+# results_path <- ("/data00/leonardo/RSA/analyses/rsa/rsa_results")
+# filename_results_nii <- paste0("rsa_results/rsa_results_",ratings_type,"_",atlas_filename)
+
+
+results_path <- "/data00/leonardo/RSA/analyses/rsa/rsa_results"
+
+results_filename <- create_filename_results(
+  atlas_filename, ratings_type, dist_method_rating, dist_method_fmri, dist_method_rsa
+)
+
+
+# Function to write the results to a nii.gz volume
+# (purrr gives issues here)
+write_results_to_nii <- function(results_to_map, filename_results_nii, atlas_nii) {
+  
+  results_nii = atlas_nii
+  
+  for (ROI_numba in region_labels) {
+    cat(paste0(ROI_numba," "))
+    row_region <- which(results_to_map$region == ROI_numba)
+    value <- results_to_map$mean_similarity[row_region]
+    
+    idx <- which(results_nii == ROI_numba)
+    results_nii[idx] = value
+  }
+
+  writeNifti(results_nii, filename_results_nii)
+}
+
+
+# Write the results nii.gz in the rsa_results dir
+write_results_to_nii(
+  results_to_map, 
+  paste0(results_path, "/", results_filename), 
+  atlas_nii
+)
+
+```
+
+
+
+
+
+
+
+
