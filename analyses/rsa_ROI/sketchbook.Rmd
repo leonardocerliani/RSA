@@ -1,0 +1,57 @@
+---
+title: "sketchbook"
+author: "LC"
+date: "2024-08-14"
+output: html_document
+---
+
+```{r, message=FALSE}
+library(tidyverse)
+library(RNifti)
+library(papayaWidget)
+```
+
+
+# View one ROI
+```{r}
+bd = "/data00/leonardo/RSA/analyses/rsa_ROI"
+bd_atlases = paste0(bd,"/atlases")
+
+atlas_filename <- "Yeo_17_liberal_2mm"
+
+render_papaya <- function(atlas_filename, roi_numba) {
+  
+  f <- function(nii_filename) {
+    return(paste0(bd_atlases,"/", nii_filename,".nii.gz"))
+  }
+  
+  nii_atlas <- RNifti::readNifti( f(atlas_filename) )
+  # view(nii_atlas)
+  
+  nii_atlas_thr <- ifelse(nii_atlas == roi_numba, 1, 0)
+  RNifti::writeNifti(nii_atlas_thr, template = nii_atlas, paste0(bd_atlases,"/tmp_ROI.nii.gz"))
+  
+  papaya(
+    c(f("Dummy"), f("MNI152_T1_2mm_brain"), f("tmp_ROI")),
+    options = list(
+      papayaOptions(alpha = 1, lut = "Grayscale"),
+      papayaOptions(alpha = 0.5, lut = "Grayscale"),
+      papayaOptions(alpha = 0.5, lut = "Red Overlay", min = 0, max = 5)
+    ),
+    interpolation = FALSE,
+    orthogonal = FALSE
+  )
+  
+}
+
+render_papaya(atlas_filename, roi_numba = 17)
+
+```
+
+
+
+
+
+
+
+

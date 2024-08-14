@@ -1,0 +1,562 @@
+---
+title: "do_RSA_v11"
+author: "LC"
+date: "2024-08-12"
+output: html_document
+---
+
+# Update notes v11
+- option to remove neutral
+- updated load_sub_copes to select the path column
+- switched from heatmap to ComplexHeatmap
+
+
+# Load libraries and define parameters
+
+NB: this Rmd can be used for all types of ratings: emotion, arousal, valence
+
+Abbreviations:
+- sub : subjects(s)
+- rat : rating(s)
+
+# Load libraries
+```{r load_libraries, message=F}
+library(tidyverse)
+library(future)
+library(furrr)
+library(tictoc)
+library(RNifti)
+library(proxy) # distances
+library(profvis)
+library(DT)
+library(formattable)
+library(janitor)
+library(ComplexHeatmap)
+library(circlize)  # For color mapping functions
+library(grid)  # For gpar()
+# library(pheatmap)
+# library(heatmaply)
+library(papayaWidget)
+library(ggstatsplot)
+
+
+source("funs_V11_ROIs.R")
+```
+
+
+
+# Define paths and rsa_[flavour] specific option
+```{r}
+
+bd="/data00/leonardo/RSA/analyses"
+bd_ratings = paste0(bd,"/RATINGS")
+ratings_type <- c("emotion","arousal","valence","aroval")
+
+
+rsa_flavour="rsa_ROI"
+
+remove_neutrals = "YES"
+
+# choose the type of betas to be used, e.g.
+# - one_ev_per_movie 
+# - one_ev_per_movie_minus_neutral
+# - emotion_predictors
+copes_type <- "one_ev_per_movie_minus_neutral"
+
+
+# Choose one atlas, e.g.
+# Schaefer100_2mm.nii.gz
+# Schaefer200_2mm.nii.gz
+# Yeo_7_liberal_2mm.nii.gz
+atlas_filename <- "Yeo_17_liberal_2mm.nii.gz"
+# Atlases repos:
+# https://www.lead-dbs.org/helpsupport/knowledge-base/atlasesresources/cortical-atlas-parcellations-mni-space/
+# https://github.com/neurodata/neuroparc
+# https://www.fmrib.ox.ac.uk/datasets/brainmap+rsns/
+
+# Choose the distance metric to use for fmri RDM
+# The metric for ratings RDM *should be* euclidean, since arousal and valence
+# ratings have only one value
+# Supported methods: 'pearson', 'spearman', 'euclidean', 'cosine' or 'mahalanobis'
+dist_method_rating <- "euclidean"
+dist_method_fmri = "euclidean"
+dist_method_rsa = "pearson"
+
+# Vector of zeropadded sub_ids
+subs_file <- "/data00/leonardo/RSA/sub_list.txt"
+subs <- sprintf("%02d",readLines(subs_file) %>% as.numeric)
+
+# ---------- ONLY TOP RATERS BELOW ------------
+subs <- c("02","03","12","11","22","09","29","28","26","32","23","15","20","19")
+
+```
+
+
+# Create copes metadata (to identify and remove neutrals)
+Before anything else, we need to identify the neutral copes and their associated 
+ratings. 
+
+To this aim we load the emotion ratings which contain also the correspondence
+between movie, cope and rating. Then we select only one sub (the order is the
+same for all subs)
+```{r, message=FALSE}
+
+metadata_copes <- read_csv(paste0(bd_ratings, "/emotion_ratings.csv")) %>% 
+  filter(sub == subs[1]) %>% 
+  select(high_low_code, movie_cope_number, emotion) %>% 
+  rename(cope = movie_cope_number, label = high_low_code)
+  
+metadata_copes
+
+```
+
+
+
+
+# Create a df_path_copes with the location of the 56 cope niis from the one_movie_per_ev model
+Extract the pathname of all copes using the `list.files()` function.
+Also define a copes_numba vector with all the copes numbers.
+
+NB: The cope numbers in the `cope` column are NOT zeropadded since this is how they come out from FSL Feat
+```{r, message=FALSE}
+
+# load df_path_copes and add metadata (label and emotion/neutral)
+df_path_copes <- import_df_path_copes(bd, copes_type, rsa_flavour) %>% 
+  inner_join(metadata_copes, by="cope")
+
+# If remove_neutrals is "YES", remove neutral copes and arrange by sub/cope (just to be sure) 
+if (remove_neutrals == "YES") {
+  df_path_copes <- df_path_copes %>%  
+  filter(emotion != "neutral") %>% 
+  arrange(sub,cope)
+} 
+
+copes_numba <- df_path_copes$cope %>% unique
+
+cat(
+  "there are",length(copes_numba)," copes including ",
+  nrow(df_path_copes %>% filter(sub==subs[1], emotion=="neutral"))," neutral copes \n"
+)
+
+# df_path_copes
+# length(copes_numba)
+```
+
+
+# Read atlas and create a vector of atlas labels
+```{r}
+
+bd_atlases = paste0("/data00/leonardo/RSA/analyses/",rsa_flavour,"/atlases")
+
+atlas_path <- paste0(bd_atlases,"/",atlas_filename)
+
+atlas_nii <- readNifti(paste0(bd_atlases,"/",atlas_filename))
+region_labels <- atlas_nii[atlas_nii > 0] %>% unique %>% sort
+
+```
+
+
+
+# Calculate RATINGS RDMs
+```{r, message=FALSE}
+
+# NB: ratings_type is now a *vector*, e.g.: 
+# ratings_type <- c("emotion","arousal","valence","aroval")
+# to test the fn below for one rating type : do_RDMs_rats("emotion")
+
+do_RDMs_rats <- function(ratings_type, remove_neutrals) {
+
+  ratings_path <- paste0(bd_ratings,"/",ratings_type,"_ratings.csv")
+  rats <- read_csv(ratings_path)
+  
+  if (remove_neutrals == "YES") {
+    rats <- rats %>% filter(emotion != "neutral")
+  }
+  
+  rdm <- rats %>%
+    filter(sub %in% subs) %>%
+    select(sub, starts_with("r_")) %>%
+    group_by(sub) %>%
+    nest %>%
+    mutate(!!paste0("RDM_",ratings_type) := data %>% map(~ DDOS_vec(.x, dist_method_rating))) %>%
+    ungroup %>% 
+    # remove the sub with the prospect of merging rdms of different ratings/models
+    select(!data)
+  
+  return(rdm)
+  
+}
+
+
+# calculate rdms for all ratings_type and return one column for each ratings_type
+RDMs_rats <- map_dfc(ratings_type, ~ do_RDMs_rats(.x, remove_neutrals)) %>%
+  # remove the duplicated sub_ columns (generated by do_RDMs_rats) 
+  janitor::clean_names() %>% 
+  mutate(sub = sub_1) %>% 
+  select(sub, starts_with("rdm"))
+
+
+# # example heatmap
+# plot_tril(
+#   RDMs_rats[1,]$rdm_emotion, model = "emotion",
+#   fontsize=7, side_mm=100, reord = TRUE
+# )
+
+
+```
+
+
+
+# Checkpoint - control same order in ratings and fmri copes
+Check that the ordering in the `do_RDMs_rats` and in `df_path_copes` is the same.
+```{r, message=FALSE, eval=FALSE}
+
+df_path_copes4consistency <- df_path_copes %>% 
+  filter(sub == sub[1]) %>% 
+  select(label, cope, emotion)
+
+
+rats4consistency <- read_csv(paste0(bd_ratings,"/emotion_ratings.csv")) %>% 
+  filter(sub == subs[1]) %>% 
+  select(high_low_code, movie_cope_number, emotion) %>% 
+  rename(label = high_low_code, cope = movie_cope_number)
+
+
+if(remove_neutrals == "YES") {
+  rats4consistency <- rats4consistency %>% filter(emotion != "neutral")
+} 
+
+cbind(df_path_copes4consistency, rats4consistency) %>% 
+  janitor::clean_names() %>% 
+  relocate(colnames(.) %>% sort)
+
+
+```
+
+
+
+
+# Calculate FMRI RDMs
+**IMPORTANT : ** Since we already removed neutral from df_path_copes we don't 
+need to filter anything anymore here.
+```{r}
+
+# Fn to calculate the rdm_fmri for one sub
+# Test for one sub: do_RDM_fmri(subs[1], copes_numba, df_path_copes)
+
+do_RDM_fmri <- function(sub_id, copes_numba, df_path_copes) {
+  
+  # load all the copes nii.gz into a df
+  df_copes <- load_sub_copes(sub_id, copes_numba, df_path_copes)
+  
+  # the code below does the calculation of the tril of RDM_fmri for all rois for one sub
+  
+  one_sub_RDM_fmri <- tibble(
+    sub = sub_id,
+    roi = region_labels
+  ) %>%
+  
+    # extract idx_roi for atlas voxels in that roi
+    mutate(idx_roi = roi %>% map(~ which(atlas_nii == .x)) ) %>%
+    
+    # extract the df_copes for the voxels in that region (idx_roi)
+    mutate(df_copes_region = idx_roi %>% map(~ df_copes[.x,]) ) %>%
+    
+    # calculate tril of RDM_roi (output as numeric vector)
+    mutate(rdm_fmri = df_copes_region %>% map(~ DDOS_vec(t(.x), dist_method_fmri)) ) %>% 
+    
+    # select only sub, roi (numba) and RDM_roi
+    select(sub, roi, rdm_fmri) 
+  
+  return(one_sub_RDM_fmri)
+}
+
+
+
+# Calculate RDMs_fmri for all subs
+plan(multisession, workers = 5)
+
+RDMs_fmri <- subs %>% future_map_dfr(
+  ~ {
+    paste0("Calculating RDMs for sub ",.x,"\n") %>% cat
+    do_RDM_fmri(.x, copes_numba, df_path_copes)
+  }
+)
+
+plan(sequential)
+
+# RDMs_fmri
+
+```
+
+
+
+
+
+# Calculate RSA
+```{r}
+# The dist_method_rsa is set above.
+# can be pearson, spearman
+# dist_method_rsa <- "spearman"
+
+# Join fmri and rats RDMs and create a copy of the rat RDM for each sub/roi
+RSA <- right_join(RDMs_fmri, RDMs_rats, by = "sub") %>%
+  group_by(sub) %>%
+  
+  # Dynamically create rsa_ columns for every ratings type
+  mutate(across(
+    all_of(paste0("rdm_", ratings_type)),
+    ~ map2_dbl(.x, rdm_fmri, ~ cor(.x, .y, method = dist_method_rsa)),
+    .names = "rsa_{.col}"
+  )) %>%
+  mutate(across(starts_with("rsa_"), round, 3)) %>%
+  ungroup()
+
+
+# Get the mean RSA for each ratings_type
+RSA_mean <- RSA %>%
+  select(roi, starts_with("rsa_")) %>%
+  group_by(roi) %>%
+  reframe(
+    across(
+      starts_with("rsa_"),
+      list(mean = ~ round(mean(.x, na.rm = TRUE), 2))
+    )
+  ) %>% 
+  rename_with(
+    ~ str_replace(.x, "rsa_rdm_", ""),
+    starts_with("rsa_")
+  )
+
+RSA_mean %>% datatable()
+```
+
+
+
+# Calculate mean tril for ratings and for fmri (for each roi in the fmri case)
+```{r}
+# Takes a df and a "column" containing a nested vector in each row
+# and returns the element-wise mean of that vector across rows
+get_elementwise_mean <- function(mydf, nested_col, fun=mean) {
+  m <- matrix(
+    mydf[[nested_col]] %>% unlist,
+    nrow = nrow(mydf),
+    ncol = length(mydf[[nested_col]][[1]]),
+    byrow = TRUE
+  )
+  
+  m_summary <- apply(m, 2, fun)
+  return(m_summary)
+}
+
+
+# mean RDMs_rats
+mean_RDMs_rats <- RDMs_rats %>% select(starts_with("rdm_")) %>% colnames %>%  
+  map_dfc(~{
+    mean_tril <- get_elementwise_mean(RDMs_rats, .x, fun = mean)
+    tibble(!!.x := mean_tril)
+  })
+
+
+
+# mean RDMs_fmri
+plan(multisession, workers = 5)
+
+mean_RDMs_fmri <- RDMs_fmri$roi %>% 
+  future_map_dfr(~{
+    mean_tril <- get_elementwise_mean(RDMs_fmri %>% filter(roi == .x), "rdm_fmri")
+    tibble(roi = .x, mean_tril = mean_tril)
+  }) %>% 
+  group_by(roi) %>% 
+  nest
+
+plan(sequential)
+```
+
+
+## Plot mean RDMs_rats
+```{r}
+
+# Plot mean RDMs_rats
+ratings_type %>% 
+  map(
+    ~ plot_tril(
+      mean_RDMs_rats[[paste0("rdm_",.x)]], model = .x,
+      fontsize=7, side_mm=80, reord = TRUE
+    )
+  )
+
+```
+
+## Plot mean RDMs_fmri for all ROIs
+```{r, warning=FALSE}
+
+mean_RDMs_fmri
+
+seq(nrow(mean_RDMs_fmri)) %>% 
+  map(
+    ~ plot_tril(
+      mean_RDMs_fmri[.x,]$data, model = paste0("fmri_roi_",.x),
+      fontsize=7, side_mm=80, reord = TRUE
+    )
+  )
+
+```
+
+
+
+# Elements for the app
+
+## RSA table
+```{r}
+RSA_mean %>% datatable()
+```
+
+
+## Boxplot for one roi
+```{r}
+
+roi_numba = 6
+
+RSA %>% 
+  select(sub, roi, starts_with("rsa_")) %>% 
+  filter(roi == roi_numba) %>% 
+  select(starts_with("rsa_")) %>% 
+  pivot_longer(cols = starts_with("rsa_"), names_to = "model") %>%
+  mutate(model = str_replace(model, "rsa_rdm_","")) %>% 
+  ggwithinstats(
+    x = model, y = value,
+    type = "p",   # p, np, r, b
+    results.subtitle = TRUE
+  )
+  
+```
+
+
+## View one ROI
+```{r}
+
+atlas_filename <- "Yeo_7_liberal_2mm"
+
+render_papaya <- function(atlas_filename, roi_numba) {
+  
+  f <- function(nii_filename) {
+    return(paste0(bd_atlases,"/", nii_filename,".nii.gz"))
+  }
+  
+  nii_atlas <- RNifti::readNifti( f(atlas_filename) )
+  # view(nii_atlas)
+  
+  nii_atlas_thr <- ifelse(nii_atlas == roi_numba, 1, 0)
+  RNifti::writeNifti(nii_atlas_thr, template = nii_atlas, paste0(bd_atlases,"/tmp_ROI.nii.gz"))
+  
+  papaya(
+    c(f("Dummy"), f("MNI152_T1_2mm_brain"), f("tmp_ROI")),
+    options = list(
+      papayaOptions(alpha = 1, lut = "Grayscale"),
+      papayaOptions(alpha = 0.5, lut = "Grayscale"),
+      papayaOptions(alpha = 0.5, lut = "Red Overlay", min = 0, max = 5)
+    ),
+    interpolation = FALSE,
+    orthogonal = FALSE
+  )
+  
+}
+
+render_papaya(atlas_filename, roi_numba = 6)
+
+```
+
+
+
+## Plot MEAN tril for fmri and all models for one roi
+```{r, message=FALSE, warning=FALSE}
+
+global_reord = FALSE
+global_fontsize = 7
+global_side_mm = 100
+
+roi_numba = 6
+
+# fmri one roi
+tril_fmri <- plot_tril(
+  mean_RDMs_fmri[roi_numba,]$data, model = paste0("fmri_roi",roi_numba),
+  fontsize = global_fontsize, side_mm = global_side_mm, reord = global_reord
+)
+
+
+# emotion
+tril_emotion <- plot_tril(
+  mean_RDMs_rats$rdm_emotion, model = "emotion",
+  fontsize = global_fontsize, side_mm = global_side_mm, reord = global_reord
+)
+
+# arousal
+tril_arousal <- plot_tril(
+  mean_RDMs_rats$rdm_arousal, model = "arousal",
+  fontsize = global_fontsize, side_mm = global_side_mm, reord = global_reord
+)
+
+tril_fmri + tril_emotion
+
+
+```
+
+
+
+
+# TOBEDONE -- Write the map with the values -- TOBEDONE
+```{r, eval=FALSE}
+
+results_to_map <- RSA %>% 
+  mutate(region = as.integer(str_replace(region, "RDM_region_",""))) %>% 
+  select(region, mean_similarity)
+
+results_to_map
+
+# results_path <- ("/data00/leonardo/RSA/analyses/rsa/rsa_results")
+# filename_results_nii <- paste0("rsa_results/rsa_results_",ratings_type,"_",atlas_filename)
+
+
+results_path <- "/data00/leonardo/RSA/analyses/rsa/rsa_results"
+
+results_filename <- create_filename_results(
+  atlas_filename, ratings_type, dist_method_rating, dist_method_fmri, dist_method_rsa
+)
+
+
+# Function to write the results to a nii.gz volume
+# (purrr gives issues here)
+write_results_to_nii <- function(results_to_map, filename_results_nii, atlas_nii) {
+  
+  results_nii = atlas_nii
+  
+  for (ROI_numba in region_labels) {
+    cat(paste0(ROI_numba," "))
+    row_region <- which(results_to_map$region == ROI_numba)
+    value <- results_to_map$mean_similarity[row_region]
+    
+    idx <- which(results_nii == ROI_numba)
+    results_nii[idx] = value
+  }
+
+  writeNifti(results_nii, filename_results_nii)
+}
+
+
+# Write the results nii.gz in the rsa_results dir
+write_results_to_nii(
+  results_to_map, 
+  paste0(results_path, "/", results_filename), 
+  atlas_nii
+)
+
+```
+
+
+
+
+
+
+
+
