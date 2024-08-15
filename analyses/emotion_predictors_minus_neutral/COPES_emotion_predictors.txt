@@ -1,0 +1,9 @@
+# There are 7 copes in the emotion_predictors model:
+# 1. anger
+# 2. disgust
+# 3. fear
+# 4. happy
+# 5. neutral
+# 6. pain
+# 7. sad
+

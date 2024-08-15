@@ -19,7 +19,7 @@ sub_list=/data00/leonardo/RSA/sub_list.txt
 cat ${sub_list} | xargs -P 4 -I{} ./02_do_first_level_stats.sh {}
 
 
-# # run 2nd and group level analyses
-# ./03_do_higher_levels_modified_for_emotions.sh
+# run 2nd and group level analyses
+./03_do_higher_levels.sh
 
 #EOF

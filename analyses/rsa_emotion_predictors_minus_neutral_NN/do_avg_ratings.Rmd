@@ -1,0 +1,53 @@
+---
+title: "Calculate ratings avg for emotion predictors model"
+author: "LC"
+date: "2024-03-13"
+output: html_document
+---
+
+**THIS IS THE SAME CODE AS IN do_RSA_V[N].Rmd HOWEVER SINCE HERE WE HAVE DEFINED
+ONE PREDICTOR FOR *ALL* MOVIES WITH THE SAME EMOTION, WE NEED TO CALCULATE
+THE RATING FOR EACH EMOTION AS THE AVG (MEDIAN) RATING FOR EACH EMOTION MOVIE
+FOR EACH SUB**
+
+this part is implemented directly in `do_RSA_emotion_predictors_V[N].Rmd`
+
+```{r}
+library(tidyverse)
+
+bd="/data00/leonardo/RSA/analyses/rsa_emotion_predictors"
+```
+
+Read the original ratings file
+```{r, message=FALSE}
+bd_ratings = paste0(bd,"/RATINGS")
+ratings_type <- "emotion"
+
+ratings_path <- paste0(bd_ratings,"/",ratings_type,"_ratings.csv")
+rats <- read_csv(ratings_path)
+```
+
+
+```{r}
+rats %>% 
+  select(sub, emotion, starts_with("r_")) %>%
+  group_by(sub, emotion) %>% 
+  reframe(across(starts_with("r_"), median, na.rm = TRUE)) %>% 
+  ungroup %>% 
+  arrange(sub, emotion)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

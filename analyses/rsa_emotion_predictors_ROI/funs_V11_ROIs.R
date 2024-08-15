@@ -164,17 +164,18 @@ import_df_path_copes <- function(bd, copes_type, rsa_flavour) {
 # Test with
 # sub_id = "02"
 # df_copes <- load_sub_copes(sub_id, copes_numba, df_path_copes)
+
 load_sub_copes <- function(sub_id, copes_numba, df_path_copes) {
-  
+
   copes_numba %>% map_dfc(~ {
-    nii <- df_path_copes %>% 
-      filter(sub == sub_id, cope == .x) %>% 
-      select(path) %>% pull %>%  
+    nii <- df_path_copes %>%
+      filter(sub == sub_id, cope == .x) %>%
+      select(path) %>% pull %>%
       readNifti %>% as.vector
-    
+
     tibble(!!paste0("cope_", .x) := nii)
   })
-  
+
 }
 
 

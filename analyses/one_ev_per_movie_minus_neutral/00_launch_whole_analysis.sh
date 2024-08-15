@@ -16,15 +16,15 @@ Rscript 01_do_prepare_mat_${model}.R
 # in order not to overwhelm the server
 
 
-# ------------ TESTING ------------------------------------------
-mini_sub_list=/data00/leonardo/RSA/mini_sub_list.txt
-cat ${mini_sub_list} | xargs -P 4 -I{} ./02_do_first_level_stats.sh {}
+# # ------------ TESTING ------------------------------------------
+# mini_sub_list=/data00/leonardo/RSA/mini_sub_list.txt
+# cat ${mini_sub_list} | xargs -P 4 -I{} ./02_do_first_level_stats.sh {}
 
 
 
-# # ------------ REAL DEAL ----------------------------------------
-# sub_list=/data00/leonardo/RSA/sub_list.txt
-# cat ${sub_list} | xargs -P 4 -I{} ./02_do_first_level_stats.sh {}
+# ------------ REAL DEAL ----------------------------------------
+sub_list=/data00/leonardo/RSA/sub_list.txt
+cat ${sub_list} | xargs -P 3 -I{} ./02_do_first_level_stats.sh {}
 
 
 # # run 2nd level analyses

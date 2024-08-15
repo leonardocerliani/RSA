@@ -68,7 +68,7 @@ bd_ratings = paste0(bd,"/RATINGS")
 ratings_type <- c("emotion","arousal","valence","aroval")
 
 
-rsa_flavour="rsa_emotion_predictors_ROI_minus_neutral"
+rsa_flavour="rsa_emotion_predictors_ROI"
 
 remove_neutrals = "YES"
 
@@ -77,7 +77,7 @@ remove_neutrals = "YES"
 # - one_ev_per_movie_minus_neutral
 # - emotion_predictors
 # - emotion_predictors_minus_neutral
-copes_type <- "emotion_predictors"
+copes_type <- "emotion_predictors_minus_neutral"
 
 
 # Choose one atlas, e.g.

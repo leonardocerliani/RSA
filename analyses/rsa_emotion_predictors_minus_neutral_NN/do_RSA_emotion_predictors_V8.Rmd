@@ -1,0 +1,375 @@
+---
+title: "do_RSA_v7"
+author: "LC"
+date: "2024-03-10"
+output: html_document
+---
+
+NB: this Rmd can be used for all types of ratings: emotion, arousal, valence
+
+```{r load_libraries, message=F}
+library(tidyverse)
+library(future)
+library(furrr)
+library(tictoc)
+library(RNifti)
+library(proxy) # distances
+library(profvis)
+library(DT)
+library(formattable)
+
+source("funs_emotion_predictors_V8.R")
+
+bd="/data00/leonardo/RSA/analyses"
+
+# can be emotion, arousal, valence
+ratings_type <- "emotion"
+
+# the following is out contrast of interest and it's always the same
+copes_type <- "emotion_predictors"
+
+# Choose one atlas among:
+# HO_cort_2mm.nii.gz
+# HO_sub_2mm.nii.gz
+# juelich_2mm.nii.gz
+# Schaefer100_2mm.nii.gz
+# Schaefer200_2mm.nii.gz
+# Schaefer400_2mm.nii.gz
+# insula_HO_clusters_[N].nii.gz
+atlas_filename <- "insula_HO_clusters_600.nii.gz"
+
+
+# Choose the distance metric to use for fmri RDM
+# The metric for ratings RDM *should be* euclidean, since arousal and valence
+# ratings have only one value
+# Supported methods: 'pearson', 'spearman', 'euclidean', 'cosine' or 'mahalanobis'
+dist_method_rating <- "euclidean"
+dist_method_fmri = "euclidean"
+dist_method_rsa = "pearson"
+
+
+cat(paste0("Ratings RDM to be calculated with : ", dist_method_rating, "\n"))
+cat(paste0("fMRI RDM to be calculated with : ", dist_method_fmri, "\n"))
+
+
+RDM_type = "tril"  # svd or tril. Must be the same for both rating and fmri
+ncomp_svd = 3
+
+# Vector of zeropadded sub_ids
+subs_file <- "/data00/leonardo/RSA/sub_list.txt"
+subs <- sprintf("%02d",readLines(subs_file) %>% as.numeric)
+
+# ---------- ONLY TOP RATERS BELOW ------------
+# subs <- c("02","03","12","11","22","09","29","28","26","32","23","15","20","19")
+
+```
+
+
+# Aux functions
+```{r}
+# plot_heatmap(D %>% as.matrix)
+plot_heatmap <- function(M) {
+  heatmap(M, Rowv = NA, Colv = NA, symm=T, revC = T)
+}
+```
+
+
+# Create a df_path_copes with the location of the cope niis from the one_movie_per_ev model
+Extract the pathname of all copes using the `list.files()` function.
+Also define a copes_numba vector with all the copes numbers.
+
+NB: The cope numbers in the `cope` column are NOT zeropadded since this is how they come out from FSL Feat
+```{r, message=FALSE}
+
+bd_copes = paste0(bd, "/",copes_type,"/results/2nd_level")
+
+df_path_copes <- list.files(bd_copes, recursive = T) %>% tibble()
+names(df_path_copes) <- "fname"
+
+df_path_copes <- df_path_copes %>%
+  filter(str_detect(fname, "gfeat/cope[0-9]+.feat/stats/cope")) %>%
+  tidyr::separate(
+    fname, c("sub","cope","tmp1","tmp2"),
+    sep = "/", fill = "right", remove = F
+  ) %>% 
+  select(!starts_with("tmp")) %>% 
+  mutate(sub = str_extract(sub, "[0-9]+")) %>% 
+  mutate(cope = (str_extract(cope, "[0-9]+") %>% as.numeric) ) %>% 
+  mutate(path = paste0(bd_copes,"/",fname)) %>% 
+  select(!fname) %>% 
+  arrange(sub,cope)
+
+copes_numba <- df_path_copes$cope %>% unique
+
+
+```
+
+
+# Read atlas and create a vector of atlas labels
+```{r}
+
+bd_atlases = "/data00/leonardo/RSA/analyses/rsa/atlases"
+
+atlas_path <- paste0(bd_atlases,"/",atlas_filename)
+
+atlas_nii <- readNifti(paste0(bd_atlases,"/", atlas_filename))
+region_labels <- atlas_nii[atlas_nii > 0] %>% unique %>% sort
+
+```
+
+
+
+# Calculate RATINGS RDMs - IMPORTANT DIFFERENCE FOR EMOTION_PREDICTORS MODEL
+
+**THIS IS THE SAME CODE AS IN do_RSA_V[N].Rmd HOWEVER SINCE HERE WE HAVE DEFINED
+ONE PREDICTOR FOR *ALL* MOVIES WITH THE SAME EMOTION, WE NEED TO CALCULATE
+THE RATING FOR EACH EMOTION AS THE AVG (MEDIAN) RATING FOR EACH EMOTION MOVIE
+FOR EACH SUB**
+
+We do this first since the RDM for the ratings will be the same for whatever
+atlas will be used. Also, it's much faster than the RDM_fmri and can be done
+for all the sub_ids at once.
+
+
+- **tril** : The final RDMs_rats has 546 nrows : 26 sub_ids * 21, where the latter
+derives from ((7^2)-7)/7 = 21, i.e. tril from the D matrix of 56 movies
+- **svd** : The final RDMs_rats has 4368 nrows : 26 sub_ids * 168, where the latter
+derives from 56*3, i.e. the first three components from svd of the D matrix
+```{r, message=FALSE}
+
+bd_ratings = paste0(bd,"/RATINGS")
+ratings_path <- paste0(bd_ratings,"/",ratings_type,"_ratings.csv")
+rats <- read_csv(ratings_path)
+
+# ------- IMPORTANT : AVG ACROSS MOVIES FOR EMOTION PREDICTORS MODEL -----
+rats <- rats %>% 
+  select(sub, emotion, starts_with("r_")) %>%
+  group_by(sub, emotion) %>% 
+  reframe(across(starts_with("r_"), median, na.rm = TRUE)) %>% 
+  ungroup %>% 
+  arrange(sub, emotion)
+# ------- IMPORTANT : AVG ACROSS MOVIES FOR EMOTION PREDICTORS MODEL -----
+
+rats
+
+# for RDM_type use:
+# - tril for the lower triangular of the D matrix
+# - svd for the first 3 pc from svd of the D matrix
+RDMs_rats_wider <- subs %>% map_dfc(~ {
+  do_RDM_ratings_one_sub(.x, dist_method_rating, rats, RDM_type =  RDM_type)
+})
+
+RDMs_rats <- RDMs_rats_wider %>% 
+  pivot_longer(cols = everything(), names_to = "sub") %>% 
+  arrange(sub)
+
+RDMs_rats
+```
+
+
+
+# Calculate FMRI RDMs
+
+## Define the functions
+1. df_copes[one_sub] <- load_sub_copes(sub_id, copes_numba)
+2. RDM_fmri[one_sub] <- calculate_fmri_RDMs(df_copes, atlas_path)
+
+```{r load_copes, eval=FALSE}
+
+# # Load copes for one sub_id
+# # (reasonably fast: reads 56 nifti at 2mm resolution in ~ 2.5 sec)
+# sub_id = "02"
+# 
+# df_copes <- load_sub_copes(sub_id, copes_numba, df_path_copes)
+# 
+# # Read atlas and calculate fmri RDMs for each atlas region
+# dist_method_fmri = "euclidean"
+# one_RDM_fmri <- calculate_fmri_RDMs(
+#   df_copes, atlas_nii, dist_method_fmri, RDM_type = RDM_type
+# )
+
+```
+
+
+## Furrr the calculation of RDMs
+First, the copes are loaded into a df of 91x109x91 (MNI 2mm) rows and 56 columns.
+Then the RDM is estimated for each atlas region as the tril of the similarity. 
+matrix across the 56 subs
+This is carried out in parallel for all 26 subs using `furrr::future_map_dfr`
+```{r}
+# 5 workers give the best performance (~ 15 sec)
+plan(multisession, workers = 5)
+
+tic()
+RDMs_fmri <- subs %>% future_map_dfr(~{
+  
+  paste0("Calculating RDMs for sub ",.x,"\n") %>% cat
+  
+  df_copes <- load_sub_copes(.x, copes_numba, df_path_copes)
+  
+  one_RDM_fmri <- calculate_fmri_RDMs(
+    df_copes, 
+    atlas_nii, 
+    dist_method_fmri, 
+    RDM_type = RDM_type
+  )
+  
+  one_RDM_fmri %>% mutate(sub = .x) %>% relocate(sub)
+  
+})
+toc()
+
+plan(sequential)
+```
+
+
+
+
+# RSA 
+In the approach below purrr, tidy data and R in general shine at their best.
+
+The final aim is to calculate the similarity between each sub/region fmri RDM
+and each sub rat RDM. Therefore the fmri rdms is grouped by sub/region and the
+rat rdms is grouped only by sub.
+
+First, nesting both fmri and rat rdms allows to keep the dfs tidy. 
+Soon after nesting, we can *right*-join the fmri to the rat, to create a copy
+of the rat rdm for each sub/region of the atlas.
+
+At this point, calculating the similarity is just a matter of using a purrr:map2
+(or pmap as I prefer) to the fmri and rat columns
+
+The simplicity yielded by the tidy data approach and the purrr functions is 
+unparalleled.
+
+```{r}
+
+# nest the RDMs for both rat and fmri. In the second case, they are nested by sub AND region
+rdms_fmri_nested <- RDMs_fmri %>% 
+  pivot_longer(cols = starts_with("RDM"), names_to = "region") %>% 
+  group_by(sub, region) %>% 
+  nest %>% 
+  rename(fmri = data)
+
+rdms_rats_nested <- RDMs_rats %>% 
+  group_by(sub) %>% 
+  nest %>% 
+  rename(rat = data)
+
+# we put a copy of the rating RDM for each atlas region's RDM
+joint_fmri_rat_nested <- right_join(rdms_fmri_nested,rdms_rats_nested, by = "sub")
+# # the following is just to check that the join went as expected
+# ff %>% mutate(sum_rat = rat %>% map_dbl(sum)  )
+
+joint_fmri_rat_nested
+
+# Calculate all similarity
+# This is effectively when we are calculating the RSA
+all_similarities <- joint_fmri_rat_nested %>% 
+  mutate(similarity = list(fmri,rat) %>% pmap_dbl(~ cor(.x,.y, method = dist_method_rsa)) ) %>%
+  ungroup
+
+# Produce estimates of RSA acros subjects
+RSA <- all_similarities %>%
+  select(region, similarity) %>% 
+  group_by(region) %>% 
+  reframe(
+    mean_similarity = round(mean(similarity),2),
+    sd_similarity = round(sd(similarity),2)
+  ) %>% 
+  arrange(desc(mean_similarity))
+
+RSA %>% datatable()
+```
+
+
+
+# Write the map with the values
+```{r}
+
+results_to_map <- RSA %>% 
+  mutate(region = as.integer(str_replace(region, "RDM_region_",""))) %>% 
+  select(region, mean_similarity)
+
+results_to_map
+
+results_path <- "/data00/leonardo/RSA/analyses/rsa_emotion_predictors/rsa_emotion_predictors_results"
+
+results_filename <- create_filename_results(
+  atlas_filename, ratings_type, dist_method_rating, dist_method_fmri, dist_method_rsa
+)
+
+
+# Function to write the results to a nii.gz volume
+# (purrr gives issues here)
+write_results_to_nii <- function(results_to_map, filename_results_nii, atlas_nii) {
+  
+  results_nii = atlas_nii
+  
+  for (ROI_numba in region_labels) {
+    cat(paste0(ROI_numba," "))
+    row_region <- which(results_to_map$region == ROI_numba)
+    value <- results_to_map$mean_similarity[row_region]
+    
+    idx <- which(results_nii == ROI_numba)
+    results_nii[idx] = value
+  }
+
+  writeNifti(results_nii, filename_results_nii)
+}
+
+
+# Write the results nii.gz in the rsa_results dir
+write_results_to_nii(
+  results_to_map, 
+  paste0(results_path, "/", results_filename), 
+  atlas_nii
+)
+
+```
+
+
+
+
+
+
+
+
+
+# Write the map with the values OLE
+```{r}
+
+results_to_map <- RSA %>% 
+  mutate(region = as.integer(str_extract(region, "\\d+$"))) %>% 
+  select(region, mean_similarity)
+
+results_to_map
+
+filename_results_nii <- paste0("rsa_emotion_predictors_results/rsa_results_",ratings_type,"_",atlas_filename)
+
+write_results_to_nii <- function(results_to_map, filename_results_nii, atlas_nii) {
+  
+  results_nii = atlas_nii
+  
+  for (ROI_numba in region_labels) {
+    cat(paste0(ROI_numba," "))
+    row_region <- which(results_to_map$region == ROI_numba)
+    value <- results_to_map$mean_similarity[row_region]
+    
+    idx <- which(results_nii == ROI_numba)
+    results_nii[idx] = value
+  }
+
+  writeNifti(results_nii, filename_results_nii)
+}
+
+write_results_to_nii(results_to_map, filename_results_nii, atlas_nii)
+
+```
+
+
+
+
+
+
+
