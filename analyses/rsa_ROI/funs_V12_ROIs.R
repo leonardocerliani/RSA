@@ -98,8 +98,13 @@ plot_tril <- function(tril, model, source_copes_info=df_path_copes,
 # Output : vector with the tril of the D[n,n] matrix of length (n^2 - n)/2 
 DDOS_vec <- function(X, method) {
   
-  X[is.na(X)] = 0
+  # Replace NA values with 0
+  X[is.na(X)] <- 0
   
+  # Demean each column
+  X <- scale(X, center = TRUE, scale = TRUE)
+  
+  # Calculate the distance or similarity
   switch(method,
          pearson = {
            D <- 1 - cor(t(X), method = "pearson") %>% as.dist()

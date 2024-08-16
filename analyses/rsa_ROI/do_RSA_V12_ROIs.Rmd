@@ -63,12 +63,12 @@ ratings_type <- c("emotion","arousal","valence","aroval")
 rsa_flavour="rsa_ROI"
 
 # Do you want to remove neutral cope(s) from the RSA analysis?
-remove_neutrals = "NO"
+remove_neutrals = "YES"
 
 # choose the type of betas to be used, e.g.
 # - one_ev_per_movie [_minus_neutral]
 # - emotion_predictors [_minus_neutral]
-copes_type <- "one_ev_per_movie"
+copes_type <- "one_ev_per_movie_minus_neutral"
 
 
 # Choose one atlas, e.g.
@@ -201,14 +201,17 @@ RDMs_rats <- map_dfc(ratings_type, ~ do_RDMs_rats(.x, remove_neutrals)) %>%
   select(sub, starts_with("rdm"))
 
 
-# # example heatmap
-# plot_tril(
-#   RDMs_rats[1,]$rdm_emotion, model = "emotion",
-#   fontsize=7, side_mm=80, reord = TRUE
-# )
+# example heatmap
+plot_tril(
+  RDMs_rats[1,]$rdm_emotion, model = "emotion",
+  fontsize=7, side_mm=80, reord = TRUE
+)
 
 
 ```
+
+
+
 
 
 
@@ -404,7 +407,7 @@ seq(nrow(mean_RDMs_fmri)) %>%
   map(
     ~ plot_tril(
       mean_RDMs_fmri[.x,]$data, model = paste0("fmri_roi_",.x),
-      fontsize=8, side_mm=200, reord = TRUE
+      fontsize=8, side_mm=200, reord = FALSE
     )
   )
 
