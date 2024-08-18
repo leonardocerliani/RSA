@@ -1,0 +1,50 @@
+/* style.css */
+
+/* Set the body to have 100% height and remove margins */
+body, html {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* Container to ensure full height utilization */
+.container {
+  height: 100%;
+}
+
+/* Top section styling */
+.top-section {
+  height: 50%; /* Occupy 50% of the viewport height */
+  background-color: #f0f0f0; /* Background color for top section */
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* Adjust alignment for the two columns */
+  padding: 10px; /* Optional: add padding */
+}
+
+/* Bottom section styling */
+.bottom-section {
+  height: 50%; /* Occupy the remaining 50% of the viewport height */
+  background-color: #e0e0e0; /* Background color for bottom section */
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* Adjust alignment for the two columns */
+  padding: 10px; /* Optional: add padding */
+}
+
+/* Adjust column contents if necessary */
+.col-sm-4, .col-sm-8 {
+}
+
+
+.center-content {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+}
+
+
+.no-margin-padding {
+  margin: 0;
+  padding: 0;
+}
