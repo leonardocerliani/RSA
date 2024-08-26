@@ -115,7 +115,7 @@ server <- function(input, output, session) {
     )
     
     # define a vector with the models from the columns of RSA_mean
-    models <- colnames(RSA_mean)[grepl("_mean$", colnames(RSA_mean))] %>% str_replace("_mean","")
+    models <- colnames(RSA_mean)[grepl("_mean$", colnames(RSA_mean))] %>% str_replace("_mean","") %>% sort
     updateSelectInput(
       session, "model_select",
       choices = models,
@@ -206,8 +206,13 @@ server <- function(input, output, session) {
       mutate(model = str_replace(model, "rsa_rdm_","")) %>% 
       ggwithinstats(
         x = model, y = value,
-        type = "np",   # p, np, r, b
-        results.subtitle = TRUE
+        type = "p",   # p, np, r, b
+        results.subtitle = TRUE,
+        centrality.label.args = list(size  = 6)
+      ) + theme(
+        axis.text = element_text(size = 16),   # Font size for axis text (labels)
+        axis.title = element_text(size = 16),  # Font size for axis titles
+        plot.title = element_text(size = 18)   # Font size for the plot title
       )
   }
   

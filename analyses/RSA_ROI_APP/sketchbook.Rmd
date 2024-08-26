@@ -1,0 +1,28 @@
+---
+title: "sketchbook"
+author: "LC"
+date: "2024-08-19"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+dir("results_RSA_ROI/")
+```
+
+
+```{r}
+load("results_RSA_ROI/Yeo7_EHLP_RN.RData")
+```
+
+
+```{r}
+mean_RDMs_fmri$data
+```
+
+```{r}
+mean_RDMs_rats %>% as.matrix %>% cor
+
+plot(mean_RDMs_rats$rdm_emotion ~ mean_RDMs_rats$rdm_valence)
+```
+
