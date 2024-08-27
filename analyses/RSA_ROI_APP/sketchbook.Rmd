@@ -125,6 +125,40 @@ results_table
 
 
 
+# papaya viz
+```{r}
+
+bd="/data00/leonardo/RSA/analyses"
+bd_atlases = paste0(bd,"/ROIS_REPO")
+bd_results = paste0(bd,"/RSA_ROI_APP/results_RSA_ROI")
+
+Dummy <- paste0(bd,"/ROIS_REPO/Dummy.nii.gz")
+MNI <- paste0(bd,"/ROIS_REPO/MNI152_T1_2mm_brain.nii.gz")
+
+# papaya display volumes
+papaya_display <- function(model) {
+  
+  rsa_results_nii <- paste0(bd,"/RSA_ROI_APP/results_RSA_ROI/tmp_",model,".nii.gz")
+  rsa_results_nii <- paste0(bd_atlases,"/",atlas_filename)
+  
+  papaya(
+    c(Dummy, MNI, rsa_results_nii),
+    options = list(
+      papayaOptions(alpha = 1, lut = "Grayscale"),
+      papayaOptions(alpha = 0.5, lut = "Grayscale"),
+      papayaOptions(alpha = 0.6, lut = "Red Overlay", min = 0.1, max = 0.25)
+    ),
+    interpolation = FALSE,
+    orthogonal = TRUE,
+    hide_controls = TRUE,
+    title = model
+  )
+}
+
+model="emotion"
+papaya_display(model)
+
+```
 
 
 
