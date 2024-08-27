@@ -26,3 +26,106 @@ mean_RDMs_rats %>% as.matrix %>% cor
 plot(mean_RDMs_rats$rdm_emotion ~ mean_RDMs_rats$rdm_valence)
 ```
 
+
+# One sample t-test for > 0 for every column of a df
+```{r, message=FALSE}
+library(tidyverse)
+library(ggstatsplot)
+
+n = 100
+
+df <- tibble(
+  arousal = rnorm(n, 0, 1),
+  aroval = rnorm(n, 0.1, 1),
+  emotion = rnorm(n, 0.5, 1),
+  valence = rnorm(n, -0.5, 1)
+)
+
+# df %>% 
+#   reframe(across(everything(), ~mean(.x)))
+
+# Perform one-sample t-test and extract p-values
+df %>%
+  reframe(across(everything(), ~ t.test(.x, mu = 0, alternative = "greater")$p.value))
+
+df %>% 
+  pivot_longer(cols = everything(), names_to = "cols", values_to = "value") %>% 
+  ggwithinstats(
+    x = cols,
+    y = value,
+    type = "np",
+    results.subtitle = FALSE,
+  )
+
+```
+
+```{r}
+library(infer)
+library(broom)
+library(gt)
+library(gtsummary)
+
+model <- function(vals) infer::t_test(vals, response = value, alternative = "greater")
+
+df %>% 
+  pivot_longer(cols = everything(), names_to = "models", values_to = "value") %>% 
+  group_by(models) %>% nest %>% 
+  mutate(stats = data %>% map(~ model(.x)) ) %>% 
+  unnest(cols = stats) %>% 
+  select(models, statistic, t_df, p_value)
+
+
+library(gt)
+library(broom)
+
+model <- function(val) t.test(val, mu = 0, alternative = "two.sided")  # greater or two.sided
+
+df %>% 
+  map_dfr(~ broom::tidy(model(.x)), .id = "rsa_model") %>%
+  mutate(t = paste0("t=",round(statistic, 2)) ) %>% 
+  mutate(p = ifelse(p.value >= 0.001, paste0("p = ",round(p.value,2) ), "p < 0.001")) %>% 
+  mutate(res = paste0(t,", ",p)) %>%
+  select(rsa_model, res) %>% 
+  pivot_wider(names_from = rsa_model, values_from = res) %>% 
+  gt() %>% 
+  tab_options(table.font.size = px(14)) %>% 
+  tab_style(style = cell_text(style = "italic"), locations = cells_body()) %>% 
+  cols_width(everything() ~ px(300))
+
+# scales::pvalue(p.value)
+  
+```
+
+
+
+```{r}
+results <- df %>%
+  summarise(across(everything(), ~ tidy(t.test(.)))) %>%
+  pivot_longer(everything(), names_to = "Variable", values_to = "TTest") %>%
+  unnest(TTest)
+
+# Create a table using gtsummary
+results_table <- results %>%
+  select(Variable, estimate, statistic, p.value, conf.low, conf.high) %>%
+  mutate(
+    p.value = scales::pvalue(p.value),
+    estimate = sprintf("%.2f", estimate),
+    statistic = sprintf("%.2f", statistic),
+    conf.low = sprintf("%.2f", conf.low),
+    conf.high = sprintf("%.2f", conf.high)
+  ) %>%
+  gt() %>%
+  tab_header(title = "One-Sample T-Test Results") %>%
+  fmt_number(columns = vars(estimate, statistic, p.value, conf.low, conf.high), decimals = 2)
+
+# Print the table
+results_table
+
+```
+
+
+
+
+
+
+

@@ -52,7 +52,7 @@ ui <- fluidPage(
               reactableOutput("RSA_mean_table")
           ),
           div(class = "col-sm-8 no-margin-padding", # Right column - 8 columns wide
-              plotOutput("boxplot", height = "40vh"),
+              plotOutput("boxplot", height = "45vh"),
           )
       ),
       
@@ -137,7 +137,8 @@ server <- function(input, output, session) {
     output$RDM_fmri_mean <- renderPlot({
       
       req(input$roi_select)
-      ith_roi <- input$roi_select
+      # ith_roi <- input$roi_select
+      ith_roi <- which(rois == input$roi_select)
       
       req(input$reorder_fmri)
       reord_fmri <- as.logical(input$reorder_fmri)
@@ -207,6 +208,7 @@ server <- function(input, output, session) {
       ggwithinstats(
         x = model, y = value,
         type = "p",   # p, np, r, b
+        title = paste0("roi ", roi_numba),
         results.subtitle = TRUE,
         centrality.label.args = list(size  = 6)
       ) + theme(
