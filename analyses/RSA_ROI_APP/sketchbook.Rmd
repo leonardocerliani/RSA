@@ -162,4 +162,36 @@ papaya_display(model)
 
 
 
+# read XML of juelich
+```{r}
+
+library(xml2)
+
+jubrain_XML <- "/data00/leonardo/RSA/analyses/ROIS_REPO/jubrain/orig/maximum-probability-maps_MPMs_207-areas/JulichBrainAtlas_3.1_207areas_MPM_rh_MNI152.xml"
+
+# Read the XML file
+xml_file <- read_xml(jubrain_XML)
+
+# Extract all Structure nodes
+structures <- xml_find_all(xml_file, "//Structure")
+
+# Create a dataframe with grayvalue and name
+df <- tibble(
+  grayvalue = xml_attr(structures, "grayvalue"),
+  name = xml_text(structures)
+)
+
+# Display the dataframe
+print(df)
+
+library(reactable)
+reactable(df)
+
+
+reactable(
+  df, 
+  style = list(fontFamily = "Arial narrow", fontSize = "13px")
+)
+
+```
 
