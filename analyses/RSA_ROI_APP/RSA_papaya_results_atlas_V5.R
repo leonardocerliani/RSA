@@ -22,10 +22,9 @@ bd="/data00/leonardo/RSA/analyses"
 bd_atlases = paste0(bd,"/ROIS_REPO")
 bd_results = paste0(bd,"/RSA_ROI_APP/results_RSA_ROI")
 
-# Make sure you remove the tmp_[model].nii.gz volumes from
-# the previous session
-file.remove(Sys.glob(paste0(bd_results,"/tmp*.nii.gz") ) )
 
+# Makes sure you remove the tmp_[model].nii.gz volumes from the previous session
+file.remove(Sys.glob(paste0(bd_results,"/tmp*.nii.gz") ) )
 
 # Volumes for papaya display
 Dummy <- paste0(bd,"/ROIS_REPO/Dummy.nii.gz")
@@ -54,8 +53,9 @@ ui <- fluidPage(
     sidebarPanel(width = 3,
                  
                 selectInput(
-                  "results_file", "Select results", choices = results_file_choices, width = "100%"
+                      "results_file", "Select results", choices = results_file_choices, width = "100%"
                 ),
+                
                  
                 fluidRow(
                   column(6,
@@ -171,23 +171,24 @@ server <- function(input, output, session) {
     req(input$results_file)
     req(exists("RSA_volumes_df", where = .GlobalEnv))
     
-    prepare_result_volumes(atlas_filename) 
+    # prepare_result_volumes(atlas_filename) 
         
     output$papaya_atlas <- renderPapaya(papaya_display_atlas(atlas_filename))
     
+    
     # Emotion
     output$papaya_emotion <- renderPapaya({
-      papaya_display("emotion", input$positive_range[1], input$positive_range[2], input$negative_range[2], input$negative_range[1])
+      papaya_display("emotion", atlas_filename, input$positive_range[1], input$positive_range[2], input$negative_range[2], input$negative_range[1])
     })
     
     # Arousal
     output$papaya_arousal <- renderPapaya({
-      papaya_display("arousal", input$positive_range[1], input$positive_range[2], input$negative_range[2], input$negative_range[1])
+      papaya_display("arousal", atlas_filename, input$positive_range[1], input$positive_range[2], input$negative_range[2], input$negative_range[1])
     })
     
     # Aroval
     output$papaya_aroval <- renderPapaya({
-      papaya_display("aroval", input$positive_range[1], input$positive_range[2], input$negative_range[2], input$negative_range[1])
+      papaya_display("aroval", atlas_filename, input$positive_range[1], input$positive_range[2], input$negative_range[2], input$negative_range[1])
     })
     
     # # Valence
@@ -203,6 +204,39 @@ server <- function(input, output, session) {
 
 
 # ----------- aux funs ----------------
+
+
+# papaya display RSA_volumes_df
+papaya_display <- function(model, atlas_filename, positive_min, positive_max, negative_min, negative_max) {
+  
+  # generate the tmp_[model].nii.gz results file
+  nii_atlas <- RNifti::readNifti(paste0(bd_atlases,"/", atlas_filename))
+  tmp_nii <- nii_atlas
+  tmp_nii[1:length(nii_atlas)] <- RSA_volumes_df[[model]]
+  filename_2_write <- paste0(bd_results,"/tmp_",model,".nii.gz")
+  writeNifti(tmp_nii, filename_2_write)
+  
+  rsa_results_nii <- paste0(bd_results,"/tmp_",model,".nii.gz")
+  
+  # display tmp_[model].nii.gz results on the MNI
+  papaya(
+    c(Dummy, MNI, rsa_results_nii, rsa_results_nii),
+    options = list(
+      papayaOptions(alpha = 1, lut = "Grayscale"),
+      papayaOptions(alpha = 0.5, lut = "Grayscale"),
+      papayaOptions(alpha = 0.6, lut = "Red Overlay", min = positive_min, max = positive_max),
+      papayaOptions(alpha = 0.6, lut = "Overlay (Negatives)", min = negative_min, max = negative_max)
+    ),
+    interpolation = FALSE,
+    orthogonal = TRUE,
+    hide_controls = TRUE,
+    sync_view = TRUE,
+    title = model
+  )
+}
+
+
+
 
 # boxplot of different models for the selected ROI
 do_boxplot <- function(RSA, roi_numba) {
@@ -245,50 +279,6 @@ do_ttest_table <- function(RSA, roi_numba) {
     select(rsa_model, res) %>% 
     pivot_wider(names_from = rsa_model, values_from = res) %>% 
     mutate(roi = roi_numba) %>% relocate(roi)
-}
-
-
-# takes the RSA_volumes_df from the .RData file
-# and generates tmp_[model].nii.gz volumes
-prepare_result_volumes <- function(atlas_filename) {
-  
-  f <- function(nii_filename) {
-    return(paste0(bd_atlases,"/", nii_filename))
-  }
-  
-  nii_atlas <- RNifti::readNifti( f(atlas_filename) )
-  # view(nii_atlas)
-  
-  ratings_type <- colnames(RSA_volumes_df)
-  
-  ratings_type %>% walk(~{
-    tmp_nii <- nii_atlas
-    tmp_nii[1:length(nii_atlas)] <- RSA_volumes_df[[.x]]
-    filename_2_write <- paste0(bd_results,"/tmp_",.x,".nii.gz")
-    writeNifti(tmp_nii, filename_2_write)
-  })
-}
-
-
-# papaya display RSA_volumes_df
-papaya_display <- function(model, positive_min, positive_max, negative_min, negative_max) {
-  
-  rsa_results_nii <- paste0(bd,"/RSA_ROI_APP/results_RSA_ROI/tmp_",model,".nii.gz")
-  
-  papaya(
-    c(Dummy, MNI, rsa_results_nii, rsa_results_nii),
-    options = list(
-      papayaOptions(alpha = 1, lut = "Grayscale"),
-      papayaOptions(alpha = 0.5, lut = "Grayscale"),
-      papayaOptions(alpha = 0.6, lut = "Red Overlay", min = positive_min, max = positive_max),
-      papayaOptions(alpha = 0.6, lut = "Overlay (Negatives)", min = negative_min, max = negative_max)
-    ),
-    interpolation = FALSE,
-    orthogonal = TRUE,
-    hide_controls = TRUE,
-    sync_view = TRUE,
-    title = model
-  )
 }
 
 
