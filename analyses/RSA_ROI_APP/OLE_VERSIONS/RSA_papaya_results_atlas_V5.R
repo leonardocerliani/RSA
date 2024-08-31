@@ -171,15 +171,9 @@ server <- function(input, output, session) {
     req(input$results_file)
     req(exists("RSA_volumes_df", where = .GlobalEnv))
     
-    # Display ONLY the atlas ROI selected in the RSA_mean_table
-    output$papaya_atlas <- renderPapaya({
-      
-      req(getReactableState("RSA_mean_table", "selected"))
-      selected_ROI <- reactive( getReactableState("RSA_mean_table","selected") )
-      
-      papaya_display_atlas(atlas_filename,selected_ROI())
-      
-    })
+    # prepare_result_volumes(atlas_filename) 
+        
+    output$papaya_atlas <- renderPapaya(papaya_display_atlas(atlas_filename))
     
     
     # Emotion
@@ -199,9 +193,11 @@ server <- function(input, output, session) {
     
     # # Valence
     # output$papaya_valence <- renderPapaya({
-    #   papaya_display("valence", atlas_filename, input$positive_range[1], input$positive_range[2], input$negative_range[2], input$negative_range[1])
+    #   papaya_display("valence", input$positive_range[1], input$positive_range[2], input$negative_range[2], input$negative_range[1])
     # })
-  
+    
+    # file.remove(Sys.glob(paste0(bd_results,"/tmp*.nii.gz") ) )
+    
   })
   
 }
@@ -288,24 +284,16 @@ do_ttest_table <- function(RSA, roi_numba) {
 
 
 # papaya display atlas_filename
-papaya_display_atlas <- function(atlas_filename, selected_ROI) {
+papaya_display_atlas <- function(atlas_filename) {
   
   atlas_path <- paste0(bd_atlases,"/",atlas_filename)
 
-  # to make a specific ROI visible, the range must be from ROI-1 to ROI+1
-  if(!is.null(selected_ROI)) {
-    min_val <- selected_ROI - 1
-    max_val <- selected_ROI + 1
-  } else {
-    min_val <- max_val <- NULL
-  }
-  
   papaya(
     c(Dummy, MNI, atlas_path),
     options = list(
       papayaOptions(alpha = 1, lut = "Grayscale"),
       papayaOptions(alpha = 0.5, lut = "Grayscale"),
-      papayaOptions(alpha = 0.6, lut = "Spectrum", min = min_val, max = max_val)
+      papayaOptions(alpha = 0.6, lut = "Spectrum")
     ),
     interpolation = FALSE,
     orthogonal = TRUE,
