@@ -1,4 +1,11 @@
 library(shiny)
+library(shinythemes)
+library(bslib)
+# thematic::thematic_shiny(font = "auto")
+library(ggthemes)
+library(ggdark)
+
+
 library(tidyverse)
 library(ggstatsplot)
 library(reactable)
@@ -11,6 +18,8 @@ library(RNifti)
 library(xml2)
 
 options(warn = -1)
+papaya_hide_toolbar = FALSE
+
 
 # Papaya viz thanks to the great John Muschelli!
 # https://github.com/muschellij2/linked_viewer/blob/master/app.R
@@ -31,6 +40,7 @@ Dummy <- paste0(bd,"/ROIS_REPO/Dummy.nii.gz")
 MNI <- paste0(bd,"/ROIS_REPO/MNI152_T1_2mm_brain.nii.gz")
 juelich <- ("jubrain_bilat.nii.gz")
 
+
 # clever way to make it so that the displayed name corresponds to a certain
 # filename
 results_files <- dir(bd_results, pattern = "RData")
@@ -40,12 +50,20 @@ results_file_choices <- setNames(results_files, results_files_display)
 
 ui <- fluidPage(
   
+  # theme = bs_theme(),
+  # shinythemes::themeSelector(),
+  # theme = shinytheme("cerulean"),
+  
+  
   tags$style(HTML("
     body {
       padding-top: 5vh;
     }
     .papayaWidget {
       height: 40vh !important;
+    }
+    .radio-inline {
+      font-size: 8pt;
     }
   ")),
   
@@ -56,6 +74,16 @@ ui <- fluidPage(
                       "results_file", "Select results", choices = results_file_choices, width = "100%"
                 ),
                 
+                div(
+                  style = "font-size: 8pt;",
+                    HTML("
+                      <strong>OEPM</strong> : one ev per movie (48+8 EVs) &nbsp;&nbsp;
+                      <strong>EHLP</strong> : emotion high/low predictors (12+2 EVs)<br>
+                      <strong>EP</strong> : emotion predictors (6+1 EVs)  &nbsp;&nbsp; 
+                      <strong>RN</strong> : remove neutral &nbsp;&nbsp;
+                      <br><br>
+                    ")
+                  ),
                  
                 fluidRow(
                   column(6,
@@ -77,6 +105,7 @@ ui <- fluidPage(
                 reactableOutput("ttest_table"),
 
                 tags$br(),
+                radioButtons("ttest_type", "Paired samples t-test type", c("p","np","b"), selected = "p", inline = TRUE ),
                  
                 plotOutput("models_boxplot")
                 
@@ -108,6 +137,8 @@ ui <- fluidPage(
 
 server <- function(input, output, session) {
   
+  # bs_themer()
+  
   # Show atlas and area names
   output$papaya_juelich <- renderPapaya({
     papaya_display_juelich()
@@ -130,7 +161,7 @@ server <- function(input, output, session) {
     output$RSA_mean_table <- renderReactable({
       reactable(
         RSA_mean %>% rename_with(~ str_replace(., "_mean", "")),
-        defaultPageSize = 10,
+        defaultPageSize = 5,
         selection = "single", defaultSelected = c(1)
       )
     })
@@ -142,10 +173,17 @@ server <- function(input, output, session) {
   # boxplot across models
   observe({
     
-    req(getReactableState("RSA_mean_table", "selected"))
+    # We require again the input$results_file to refresh the values of the 
+    # ttest and boxplot, otherwise it would display those of the previously
+    # selected results_file
+    req(input$results_file)
     
+    req(getReactableState("RSA_mean_table", "selected"), cancelOutput = "progress")
+
+    # prevent warning if no row is selected (defaults to first row)
     idx_ROI <- reactive({
-      getReactableState("RSA_mean_table", "selected")
+      rs <- getReactableState("RSA_mean_table", "selected")
+      ifelse(is.null(rs),1,rs)
     })
     
     # print the table with the one-sample ttest for each model
@@ -159,7 +197,7 @@ server <- function(input, output, session) {
     
     # show boxplot across models
     output$models_boxplot <- renderPlot({
-      do_boxplot(RSA, idx_ROI())
+      do_boxplot(RSA, idx_ROI(), input$ttest_type )
     })
     
   })
@@ -233,6 +271,7 @@ papaya_display <- function(model, atlas_filename, positive_min, positive_max, ne
     ),
     interpolation = FALSE,
     orthogonal = TRUE,
+    hide_toolbar = papaya_hide_toolbar,
     hide_controls = TRUE,
     sync_view = TRUE,
     title = model
@@ -243,7 +282,7 @@ papaya_display <- function(model, atlas_filename, positive_min, positive_max, ne
 
 
 # boxplot of different models for the selected ROI
-do_boxplot <- function(RSA, roi_numba) {
+do_boxplot <- function(RSA, roi_numba, ttest_type) {
   
   RSA %>% 
     select(sub, roi, starts_with("rsa_")) %>% 
@@ -253,15 +292,19 @@ do_boxplot <- function(RSA, roi_numba) {
     mutate(model = str_replace(model, "rsa_rdm_","")) %>% 
     ggwithinstats(
       x = model, y = value,
-      type = "p",   # p, np, r, b
+      type = ttest_type,   # p, np, r, b
       title = paste0("roi ", roi_numba),
       results.subtitle = TRUE,
-      centrality.label.args = list(size  = 6)
-    ) + theme(
+      bf.message = FALSE,
+      ggsignif.args = list(textsize = 3, tip_length = 0.01),
+      p.adjust.method = "fdr",
+      centrality.label.args = list(size  = 5)
+    ) +
+    theme(
       axis.text = element_text(size = 16),   # Font size for axis text (labels)
       axis.title = element_text(size = 16),  # Font size for axis titles
       plot.title = element_text(size = 18)   # Font size for the plot title
-    )
+    ) 
 }
 
 
@@ -309,6 +352,7 @@ papaya_display_atlas <- function(atlas_filename, selected_ROI) {
     ),
     interpolation = FALSE,
     orthogonal = TRUE,
+    hide_toolbar = papaya_hide_toolbar,
     hide_controls = TRUE,
     sync_view = TRUE,
     title = str_replace(atlas_filename, ".nii.gz","")
@@ -329,6 +373,7 @@ papaya_display_juelich <- function() {
     ),
     interpolation = FALSE,
     orthogonal = TRUE,
+    hide_toolbar = papaya_hide_toolbar,
     hide_controls = TRUE,
     sync_view = TRUE,
     title = ("Juelich31")

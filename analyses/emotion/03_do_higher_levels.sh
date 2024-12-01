@@ -5,10 +5,10 @@
 # I will modify it later to accept a new list of subs
 
 export model="emotion"
-# copes: anger | disgust | fear | happy | pain | sad | allMovies
-export ncopes=7
+# copes: anger | disgust | fear | happy | pain | sad | allMovies | A_D | D_F | F_H | H_P | P_S
+export ncopes=12
 
-export nruns=8  # input how many runs to process, e.g. 5 for runs 1..5
+export nruns=8  # input how many runs to process, e.g. 8 for runs 1..8
 
 export sub_list="/data00/leonardo/RSA/sub_list.txt"
 
@@ -91,37 +91,37 @@ export -f run_sub_2nd_level
 cat ${sub_list} | xargs -P 30 -I{} bash -c 'run_sub_2nd_level {}'
 
 
-# ---------- run the grouplevel analysis ------------------
+# # ---------- run the grouplevel analysis ------------------
 
-RSA_dir="/data00/leonardo/RSA"
-analyses_dir=${RSA_dir}/analyses/${model}
+# RSA_dir="/data00/leonardo/RSA"
+# analyses_dir=${RSA_dir}/analyses/${model}
 
-fsf_grouplevel_template="${analyses_dir}/grouplevel_template.fsf"
+# fsf_grouplevel_template="${analyses_dir}/grouplevel_template.fsf"
 
-for i in $(seq ${ncopes}); do
+# for i in $(seq ${ncopes}); do
 
-    ncope="cope${i}"
+#     ncope="cope${i}"
 
-    fsf_grouplevel_model="${analyses_dir}/results/grouplevel_${model}_${ncope}.fsf"
-    group_outputdir="${analyses_dir}/results/grouplevel_${model}_${ncope}.gfeat"
+#     fsf_grouplevel_model="${analyses_dir}/results/grouplevel_${model}_${ncope}.fsf"
+#     group_outputdir="${analyses_dir}/results/grouplevel_${model}_${ncope}.gfeat"
 
-    for var in fsf_grouplevel_template fsf_grouplevel_model group_outputdir; do
-        echo ${var} = ${!var}
-    done
+#     for var in fsf_grouplevel_template fsf_grouplevel_model group_outputdir; do
+#         echo ${var} = ${!var}
+#     done
 
-    sed -e "s@__GROUP_OUTPUTDIR__@${group_outputdir}@g" \
-        -e "s@__MNI_TEMPLATE__@${MNI_template}@g"  \
-        -e "s@__MODEL__@${model}@g" \
-        -e "s@__NCOPE__@${ncope}@g" \
-        ${fsf_grouplevel_template} > ${fsf_grouplevel_model}
+#     sed -e "s@__GROUP_OUTPUTDIR__@${group_outputdir}@g" \
+#         -e "s@__MNI_TEMPLATE__@${MNI_template}@g"  \
+#         -e "s@__MODEL__@${model}@g" \
+#         -e "s@__NCOPE__@${ncope}@g" \
+#         ${fsf_grouplevel_template} > ${fsf_grouplevel_model}
 
-done
+# done
 
 
-# run all the ${ncopes} grouplevel copes at once
-eval "grouplevel_fsfs=(\"$PWD/results/grouplevel_${model}_cope\"{1..$ncopes}\".fsf\")"
+# # run all the ${ncopes} grouplevel copes at once
+# eval "grouplevel_fsfs=(\"$PWD/results/grouplevel_${model}_cope\"{1..$ncopes}\".fsf\")"
 
-printf "%s\n" "${grouplevel_fsfs[@]}" | xargs -P ${ncopes} -I{} feat {}
+# printf "%s\n" "${grouplevel_fsfs[@]}" | xargs -P ${ncopes} -I{} feat {}
 
 
 

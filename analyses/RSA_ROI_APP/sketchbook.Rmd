@@ -195,3 +195,95 @@ reactable(
 
 ```
 
+
+## ggplot themes
+```{r}
+
+library(ggstatsplot)
+library(ggdark)
+
+
+ggwithinstats(
+  data = bugs_long,
+  x = condition,
+  y = desire,
+  type = "np",
+  results.subtitle = FALSE
+) +
+  ggdark::dark_theme_dark() +
+  theme(legend.position = "none")
+  
+  
+```
+
+
+# RSA between regions
+# "/data00/leonardo/RSA/analyses/RSA_ROI_APP/sketchbook.Rmd"
+
+```{r}
+library(tidyverse)
+
+
+load("results_RSA_ROI/Yeo17_EHLP_RN_N14.RData")
+
+df <- mean_RDMs_fmri
+
+df
+
+df %>% 
+  unnest() %>% 
+  group_split()
+
+ff <- df %>% 
+  unnest(c("data")) %>% 
+  pivot_wider(names_from = "roi", values_from = "mean_tril") %>% 
+  unnest()
+
+
+CC <- cor(ff, method = "pearson")
+
+CC %>% heatmap
+
+library(uwot)
+
+u <- umap(1-CC)
+
+pcs <- list(u[,1], u[,2])
+
+
+library(plotly)
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

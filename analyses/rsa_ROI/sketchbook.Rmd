@@ -49,6 +49,60 @@ render_papaya(atlas_filename, roi_numba = 17)
 ```
 
 
+# ggwithinstats font change
+```{r}
+library(ggstatsplot)
+
+# https://indrajeetpatil.github.io/ggstatsplot/articles/web_only/faq.html
+# https://indrajeetpatil.github.io/ggstatsplot/reference/ggwithinstats.html
+
+p <- ggbetweenstats(
+  data = iris,
+  title = "Pairwise comparison",
+  x = Species,
+  y = Sepal.Length,
+  type = "np",
+  results.subtitle = FALSE,
+  centrality.label.args = list(size  = 4)
+)
+
+p + theme(
+  axis.text = element_text(size = 14),   # Font size for axis text (labels)
+  axis.title = element_text(size = 16),  # Font size for axis titles
+  plot.title = element_text(size = 18)   # Font size for the plot title
+)
+```
+
+
+
+```{r}
+
+ggbetweenstats(
+  data = iris,
+  title = "Pairwise comparison",
+  x = Species,
+  y = Sepal.Length,
+  type = "np",
+  results.subtitle = FALSE,
+  ggtheme = theme_minimal()
+)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

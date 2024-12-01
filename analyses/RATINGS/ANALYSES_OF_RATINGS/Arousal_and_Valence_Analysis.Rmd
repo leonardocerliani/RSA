@@ -1,0 +1,237 @@
+---
+title: "Arousal and Valence analysis"
+author: "LC"
+date: "2024-11-28"
+output:
+  html_document:
+    self_contained: true
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    code_folding: hide
+    theme: cerulean 
+---
+
+```{r, message=FALSE}
+library(tidyverse)
+library(ggstatsplot)
+
+bd <- "/data00/leonardo/RSA/analyses/RATINGS"
+
+subs_file <- "/data00/leonardo/RSA/sub_list.txt"
+subs <- sprintf("%02d",readLines(subs_file) %>% as.numeric)
+```
+
+
+# Load data
+```{r, message=FALSE}
+# IMPORTANT: REMOVE NEUTRAL !!
+
+df_A <- read_csv(paste0(bd,"/","arousal_ratings.csv")) %>% 
+  filter(emotion != "neutral") %>% 
+  select(sub,video,r_arousal,emotion)
+
+
+# Subtract 5 for valence only
+df_V <- read_csv(paste0(bd,"/","valence_ratings.csv")) %>%
+  filter(emotion != "neutral") %>% 
+  select(sub,video,r_valence,emotion) %>% 
+  mutate(r_valence = r_valence - 5)
+
+
+df_AV <- inner_join(df_A, df_V, by = c("sub","video","emotion")) %>% 
+  select(sub, r_arousal, r_valence,emotion)
+```
+
+
+
+
+
+
+# Arousal 
+NB: there are so many sig pairwise comparisons, that it is actually cleaner to display only those
+which are __not__ significant
+```{r, warning=FALSE}
+# Arousal
+df_A %>%
+  select(-video) %>% 
+  group_by(sub,emotion) %>% 
+  reframe(
+    mean_arousal = mean(r_arousal)
+  ) %>% 
+  mutate(emotion = fct_reorder(emotion, mean_arousal)) %>%
+  ggstatsplot::ggwithinstats(
+    title = "Arousal ratings",
+    x = emotion,
+    y = mean_arousal,
+    type = "parametric",
+    bf.message = TRUE,
+    p.adjust.method = "fdr",
+    pairwise.display = "ns" # "s", "ns" or "none"
+  )
+```
+
+
+
+
+
+
+
+
+
+# Valence
+Again we display only __non__significant pairwise comparisons.
+
+```{r, warning=FALSE}
+# Valence
+df_V %>%
+  select(-video) %>% 
+  group_by(sub,emotion) %>% 
+  reframe(
+    mean_valence = mean(r_valence)
+  ) %>% 
+  mutate(emotion = fct_reorder(emotion, mean_valence)) %>%
+  ggstatsplot::ggwithinstats(
+      title = "Valence ratings",
+      x = emotion,
+      y = mean_valence,
+      type = "parametric",
+      p.adjust.method = "fdr",
+      pairwise.display = "ns" # "s", "ns" or "none"
+    )
+
+```
+
+# Very high top values of valence. Is it a single subject?
+
+Yes, it turns out that sub 15 (which is among the subs with highest congruence) gave
+on average much higher valence
+
+```{r}
+
+df_V %>%
+  select(-video) %>% 
+  group_by(sub,emotion) %>% 
+  reframe(
+    mean_valence = mean(r_valence)
+  ) %>% 
+  ungroup %>% 
+  group_by(emotion) %>% 
+  arrange(desc(mean_valence)) %>% 
+  group_split()
+  
+```
+
+This is how the violin plot looks like if we exclude sub 15
+
+```{r}
+# Valence
+df_V %>%
+  filter(sub != "15") %>% 
+  select(-video) %>% 
+  group_by(sub,emotion) %>% 
+  reframe(
+    mean_valence = mean(r_valence)
+  ) %>% 
+  mutate(emotion = fct_reorder(emotion, mean_valence)) %>%
+  ggstatsplot::ggwithinstats(
+      title = "Valence ratings (w/out sub15)",
+      x = emotion,
+      y = mean_valence,
+      type = "parametric",
+      p.adjust.method = "fdr",
+      pairwise.display = "ns" # "s", "ns" or "none"
+    )
+```
+
+# Arousal and valence for high and low intensity movies
+
+# Arousal
+```{r, message=FALSE}
+
+df_A <- read_csv(paste0(bd,"/","arousal_ratings.csv")) %>% 
+  filter(emotion != "neutral") %>% 
+  mutate(high_low_code = str_match(high_low_code, "high|low")) %>% 
+  select(sub, r_arousal, emotion, high_low_code) %>% 
+  group_by(sub, emotion, high_low_code) %>% 
+  reframe(
+    r_arousal = mean(r_arousal)
+  ) %>% 
+  ungroup %>% 
+  group_by(emotion, high_low_code) %>% 
+  reframe(
+    mean_r_arousal = round(mean(r_arousal),2),
+    sem = round(sd(r_arousal) / sqrt(n()),2)
+  ) 
+
+df_A %>% 
+  ggplot(aes(x = emotion, y = mean_r_arousal, fill = high_low_code)) +
+  geom_bar(stat = "identity", position = position_dodge(), color = "black") +
+  geom_errorbar(aes(
+    ymin = mean_r_arousal - sem, 
+    ymax = mean_r_arousal + sem
+  ), 
+  position = position_dodge(0.9),  # Ensures alignment with bars
+  width = 0.2                     # Controls the width of the error bars
+  ) +
+  labs(
+    title = "Arousal Ratings by Emotion and High/Low Code",
+    x = "Emotion",
+    y = "Mean Arousal (±SEM)",
+    fill = "High/Low Code"
+  ) +
+  theme_minimal()
+
+
+```
+
+# Valence
+```{r, message=FALSE}
+
+df_A <- read_csv(paste0(bd,"/","valence_ratings.csv")) %>% 
+  filter(emotion != "neutral") %>% 
+  mutate(r_valence = r_valence - 5) %>%   # REMOVE 5 FROM VALENCE
+  mutate(high_low_code = str_match(high_low_code, "high|low")) %>% 
+  select(sub, r_valence, emotion, high_low_code) %>% 
+  group_by(sub, emotion, high_low_code) %>% 
+  reframe(
+    r_valence = mean(r_valence)
+  ) %>% 
+  ungroup %>% 
+  group_by(emotion, high_low_code) %>% 
+  reframe(
+    mean_r_valence = round(mean(r_valence),2),
+    sem = round(sd(r_valence) / sqrt(n()),2)
+  ) 
+
+df_A %>% 
+  ggplot(aes(x = emotion, y = mean_r_valence, fill = high_low_code)) +
+  geom_bar(stat = "identity", position = position_dodge(), color = "black") +
+  geom_errorbar(aes(
+    ymin = mean_r_valence - sem, 
+    ymax = mean_r_valence + sem
+  ), 
+  position = position_dodge(0.9),  # Ensures alignment with bars
+  width = 0.2                     # Controls the width of the error bars
+  ) +
+  labs(
+    title = "Valence Ratings by Emotion and High/Low Code",
+    x = "Emotion",
+    y = "Mean valence (±SEM)",
+    fill = "High/Low Code"
+  ) +
+  theme_minimal()
+
+
+```
+
+
+
+
+
+
+
+
+
+
+

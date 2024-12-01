@@ -1,0 +1,196 @@
+---
+title: "RSA simulations"
+author: "LC"
+date: "2024-08-16"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(ComplexHeatmap)
+library(circlize)
+
+
+source("funs_V12_ROIs.R")
+
+mean_noise = 1
+sd_noise = 1
+
+```
+
+
+# Create the ratings matrix
+```{r}
+# Set seed for reproducibility
+set.seed(42)
+
+# Parameters
+n_movies <- 56
+n_emotions <- 7
+movies_per_emotion <- n_movies / n_emotions
+
+# Initialize the ratings matrix
+ratings_matrix <- matrix(0, nrow = n_movies, ncol = n_emotions)
+
+# Fill the ratings matrix
+for (emotion_index in 1:n_emotions) {
+  # Rows corresponding to the current emotion
+  start_row <- (emotion_index - 1) * movies_per_emotion + 1
+  end_row <- start_row + movies_per_emotion - 1
+  
+  # Assign high ratings to the current emotion
+  ratings_matrix[start_row:end_row, emotion_index] <- 10 + rnorm(movies_per_emotion, mean = mean_noise, sd = sd_noise)
+  
+  # Add some positive noise to other emotions
+  ratings_matrix[start_row:end_row, -emotion_index] <- rnorm((movies_per_emotion * (n_emotions - 1)), mean = 0, sd = 0.5)
+  
+  # Ensure that all ratings are positive
+  ratings_matrix[start_row:end_row, ] <- pmax(ratings_matrix[start_row:end_row, ], 0)
+}
+
+# Convert to data frame for easier viewing
+ratings_df <- as.data.frame(ratings_matrix)
+colnames(ratings_df) <- paste0("Emotion_", 1:n_emotions)
+
+# Display the ratings matrix
+print(ratings_df)
+
+# Create labels for the movies and emotions
+movie_labels <- rep(paste0("e", 1:7), each = movies_per_emotion)
+emotion_labels <- paste("Emotion", 1:n_emotions)
+
+do_heat <- function(mat, row_names, col_names, reord=FALSE) {
+  Heatmap(mat, 
+        name = "Rating", 
+        rect_gp = gpar(col = "white", lwd = 1),
+        row_labels = row_names, 
+        column_labels = col_names, 
+        col = colorRamp2(c(0, 10), c("white", "red")),
+        cluster_rows = reord, cluster_columns = reord,
+        show_row_dend = reord, show_column_dend = reord,
+        show_row_names = TRUE, 
+        show_column_names = TRUE,
+        row_names_side = "left",  # Display row names on the left
+        column_names_side = "top",  # Display column names on the top
+        column_names_rot = 60,  # Slant column names at 60 degrees
+        row_names_gp = gpar(fontsize = 7),  # Set row names font size to 8
+        column_names_gp = gpar(fontsize = 7),  # Set column names font size to 8
+        )
+}
+
+do_heat(mat = ratings_matrix, row_names = movie_labels, col_names = emotion_labels, reord = F)
+
+```
+
+
+# Fmri matrix
+```{r}
+# Set seed for reproducibility
+set.seed(42)
+
+# Parameters
+n_movies <- 56
+n_voxels <- 600
+n_emotions <- 7
+voxels_per_emotion <- n_voxels / n_emotions
+movies_per_emotion <- n_movies / n_emotions
+
+# Initialize the fMRI matrix
+fmri_matrix <- matrix(0, nrow = n_movies, ncol = n_voxels)
+
+# Fill the fMRI matrix
+for (emotion_index in 1:n_emotions) {
+  # Define column range for the current emotion
+  start_col <- (emotion_index - 1) * voxels_per_emotion + 1
+  end_col <- start_col + voxels_per_emotion - 1
+  
+  # Define rows for the current emotion
+  rows_for_emotion <- ((emotion_index - 1) * movies_per_emotion + 1):(emotion_index * movies_per_emotion)
+  
+  # Assign high beta values to the correct region and rows
+  fmri_matrix[rows_for_emotion, start_col:end_col] <- matrix(10 + rnorm(movies_per_emotion * voxels_per_emotion, mean = 0, sd = 1), 
+                                                              nrow = movies_per_emotion, 
+                                                              ncol = voxels_per_emotion)
+  
+  # Ensure that other rows have low beta values (add noise)
+  other_rows <- setdiff(1:n_movies, rows_for_emotion)
+  fmri_matrix[other_rows, start_col:end_col] <- matrix(rnorm(length(other_rows) * voxels_per_emotion, mean = mean_noise, sd = sd_noise), 
+                                                        nrow = length(other_rows), 
+                                                        ncol = voxels_per_emotion)
+}
+
+# Add random positive noise to the entire matrix
+fmri_matrix <- fmri_matrix + abs(rnorm(n_movies * n_voxels, mean = 0, sd = 1))
+fmri_matrix[fmri_matrix < 0] <- 0  # Ensure no negative values
+
+# Convert to data frame for easier viewing if needed
+fmri_df <- as.data.frame(fmri_matrix)
+
+# Display the fMRI matrix
+voxel_labels <- 1:n_voxels
+
+do_heat(mat = fmri_matrix, row_names = movie_labels, col_names = voxel_labels, reord = F)
+
+```
+
+# RDMs
+```{r}
+
+
+make_full <- function(tril, n_movies) {
+  full_matrix <- matrix(0, n_movies, n_movies)
+  full_matrix[lower.tri(full_matrix, diag = FALSE)] <- unlist(tril)
+  full_matrix <- full_matrix + t(full_matrix)
+  
+  # demean
+  full_matrix <- full_matrix - mean(full_matrix)
+}
+
+
+rdm_ratings <- DDOS_vec(ratings_matrix, "euclidean") %>% make_full(n_movies)
+
+do_heat(
+  mat = rdm_ratings,
+  row_names = movie_labels, col_names = movie_labels, 
+  reord = F
+)
+
+
+rdm_fmri <- DDOS_vec(fmri_matrix, "euclidean") %>% make_full(n_movies)
+
+do_heat(
+  mat = rdm_fmri,
+  row_names = movie_labels, col_names = movie_labels, 
+  reord = F
+)
+
+
+```
+
+# RSA
+```{r}
+# Example RDM matrices (assuming these are already defined and symmetric)
+# rdm_ratings <- ...
+# rdm_fmri <- ...
+
+# Extract the lower triangular part of each RDM (excluding the diagonal)
+lower_tri_ratings <- rdm_ratings[lower.tri(rdm_ratings, diag = FALSE)]
+lower_tri_fmri <- rdm_fmri[lower.tri(rdm_fmri, diag = FALSE)]
+
+# Calculate correlation coefficient
+correlation <- cor(lower_tri_ratings, lower_tri_fmri)
+
+# Create scatterplot
+plot(lower_tri_ratings, lower_tri_fmri, 
+     xlab = "Lower Triangular of RDM Ratings", 
+     ylab = "Lower Triangular of RDM fMRI", 
+     pch = 16,  # Point character (solid circle)
+     col = "blue",  # Color of the points
+     main = paste0("RSA: Correlation = ", round(correlation, 2)))  # Title with correlation
+
+# Optional: Add a regression line
+abline(lm(lower_tri_fmri ~ lower_tri_ratings), col = "red", lwd = 2)
+```
+
+
+

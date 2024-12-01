@@ -1,0 +1,75 @@
+---
+title: "Prepare Arousal and Valence for JASP"
+author: "LC"
+date: "2024-11-27"
+output: html_document
+---
+
+
+NB: since the analysis is carried out in JASP, it can be found at [GDrive]/RSA/arousal_valence_anova2
+
+
+# Load the rating files
+```{r, message=FALSE}
+library(tidyverse)
+
+bd <- "/data00/leonardo/RSA/analyses/RATINGS"
+
+subs_file <- "/data00/leonardo/RSA/sub_list.txt"
+subs <- sprintf("%02d",readLines(subs_file) %>% as.numeric)
+
+# Load the preprocessed ratings file
+# which was prepared with the 02_prepare_ratings_EMOTION.Rmd
+# located in /data00/leonardo/RSA/prep_scripts/05_prepare_ratings
+
+# In both cases, REMOVE THE NEUTRALS!
+
+df_arousal <- read_csv(paste0(bd,"/","arousal_ratings.csv")) %>% 
+  filter(emotion != "neutral")
+
+# Remove 5 from valence ratings (they were actually from -5 to 5)
+df_valence <- read_csv(paste0(bd,"/","valence_ratings.csv")) %>%
+  filter(emotion != "neutral") %>% 
+  mutate(r_valence = r_valence - 5)
+
+```
+
+
+# Save in the format required by JASP
+
+This is a 6x2 RM ANOVA, therefore we need 12 columns with nsub rows. E.g. Anger_A (Arousal), Anger_V (Valence), Pain_A, Pain_V and so on. 
+Note that we have 8 ratings for each combination of subject/movie/rating (e.g. sub 02, anger, valence), so I will take the average rating of that subject for that movie for that rating type (arousal or valence).
+
+```{r}
+
+df_arousal <- df_arousal %>% select(sub, video, emotion, r_arousal)
+
+df_valence <- df_valence %>% select(sub, video, emotion, r_valence)
+
+
+df <- inner_join(df_arousal, df_valence, by = c("sub","video","emotion")) %>% 
+  rename(arousal = r_arousal, valence = r_valence)
+
+
+df_4_JASP <- df %>% 
+  select(-video) %>% 
+  
+  # Take the mean rating for each sub/movie/rating type (A or V)
+  group_by(sub,emotion) %>% 
+  reframe(
+    arousal = mean(arousal),
+    valence = mean(valence)
+  ) %>%
+  
+  # Put in the format required by JASP for RM ANOVA
+  pivot_wider(names_from = "emotion", values_from = c("arousal","valence"))
+
+df_4_JASP
+  
+write_location <- paste0(bd, "/ANALYSES_OF_RATINGS")
+write_filename <- "arousal_valence_4_JASP.csv"
+
+write_csv(df_4_JASP, paste0(write_location, "/", write_filename))
+
+```
+

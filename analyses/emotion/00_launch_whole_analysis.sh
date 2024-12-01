@@ -16,7 +16,7 @@ Rscript 01_do_prepare_mat_${model}.R
 # in order not to overwhelm the server
 
 sub_list=/data00/leonardo/RSA/sub_list.txt
-cat ${sub_list} | xargs -P 4 -I{} ./02_do_first_level_stats.sh {}
+cat ${sub_list} | xargs -P 6 -I{} ./02_do_first_level_stats.sh {}
 
 
 # run 2nd and group level analyses
