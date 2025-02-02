@@ -20,6 +20,10 @@ options(warn = -1)
 papaya_hide_toolbar = FALSE
 
 # V 6.5
+# - The downloaded figure also contains indication of the results of the one-sample
+#   ttest for <> 0 for each model
+#
+# V 6.4
 # - Introduced a function (do_boxplot_4_download) and button (downloadButton)
 #   to download a version of the figure in a format suitable for the paper
 # 
