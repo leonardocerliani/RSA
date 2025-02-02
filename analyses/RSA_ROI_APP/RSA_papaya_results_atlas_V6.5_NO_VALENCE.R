@@ -19,7 +19,13 @@ library(xml2)
 options(warn = -1)
 papaya_hide_toolbar = FALSE
 
-
+# V 6.5
+# - Introduced a function (do_boxplot_4_download) and button (downloadButton)
+#   to download a version of the figure in a format suitable for the paper
+# 
+# V 6.3
+# - excluded Valence alone: Now only Emotion, Arousal and Aroval are present 
+# 
 # V 6.2
 # - idx_ROI : fixed the issue when (ROI number != RSA_mean row number), i.e. when not all ROIs values are present in the atlas (e.g. because some have been masked out)
 # - idx_ROI_value_in_atlas : same as above but for atlas display
@@ -220,24 +226,27 @@ server <- function(input, output, session) {
       do_boxplot(RSA, idx_ROI(), input$ttest_type )
     })
     
-    # download the plot
+    # generate the plot for download
     output$downloadPlot <- downloadHandler(
       filename = function() {
         req(idx_ROI())  # Ensure idx_ROI() is available
         paste0("boxplot_roi_", idx_ROI(), ".pdf")  
       },
       content = function(file) {
-        pdf(file, width = 8, height = 6)  
+        pdf(file, width = 8, height = 6)  # Set PDF size
         
-        # Generate the plot without axis labels
-        plot_no_labels <- do_boxplot(RSA, idx_ROI(), input$ttest_type) +
-          theme(axis.title.x = element_blank(),  # Remove x-axis label
-                axis.title.y = element_blank())  # Remove y-axis label
+        # Generate the plot using the do_boxplot_4_download function
+        plot_to_save <- do_boxplot_4_download(RSA, idx_ROI(), input$ttest_type)
         
-        print(plot_no_labels)  
-        dev.off()  
+        print(plot_to_save)  # Print the plot to the PDF
+        dev.off()  # Close the PDF device
       }
     )
+    
+    
+    
+    
+    
     
   })
   
@@ -360,6 +369,57 @@ do_boxplot <- function(RSA, roi_numba, ttest_type) {
       plot.title = element_text(size = 18)   # Font size for the plot title
     ) 
 }
+
+
+# boxplot for download (to insert in the paper)
+do_boxplot_4_download <- function(RSA, roi_numba, ttest_type) {
+
+  ttest_results <- do_ttest_table(RSA, roi_numba) %>% 
+    select(-valence)
+  print(ttest_results)
+  
+  RSA %>%
+    select(sub, roi, starts_with("rsa_")) %>%
+    select(!rsa_rdm_valence) %>%   # REMOVING VALENCE
+    filter(roi == roi_numba) %>%
+    select(starts_with("rsa_")) %>%
+    pivot_longer(cols = starts_with("rsa_"), names_to = "model") %>%
+    mutate(
+      model = str_replace(model, "rsa_rdm_",""),
+      model = factor(model, levels = c("emotion", "arousal", "aroval")) # Set desired order
+    ) %>%
+    ggwithinstats(
+      x = model, y = value,
+      type = ttest_type,   # p, np, r, b
+      title = paste0("roi ", roi_numba),
+      results.subtitle = FALSE,   # Keep results in the plot, as per your settings
+      bf.message = FALSE,
+      ggsignif.args = list(textsize = 3, tip_length = 0.01),
+      p.adjust.method = "fdr",
+      centrality.label.args = list(size  = 10),  # Larger size for centrality labels
+      point.args = list(size = 5, alpha = 0.5)  # Adjust point size and transparency
+    ) +
+    theme(
+      axis.title = element_blank(),
+      axis.text = element_text(size = 28),  # Larger font size for axis text
+      axis.title.y.right = element_blank(),
+      plot.title = element_text(size = 30)   # Font size for plot title
+    ) +
+    # scale_x_discrete(labels = ~ gsub(" \\(n=.*\\)", "", .)) +  # Remove n size from axis labels
+    scale_x_discrete(labels = c(
+      paste0("emotion \n", ttest_results$emotion),
+      paste0("arousal \n", ttest_results$arousal),
+      paste0("aroval \n", ttest_results$aroval)
+    ))
+}
+
+
+
+
+
+
+
+
 
 
 # ttest for != 0 for a specific ROI selected in the RSA_mean reactable table

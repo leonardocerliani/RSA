@@ -257,10 +257,103 @@ library(plotly)
 ```
 
 
+# Plot options on ggwithinstats
+```{r, message=FALSE}
+library(tidyverse)
+library(ggstatsplot)
+
+n = 26
+
+df <- tibble(
+  arousal = rnorm(n, 0, 1),
+  aroval = rnorm(n, 0.1, 1),
+  emotion = rnorm(n, 0.5, 1)
+)
+
+
+df %>% 
+  pivot_longer(cols = everything(), names_to = "cols", values_to = "value") %>% 
+  ggwithinstats(
+        x = cols,
+        y = value,
+        type = "p",
+        results.subtitle = FALSE,
+        centrality.label.args = list(size = 10),
+        point.args = list(size=5, alpha=0.5)
+      ) + 
+      theme(
+        axis.title = element_blank(),
+        axis.text = element_text(size = 28),
+        axis.title.y.right = element_blank()
+      ) +
+      ggplot2::scale_x_discrete(labels = ~ gsub(" \\(n=.*\\)", "", .))
+
+```
 
 
 
+```{r}
+library(shiny)
+library(tidyverse)
+library(ggstatsplot)
 
+# Generate data
+n = 100
+df <- tibble(
+  arousal = rnorm(n, 0, 1),
+  aroval = rnorm(n, 0.1, 1),
+  emotion = rnorm(n, 0.5, 1)
+)
+
+# Define UI
+ui <- fluidPage(
+  titlePanel("Shiny Plot with Download"),
+  plotOutput("plot"),
+  downloadButton("downloadPlot", "Download Plot as PDF")
+)
+
+# Define Server
+server <- function(input, output) {
+  
+  # Create the plot
+  myplot <- reactive({
+    df %>% 
+      pivot_longer(cols = everything(), names_to = "cols", values_to = "value") %>% 
+      ggwithinstats(
+        x = cols,
+        y = value,
+        type = "p",
+        results.subtitle = FALSE,
+        centrality.label.args = list(size = 10),
+        point.args = list(size=5, alpha=0.5)
+      ) + 
+      theme(
+        axis.title = element_blank(),
+        axis.text = element_text(size = 28),
+        axis.title.y.right = element_blank()
+      ) +
+        ggplot2::scale_x_discrete(labels = ~ gsub(" \\(n=.*\\)", "", .))
+
+  })
+  
+  # Render plot in UI
+  output$plot <- renderPlot({
+    myplot()
+  })
+  
+  # Download handler
+  output$downloadPlot <- downloadHandler(
+    filename = function() { "myplot.pdf" },
+    content = function(file) {
+      ggsave(file, plot = myplot(), width = 8, height = 6)
+    }
+  )
+}
+
+# Run the Shiny app
+shinyApp(ui, server)
+
+```
 
 
 
