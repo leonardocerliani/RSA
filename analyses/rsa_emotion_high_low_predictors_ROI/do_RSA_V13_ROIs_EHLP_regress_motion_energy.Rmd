@@ -1,14 +1,47 @@
 ---
-title: "do_RSA_v12_ROIs_EHLP"
+title: "do_RSA_v12_ROIs_EHLP_regress_motion_energy"
 author: "LC"
 date: "2024-08-25"
 output: html_document
 params:
-  atlas_filename: jubrain_bilat.nii.gz
+  atlas_filename: Yeo7.nii.gz
   remove_neutrals: "YES"
   minus_neutral: "NO"
   subs_set: "N26"
 ---
+
+# regress_motion_predictors
+The aim is to regress motion energy from the ratings RDM before calculating the 
+RSA. Since the order of stimuli is different for each participant, the "easiest"
+thing to do is to treat motion energy as another ratings_type.
+
+This will mean that in the calculated rdm df there will be also a (nested) column
+for motion_energy rdm. At this point we just need to regress motion_energy
+from emotion/arousal/valence/aroval and then calculate the RSA.
+
+Motion energy was calculated here:
+
+```bash
+# Calculates the motion energy
+/data00/leonardo/RSA/prep_scripts/07_motion_energy_movies/do_motion_energy.ipynb
+
+# Produces an output which is compatible with the other <model_type>_ratings.csv
+# in /data00/leonardo/RSA/analyses/RATINGS
+do_motion_energy_compatible_with_ratings.Rmd
+```
+and saved into the file `motion_energy_ratings.csv` in `/data00/leonardo/RSA/analyses/RATINGS`.
+
+Or course the motion energy estimates are _not_ ratings, however after 1,000,000
+requests of "Why don't we do this and that...? It's easy!" I **had** to give up order
+and create some mess. So here it is. If you don't like it, go somewhere else.
+
+There are a few key modifications two do to make this work:
+
+- add `motion_energy` to the `ratings_type` (~ line 148)
+
+- _after_ calculating the rdm's, add some logic for the regression of motion energy.
+
+
 
 # update notes V13
 - saving RSA_volumes_df in the .RData 
@@ -123,8 +156,11 @@ bd_ratings = paste0(bd,"/RATINGS")
 bd_atlases = paste0(bd,"/ROIS_REPO")
 bd_results = paste0(bd,"/RSA_ROI_APP/results_RSA_ROI")
 
-
-ratings_type <- c("emotion","arousal","valence","aroval")
+### ------------- ADDED MOTION ENERGY AS A RATING TYPE --------------------
+###
+ratings_type <- c("emotion","arousal","valence","aroval", "motion_energy")
+###
+### ------------- ADDED MOTION ENERGY AS A RATING TYPE --------------------
 
 
 rsa_flavour="rsa_emotion_high_low_predictors_ROI"
@@ -229,6 +265,8 @@ region_labels <- atlas_nii[atlas_nii > 0] %>% unique %>% sort
 
 do_RDMs_rats <- function(ratings_type, remove_neutrals) {
 
+  ratings_type = ratings_type[1]
+  
   ratings_path <- paste0(bd_ratings,"/",ratings_type,"_ratings.csv")
   rats <- read_csv(ratings_path)
   
@@ -279,7 +317,156 @@ plot_tril(
   RDMs_rats[1,]$rdm_emotion, model = "emotion",
   fontsize=10, side_mm=80, reord = FALSE
 )
+
 ```
+
+## Cross-correlation matrix
+
+```{r}
+df <- RDMs_rats %>% unnest()
+
+library(dplyr)
+library(tidyr)
+library(purrr)
+library(stringr)
+library(ggplot2)
+
+# Step 1: Standardize columns starting with "rdm_"
+df_std <- df %>%
+  group_by(sub) %>%
+  mutate(across(starts_with("rdm_"), scale)) %>%
+  ungroup()
+
+# Step 2: Calculate correlation matrix for each subject
+# First, get unique subjects
+subjects <- unique(df$sub)
+corr_list <- list()
+
+for (s in subjects) {
+  # Filter data for this subject
+  sub_data <- df_std %>% 
+    filter(sub == s) %>%
+    select(starts_with("rdm_"))
+  
+  # Calculate correlation matrix
+  corr_mat <- cor(sub_data, use = "pairwise.complete.obs")
+  corr_list[[s]] <- corr_mat
+}
+
+# Step 3: Stack all correlation matrices and apply Fisher's z-transformation
+# Create an empty dataframe to store stacked correlations
+stacked_corr <- data.frame()
+
+# Loop through subjects and their correlation matrices
+for (s in names(corr_list)) {
+  # Convert matrix to long format
+  m_long <- reshape2::melt(corr_list[[s]])
+  # Add subject identifier
+  m_long$sub <- s
+  # Bind to the result dataframe
+  stacked_corr <- bind_rows(stacked_corr, m_long)
+}
+
+
+# Apply Fisher's z-transformation
+stacked_corr <- stacked_corr %>%
+  mutate(z_value = 0.5 * log((1 + value) / (1 - value)))
+
+# Step 4: Calculate mean z values across subjects
+mean_z <- stacked_corr %>%
+  group_by(Var1, Var2) %>%
+  summarize(mean_z = mean(z_value, na.rm = TRUE), .groups = "drop")
+
+# Convert back to correlation coefficient (r) for interpretation
+mean_z <- mean_z %>%
+  mutate(mean_r = (exp(2 * mean_z) - 1) / (exp(2 * mean_z) + 1))
+
+# Reshape for heatmap
+mean_mat <- reshape2::acast(mean_z, Var1 ~ Var2, value.var = "mean_r")
+
+# Step 5: Create heatmap of mean correlation matrix
+library(corrplot)
+
+corrplot(mean_mat, method = "color", type = "upper", 
+         tl.col = "black", tl.srt = 45,
+         addCoef.col = "black", number.cex = 0.7,
+         col = colorRampPalette(c("blue", "white", "red"))(200),
+         title = "Mean Correlation Matrix (Fisher Transformed)")
+
+
+```
+
+## Regress out motion_energy
+```{r}
+
+# Create a function to calculate residuals after regressing out rdm_motion_energy
+regress_out_motion <- function(data, column_name, predictor_name) {
+  formula <- as.formula(paste(column_name, "~", predictor_name))
+  model <- lm(formula, data = data)
+  return(residuals(model))
+}
+
+# Create new dataframe with residuals for each subject and each variable
+df_reg <- df %>%
+  group_by(sub) %>%
+  group_modify(~{
+    .x %>% mutate(
+      rdm_emotion_res = regress_out_motion(.x, "rdm_emotion", "rdm_motion_energy"),
+      rdm_arousal_res = regress_out_motion(.x, "rdm_arousal", "rdm_motion_energy"),
+      rdm_valence_res = regress_out_motion(.x, "rdm_valence", "rdm_motion_energy"),
+      rdm_aroval_res = regress_out_motion(.x, "rdm_aroval", "rdm_motion_energy")
+    )
+  }) %>%
+  select(sub, rdm_emotion_res, rdm_arousal_res, rdm_valence_res, rdm_aroval_res) %>%
+  ungroup()
+
+# Preview the result
+head(df_reg)
+
+
+# Add the rdm_motion_energy column and rename the other columns
+df_reg$rdm_motion_energy = df$rdm_motion_energy
+
+df_reg <- df_reg %>% 
+  rename(
+    rdm_emotion = rdm_emotion_res,
+    rdm_arousal = rdm_arousal_res,
+    rdm_valence = rdm_valence_res,
+    rdm_aroval = rdm_aroval_res
+  )
+
+```
+
+
+## Now assign the regressed rdms to RDMs_rats
+```{r}
+
+RDMs_rats_orig = RDMs_rats
+
+rdm_colnames <- df_reg %>% 
+  select(starts_with("rdm")) %>% 
+  colnames
+
+subs_col <- df_reg %>%
+  distinct(sub)
+
+RDMs_rats <- rdm_colnames %>% map_dfc(~{
+  col_sym <- sym(.x)
+  df_reg %>%
+    group_by(sub) %>% 
+    reframe(!! .x := list(unname(!! col_sym))) %>% 
+    select(-sub)
+}) %>% 
+  bind_cols(subs_col, .) %>%
+  relocate(sub)
+
+RDMs_rats
+
+```
+
+
+
+
 
 
 
@@ -609,7 +796,7 @@ create_filename_results <- function(atlas_filename, copes_type, remove_neutrals)
   
   nsubs <- paste0("_N",length(subs))
   
-  results_filename <- paste0(atlas_root, EV_abbr, option_MN, option_NN, nsubs)
+  results_filename <- paste0(atlas_root, "_reg_ME_", EV_abbr, option_MN, option_NN, nsubs)
   return(paste0(bd_results,"/",results_filename,".RData"))
   
 }
