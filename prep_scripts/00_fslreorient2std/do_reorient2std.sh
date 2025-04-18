@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# hello!
+
 sub=$(printf "%02d" $1)
 
 echo Starting sub-${sub}... 
