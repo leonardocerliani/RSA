@@ -172,13 +172,13 @@ server <- function(input, output, session) {
   
   # Choose the results_file and load the corresponding RSA_mean_table
   observe({
-    
+
     req(input$results_file)
-    
+
     file_path <- file.path(bd_results, paste0(input$results_file))
     load(file_path, envir = .GlobalEnv)
     # print(ls(envir = .GlobalEnv))
-    
+
     output$RSA_mean_table <- renderReactable({
       reactable(
         RSA_mean %>% rename_with(~ str_replace(., "_mean", "")),
@@ -428,21 +428,21 @@ do_boxplot_4_download <- function(RSA, roi_numba, ttest_type) {
 
 # ttest for != 0 for a specific ROI selected in the RSA_mean reactable table
 do_ttest_table <- function(RSA, roi_numba) {
-  
+
   model <- function(val) t.test(val, mu = 0, alternative = "two.sided")  # greater or two.sided
-  
-  RSA %>% 
-    select(sub, roi, starts_with("rsa_")) %>% 
-    filter(roi == roi_numba) %>% 
-    select(starts_with("rsa_")) %>% 
-    rename_with(~ str_replace(.x, "^rsa_rdm_", "")) %>% 
+
+  RSA %>%
+    select(sub, roi, starts_with("rsa_")) %>%
+    filter(roi == roi_numba) %>%
+    select(starts_with("rsa_")) %>%
+    rename_with(~ str_replace(.x, "^rsa_rdm_", "")) %>%
     map_dfr(~ broom::tidy(model(.x)), .id = "rsa_model") %>%
-    mutate(t = paste0("t= ",round(statistic, 2)) ) %>% 
-    # mutate(p = ifelse(p.value >= 0.001, paste0("p = ",round(p.value,2) ), "p < 0.001")) %>% 
-    mutate(p = paste0("p=",round(p.value, 3)) ) %>% 
+    mutate(t = paste0("t= ",round(statistic, 2)) ) %>%
+    # mutate(p = ifelse(p.value >= 0.001, paste0("p = ",round(p.value,2) ), "p < 0.001")) %>%
+    mutate(p = paste0("p=",round(p.value, 3)) ) %>%
     mutate(res = paste0(t,", ",p)) %>%
-    select(rsa_model, res) %>% 
-    pivot_wider(names_from = rsa_model, values_from = res) %>% 
+    select(rsa_model, res) %>%
+    pivot_wider(names_from = rsa_model, values_from = res) %>%
     mutate(roi = roi_numba) %>% relocate(roi)
 }
 
