@@ -1,16 +1,16 @@
-# Reads the onsets.csv file in the raw_data folder and writes
-# the prep_data/sub-{sub}/fmri/{model}/sub-{sub}_run-{run}.mat file
-# which will be used in the first-level feat.
-# It cycles through all subs and all runs for each sub
-# run with Rscript do_prepare_mat_emotion.R
+---
+title: "Prepare .mat for arousal GLM"
+output: html_notebook
+---
 
-  
+# Load library and define initial variables
+```{r, message=F}
 library(tidyverse)
 
 subs_file <- "/data00/leonardo/RSA/sub_list.txt"
 subs <- sprintf("%02d",readLines(subs_file) %>% as.numeric)
 
-model="emotion"
+model="arousal"
 movie_duration = 1.5 # (seconds)
 
 # read ratings and zeropad the sub number
@@ -42,17 +42,25 @@ ratings_all_runs <- runs %>% map_dfr(
 #   count(sub, high_low_code, name = "n_runs") %>% 
 #   group_split(sub);
 
+```
+
 
 # Inner join the fmri log and the rating by high_low_code 
-# For each sub and run separately, so that we can then purrr the function
+For each sub and run separately, so that we can then purrr the function
 
-read_onsets_write_mat <- function(sub_id, run_id, dest) {
-  
-  # paste0("Writing emotion_rating mat files for sub ",sub_id, " run ", run_id,"\n") %>% cat
+```{r}
+
+# variable setting for testing ONLY - to be removed in the next purrr
+sub_id = subs[1]
+run_id = 1
+orig_csv_root = "/data00/leonardo/RSA/raw_data"
+dest = paste0("/data00/leonardo/RSA/prep_data/sub-", sub_id, "/fmri/", model)
+
+read_onsets_write_mat <- function(sub_id, run_id, dest, show_test = FALSE) {
   
   sub_onsets_file <- paste0(orig_csv_root,
-                            "/sub-", sub_id,
-                            "/onsets/sub-", sub_id, "_onset_run",run_id,".csv")
+      "/sub-", sub_id,
+      "/onsets/sub-", sub_id, "_onset_run",run_id,".csv")
   
   # NB: the sub in fmri_log is read from a csv and assigned to dbl for numbers
   # above 09, however I need to join it with the sub in ratings_all_runs
@@ -64,10 +72,10 @@ read_onsets_write_mat <- function(sub_id, run_id, dest) {
     filter(sub == sub_id, run == run_id) %>% 
     select(sub, run, starts_with("r_"), high_low_code) %>% 
     inner_join(fmri_log, by = c("sub","run","high_low_code"))
-  
+
   
   # --------- allMovies + [model] parametric modulation ------------------------
-  
+
   # select onset_sec, duration and intensity to prepare the .mat file
   mat_4_feat <- joined_ratings_fmri_logs %>% 
     mutate(duration = movie_duration) %>% 
@@ -76,15 +84,11 @@ read_onsets_write_mat <- function(sub_id, run_id, dest) {
     mutate(across(starts_with("r_"), ~ . - mean(.x, na.rm = TRUE))) %>% 
     arrange(onset_sec)
   
-  for (emotion in c("anger","disgust","fear","happy","pain","sad")) {
-    mat_one_emotion <- mat_4_feat %>% 
-      select(onset_sec, duration, paste0("r_", emotion))
-    
-    mat_path <- paste0(dest, "/sub-", sub_id, "_run-", run_id, "_", emotion, "_rating.mat")
-    # print(mat_path)
-    
-    write_tsv(mat_one_emotion, col_names = FALSE, mat_path)
-  }
+  
+  # write the .mat file for that sub and run
+  mat_path <- paste0(dest, "/sub-", sub_id, "_run-", run_id, "_", model,"_rating", ".mat")
+  write_tsv(mat_4_feat, col_names = FALSE, mat_path)
+  
   
   # create the mat for allMovies
   mat_allMovies <- mat_4_feat %>% 
@@ -96,12 +100,28 @@ read_onsets_write_mat <- function(sub_id, run_id, dest) {
   
   # --------- allMovies + [model] parametric modulation ------------------------  
   
+  
+  # testing that same movies have same rating across runs but
+  # different onset_sec
+  if (show_test == TRUE) {
+    test_onset_rating <- joined_ratings_fmri_logs %>% 
+      mutate(duration = movie_duration) %>% 
+      select(high_low_code, onset_sec, duration, starts_with("r_")) %>% 
+      print()  
+  }
+  
 }
 
+# use the following with one sub to test that same movies have
+# same rating across runs but different onset_sec
+runs %>% walk(~ read_onsets_write_mat(sub_id = subs[1], run_id = .x, dest = dest, show_test = T))
+
+```
 
 
 # Loops across subs and runs
-# I use a `for` construct for subjects since two nested `map` can be difficult to read 
+I use a `for` construct for subjects since two nested `map` can be difficult to read 
+```{r, message=F}
 
 for (sub_id in subs) {
   
@@ -113,8 +133,10 @@ for (sub_id in subs) {
   paste0("Creating .mat files for sub", sub_id, " in ", dest) %>% print
   
   # write all .mat files (one for each run) for that sub
-  runs %>% walk(~ read_onsets_write_mat(sub = sub_id, run = .x, dest = dest))
+  runs %>% walk(~ read_onsets_write_mat(sub = sub_id, run = .x, dest = dest, show_test = F))
 }
+
+```
 
 
 

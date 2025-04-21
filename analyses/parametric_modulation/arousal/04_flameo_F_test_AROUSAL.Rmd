@@ -1,5 +1,5 @@
 ---
-title: "Generate design.mat"
+title: "F test analysis for AROUSAL"
 author: "LC"
 date: "2024-11-29"
 output: html_document
@@ -11,9 +11,9 @@ output: html_document
 library(tidyverse)
 
 # NB: remember to change the number of ALLMOVIES cope (to be removed)
-#     according to the model! For emotion, it is cope 7
+#     according to the model! For AROUSAL, it is cope 2
 
-model="emotion"
+model="arousal"
 bd <- paste0("/data00/leonardo/RSA/analyses/parametric_modulation/",model)
 
 F_results_dir <- paste0(bd,"/results_F_tests")
@@ -35,7 +35,12 @@ df <- list.files(
 ) %>% 
   
   # read all the *cope1.nii.gz in a tibble
-  as_tibble() %>% 
+  as_tibble() %>%
+  
+  # filter the "stats-"
+  filter(!str_detect(value, "stats-")) %>%
+  
+  # rename "value" as "file_path"
   rename(file_path = value) %>% 
   
   # full path of file_path
@@ -47,8 +52,8 @@ df <- list.files(
     cope = str_extract(file_path, "cope\\d+\\.feat") %>% str_remove_all("[^\\d]")
   ) %>% 
   
-  # REMOVE ALLMOVIES COPE (number 7)
-  filter(cope != 7)
+  # REMOVE ALLMOVIES COPE (number 2 for AROUSAL)
+  filter(cope != 2)
   
 
 df

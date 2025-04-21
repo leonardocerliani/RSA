@@ -1,0 +1,349 @@
+---
+title: "Generate design.mat"
+author: "LC"
+date: "2024-11-29"
+output: html_document
+---
+
+
+
+```{r, message=FALSE}
+library(tidyverse)
+
+# NB: remember to change the number of ALLMOVIES cope (to be removed)
+#     according to the model! For emotion, it is cope 7
+
+model="emotion"
+bd <- paste0("/data00/leonardo/RSA/analyses/parametric_modulation/",model)
+
+F_results_dir <- paste0(bd,"/results_F_tests")
+ifelse(!dir.exists(F_results_dir),dir.create(F_results_dir),"Directory Exists")
+
+subs_file <- "/data00/leonardo/RSA/sub_list.txt"
+subs <- sprintf("%02d",readLines(subs_file) %>% as.numeric)
+```
+
+
+# Generate df with file_path of the cope1.nii.gz images
+```{r}
+
+bd_2nd_level = paste0(bd,"/results/2nd_level")
+
+df <- list.files(
+  bd_2nd_level, 
+  pattern = "^cope1.nii.gz", recursive = T
+) %>% 
+  
+  # read all the *cope1.nii.gz in a tibble
+  as_tibble() %>% 
+  rename(file_path = value) %>% 
+  
+  # full path of file_path
+  mutate(file_path = paste0(bd_2nd_level,"/",file_path)) %>%
+  
+  # add columns for sub and for cope#
+  mutate(
+    sub = str_extract(file_path, paste(subs, collapse = "|")),
+    cope = str_extract(file_path, "cope\\d+\\.feat") %>% str_remove_all("[^\\d]")
+  ) %>% 
+  
+  # REMOVE ALLMOVIES COPE (number 7)
+  filter(cope != 7)
+  
+
+df
+  
+```
+
+# Write the list of files to pass to the Feat GUI
+```{r}
+
+writeLines(
+  df$file_path,
+  con = paste0(F_results_dir,"/list_cope_nii_gz.txt")
+)
+
+```
+
+
+
+
+# Generate design.mat
+```{r}
+
+n_subs = length(subs)
+n_copes = length(unique(df$cope))
+
+# create design.mat in a ff dataframe
+ff <- df %>% select(sub,cope)
+
+for (i in 1:n_copes) {
+  ev_column <- paste0("EV", i)  # Create the name for the EV column (e.g., EV1, EV2, etc.)
+  
+  # Add the column where the cope number equals i will be 1, others will be 0
+  ff <- ff %>%
+    mutate(!!ev_column := ifelse(cope == i, 1, 0))
+}
+
+ff
+```
+
+
+
+# Viz the design matrix
+```{r}
+
+ff_matrix <- ff %>%
+  # arrange(cope) %>%
+  mutate(across(everything(), as.numeric)) %>%
+  mutate(row_label = paste0("s",sub,"_cope",cope)) %>% 
+  select(-sub) %>% 
+  column_to_rownames("row_label") %>% 
+  as.matrix()
+
+# Plot the heatmap (after reversing the order of the rows)
+heatmap(ff_matrix[nrow(ff_matrix):1, ], Rowv = NA, Colv = NA)
+
+heatmap(ff_matrix[nrow(ff_matrix):1, 2:7], Rowv = NA, Colv = NA)
+```
+
+
+# Write design.mat
+
+Header first:
+
+```
+/NumWaves       n_copes
+/NumPoints      dim(df)[1]
+/PPheights      1.000000 1.000000 ... [n_copes]
+/Matrix
+```
+
+```{r}
+
+ff2write <- ff %>% 
+  mutate(row_label = paste0("s",sub,"_cope",cope)) %>% 
+  relocate(row_label) %>% 
+  select(!c(sub,cope)) %>% 
+  column_to_rownames("row_label") %>% 
+  mutate(across(everything(), as.numeric)) %>%
+  as.matrix
+
+ff2write
+
+# Write the header lines
+num_waves <- n_copes  # Set number of copes
+num_points <- dim(ff)[1]  # Set number of subjects (rows)
+
+header_lines_design_mat <- c(
+  paste("/NumWaves", num_waves),
+  paste("/NumPoints", num_points),
+  paste("/PPheights", paste0(rep("1.000000",num_waves), collapse = " ")),
+  paste(" "),
+  "/Matrix"
+)
+
+design_mat_location <- paste0(F_results_dir,"/design.mat")
+writeLines(header_lines_design_mat, design_mat_location)
+
+# Append the matrix to the file
+write.table(
+  ff2write, 
+  design_mat_location, 
+  append = TRUE, 
+  sep = " ", 
+  col.names = FALSE, 
+  row.names = FALSE, 
+  quote = FALSE
+)
+
+
+```
+
+
+# Write the design.grp
+```{r}
+
+num_waves <- 1
+num_points = dim(ff)[1]
+
+design_grp = c(
+  paste0("/NumWaves ", num_waves),
+  paste0("/NumPoints ", num_points),
+  "/Matrix",
+  rep("1.000000000000", num_points)
+)
+
+design_grp_location <- paste0(F_results_dir,"/design.grp")
+
+write.table(
+  design_grp, 
+  design_grp_location, 
+  append = FALSE, 
+  sep = " ", 
+  col.names = FALSE, 
+  row.names = FALSE, 
+  quote = FALSE
+)
+
+```
+
+
+
+# Manually write the other matrices
+
+## design.con
+```
+/NumWaves       6
+/NumContrasts   11
+/PPheights  1.000000e+00    1.000000e+00    1.000000e+00    1.000000e+00    1.000000e+00    1.000000e+00 
+/RequiredEffect		1000	1000    1000    1000    1000    1000
+
+/Matrix
+1 0 0 0 0 0
+0 1 0 0 0 0
+0 0 1 0 0 0
+0 0 0 1 0 0
+0 0 0 0 1 0
+0 0 0 0 0 1
+1 -1 0 0 0 0
+0 1 -1 0 0 0
+0 0 1 -1 0 0
+0 0 0 1 -1 0
+0 0 0 0 1 -1
+```
+
+## design.fcon
+```
+/NumWaves       11
+/NumContrasts   2
+
+/Matrix
+1 1 1 1 1 1 0 0 0 0 0
+0 0 0 0 0 0 1 1 1 1 1
+```
+
+
+
+https://bookdown.org/yihui/rmarkdown-cookbook/eng-bash.html
+
+```{bash, engine.opts='-l'}
+model=emotion
+
+sub_list=/data00/leonardo/RSA/sub_list.txt
+
+dest=/data00/leonardo/RSA/analyses/parametric_modulation/${model}/results_F_tests
+orig=/data00/leonardo/RSA/analyses/parametric_modulation/${model}/results/2nd_level
+
+# Create the merge *within* sub across copes first
+
+# Read each subject number from the sub_list.txt file
+while read -r sub; do
+
+    subpad=$(printf "%02d" ${sub})  # Zero-pad the subject number
+    echo $subpad
+
+    # fslmerge copes and write list_sub_copes
+    fslmerge -t  ${dest}/sub-${subpad}_copes \
+        ${orig}/sub-${subpad}_${model}.gfeat/cope{1..6}.feat/stats/cope1.nii.gz
+
+    # fslmerge varcopes and write list_sub_copes
+    fslmerge -t  ${dest}/sub-${subpad}_varcopes \
+        ${orig}/sub-${subpad}_${model}.gfeat/cope{1..6}.feat/stats/varcope1.nii.gz
+
+
+done < "$sub_list"
+
+
+echo "merging copes across subs..."
+fslmerge -t ${dest}/copes $(ls ${dest}/*_copes.nii.gz)
+
+echo "merging varcopes across subs..."
+fslmerge -t ${dest}/varcopes $(ls ${dest}/*_varcopes.nii.gz)
+
+rm ${dest}/sub*
+```
+
+
+
+# Also make sure you have the additional required files
+
+- `mask.nii.gz` (e.g. MNI mask)
+- `tdof_filtered_func_data.nii.gz` = (num_points - 1) 4D of mask.nii.gz 
+
+```{bash, engine.opts='-l'}
+
+model=emotion
+
+dest=/data00/leonardo/RSA/analyses/parametric_modulation/${model}/results_F_tests
+
+mask_nii_path="${dest}/mask.nii.gz"
+
+tdof_nii_path="${dest}/tdof_filtered_func_data.nii.gz"
+
+num_points=$(fslinfo ${dest}/copes.nii.gz | grep ^dim4 | awk '{print $2}')
+tdof=$((${num_points} - 1))
+
+time fslmerge -t ${tdof_nii_path} $(for i in $(seq 1 ${tdof}); do echo ${mask_nii_path}; done)
+
+```
+
+# Finally run flameo
+```{bash, engine.opts='-l'}
+
+model="emotion"
+
+bd="/data00/leonardo/RSA/analyses/parametric_modulation/${model}/results_F_tests"
+cd ${bd}
+
+dest=${bd}/flameo_output
+
+[ -d ${dest} ] && rm -rf ${dest}
+# mkdir ${dest}
+
+# fe (fixed effects), ols (mixed effects - OLS), 
+# flame1 (mixed effects - FLAME stage 1), flame12 (mixed effects - FLAME stage 1+2)
+
+
+flameo --cope=copes.nii.gz \
+       --vc=varcopes.nii.gz \
+       --dvc=tdof_filtered_func_data \
+       --mask=mask.nii.gz \
+       --ld=${dest} \
+       --dm=design.mat \
+       --tc=design.con \
+       --cs=design.grp \
+       --fc=design.fcon \
+       --runmode=ols
+      
+```
+
+
+# Thresholding
+Do it manually. Sample code here:
+
+```
+fsl-cluster -i zfstat1 \
+	-t 3.1 \
+	--othresh=thresh_zstat1 \
+	--connectivity=26 \
+	--mm \
+	-p 0.05 \
+	-d 0.06 \
+	--volume=213207
+	```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

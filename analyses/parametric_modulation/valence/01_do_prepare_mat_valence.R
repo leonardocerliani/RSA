@@ -2,15 +2,16 @@
 # the prep_data/sub-{sub}/fmri/{model}/sub-{sub}_run-{run}.mat file
 # which will be used in the first-level feat.
 # It cycles through all subs and all runs for each sub
-# run with Rscript do_prepare_mat_emotion.R
+# run with Rscript 01_do_prepare_mat_valence.R
 
-  
+
+# Load library and define initial variables
 library(tidyverse)
 
 subs_file <- "/data00/leonardo/RSA/sub_list.txt"
 subs <- sprintf("%02d",readLines(subs_file) %>% as.numeric)
 
-model="emotion"
+model="valence"
 movie_duration = 1.5 # (seconds)
 
 # read ratings and zeropad the sub number
@@ -36,19 +37,11 @@ ratings_all_runs <- runs %>% map_dfr(
   ~ ratings %>% mutate(run = .x) %>% relocate(sub,run)
 )
 
-# # test ratings_all_runs with the following
-# ratings_all_runs %>% 
-#   # group_by(high_low_code) %>%
-#   count(sub, high_low_code, name = "n_runs") %>% 
-#   group_split(sub);
-
 
 # Inner join the fmri log and the rating by high_low_code 
 # For each sub and run separately, so that we can then purrr the function
 
-read_onsets_write_mat <- function(sub_id, run_id, dest) {
-  
-  # paste0("Writing emotion_rating mat files for sub ",sub_id, " run ", run_id,"\n") %>% cat
+read_onsets_write_mat <- function(sub_id, run_id, dest, show_test = FALSE) {
   
   sub_onsets_file <- paste0(orig_csv_root,
                             "/sub-", sub_id,
@@ -76,15 +69,11 @@ read_onsets_write_mat <- function(sub_id, run_id, dest) {
     mutate(across(starts_with("r_"), ~ . - mean(.x, na.rm = TRUE))) %>% 
     arrange(onset_sec)
   
-  for (emotion in c("anger","disgust","fear","happy","pain","sad")) {
-    mat_one_emotion <- mat_4_feat %>% 
-      select(onset_sec, duration, paste0("r_", emotion))
-    
-    mat_path <- paste0(dest, "/sub-", sub_id, "_run-", run_id, "_", emotion, "_rating.mat")
-    # print(mat_path)
-    
-    write_tsv(mat_one_emotion, col_names = FALSE, mat_path)
-  }
+  
+  # write the .mat file for that sub and run
+  mat_path <- paste0(dest, "/sub-", sub_id, "_run-", run_id, "_", model,"_rating", ".mat")
+  write_tsv(mat_4_feat, col_names = FALSE, mat_path)
+  
   
   # create the mat for allMovies
   mat_allMovies <- mat_4_feat %>% 
@@ -96,8 +85,17 @@ read_onsets_write_mat <- function(sub_id, run_id, dest) {
   
   # --------- allMovies + [model] parametric modulation ------------------------  
   
+  
+  # testing that same movies have same rating across runs but
+  # different onset_sec
+  if (show_test == TRUE) {
+    test_onset_rating <- joined_ratings_fmri_logs %>% 
+      mutate(duration = movie_duration) %>% 
+      select(high_low_code, onset_sec, duration, starts_with("r_")) %>% 
+      print()  
+  }
+  
 }
-
 
 
 # Loops across subs and runs
@@ -113,9 +111,8 @@ for (sub_id in subs) {
   paste0("Creating .mat files for sub", sub_id, " in ", dest) %>% print
   
   # write all .mat files (one for each run) for that sub
-  runs %>% walk(~ read_onsets_write_mat(sub = sub_id, run = .x, dest = dest))
+  runs %>% walk(~ read_onsets_write_mat(sub = sub_id, run = .x, dest = dest, show_test = F))
 }
-
 
 
 
