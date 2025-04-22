@@ -1,0 +1,54 @@
+---
+title: "do_motion_energy_compatible_with_ratings"
+author: "LC"
+date: "2025-04-18"
+output: html_document
+---
+
+```{r, message=F}
+library(tidyverse)
+
+
+ratings = read_csv("emotion_ratings.csv") %>% 
+  select(!starts_with("r_"))
+
+df_me <- read_csv("motion_energy_total.csv") %>%
+  rename(video = Filename) %>%
+  mutate(emotion = str_to_lower(Emotion_Type)) %>%
+  mutate(r_me = scale(Motion_Energy)) %>% 
+  select(video, r_me)
+
+df_me
+```
+
+
+
+
+```{r}
+
+df_to_write <- ratings %>% 
+  group_by(sub) %>% 
+  inner_join(df_me, by="video") %>% 
+  ungroup() %>% 
+  mutate(r_me = as.vector(r_me)) %>% 
+  relocate(sub,video,starts_with("r_"))
+
+bd_ratings = "/data00/leonardo/RSA/analyses/RATINGS"
+
+
+readr::write_csv(
+  df_to_write,
+  paste0(bd_ratings,"/motion_energy_ratings.csv")
+)
+
+```
+
+
+```{r}
+ratings
+```
+
+```{r}
+df_to_write
+```
+
