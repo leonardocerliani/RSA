@@ -143,6 +143,19 @@ if (params$subs_set == "N14")  {
 }
 
 
+
+# ---------- N25 : remove sub 07 --------------------
+if (params$subs_set == "N25")  {
+  subs <- setdiff(subs, "07")  
+}
+
+
+# ---------- N23 : remove subs 07,34,16  ------------
+if (params$subs_set == "N23")  {
+  subs <- setdiff(subs, c("07","34","16"))  
+}
+
+
 ```
 
 

@@ -1,0 +1,519 @@
+---
+title: "Emotion Ratings Analysis_V1"
+author: "Leonardo Cerliani"
+date: "2024-05-13"
+output:
+  html_document:
+    self_contained: true
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    code_folding: hide
+    theme: cerulean 
+---
+
+```{r, message=FALSE}
+library(tidyverse)
+
+bd <- "/data00/leonardo/RSA/analyses/RATINGS"
+
+subs_file <- "/data00/leonardo/RSA/sub_list.txt"
+subs <- sprintf("%02d",readLines(subs_file) %>% as.numeric)
+
+# Load the preprocessed emotion ratings file
+# which was prepared with the 02_prepare_ratings_EMOTION.Rmd
+# located in /data00/leonardo/RSA/prep_scripts/05_prepare_ratings
+df <- read_csv(paste0(bd,"/","emotion_ratings.csv"))
+
+```
+
+# Examine movie/rating congruence
+Each movie displays a specific emotion, however the participant is requested to rate each movie for all the 6 emotions, using a scale from 1 to 10.
+
+Congruence is defined in a very simple way: 
+
+- the subject's rating is congruent if - in each trial - the highest score is given to the emotion which is actually displayed in the movie.
+
+- congruence is therefore here defined as a binary variable. 
+
+
+```{r, message=FALSE, warning=FALSE}
+
+calculate_congruence <- function(df, highlow_flag = "ALL") {
+  
+  cat("highlow_flag = ", highlow_flag, "\n")
+
+  if (highlow_flag %in% c("high","low")) {
+    df <- df %>% filter(str_detect(high_low_code, highlow_flag))
+  }
+      
+  df_congruence <- df %>%
+    select(sub,original_code, emotion, starts_with("r_")) %>%
+    pivot_longer(starts_with("r_"), names_to = "rating") %>%
+    group_by(sub, original_code, emotion) %>%
+    filter(value == max(value)) %>%
+    filter(value != 0) %>%
+    mutate(rating = str_remove(rating,"r_")) %>%
+    mutate(consistent = ifelse(emotion==rating,1,0)) %>%
+    ungroup %>% 
+    group_by(sub) %>%  # here you could also group by emotion
+    summarise(
+      congruence = round(sum(consistent)/n(),2)
+    )   
+  
+  return(df_congruence)
+}
+
+
+
+# calculate congruence for ALL, high, low, using the fn above
+df_congruence <- calculate_congruence(df,"ALL") %>% 
+  rename(ALL = congruence) %>% 
+  inner_join(calculate_congruence(df,"high"), by="sub") %>% 
+  rename(high = congruence) %>% 
+  inner_join(calculate_congruence(df,"low"), by="sub") %>% 
+  rename(low = congruence)
+
+
+# OLE plot, suitable only for one of ALL, high, low at the time
+df_congruence %>%
+  ggplot(aes(x = reorder(sub, ALL), y = ALL)) +
+  geom_bar(stat = "identity", color = "grey", fill = "lightblue") +
+    geom_hline(yintercept = 0.82, linetype = "dotted", color = "black", size = 1) +
+  theme_minimal() +
+  labs(title = "Congruence between displayed emotion and max rated emotion", x = "sub")
+
+
+
+df_congruence %>%
+  pivot_longer(cols = c("ALL", "high", "low"), names_to = "intensity", values_to = "value") %>%
+  ggplot(aes(x = reorder(sub, value), y = value, fill = intensity)) +
+  geom_bar(stat = "identity", position = "dodge") + 
+  theme_minimal() +
+  theme(legend.position = "top") +
+  labs(x = "Subject", y = "Value", title = "Congruence across subs")
+
+
+df_congruence %>%
+  pivot_longer(cols = c("ALL", "high", "low"), names_to = "intensity") %>% 
+  ggstatsplot::ggwithinstats(
+    x = intensity,
+    y = value,
+    type = "nonparametric"
+  )
+
+df_congruence %>% 
+  pivot_longer(cols = c("ALL", "high", "low"), names_to = "intensity", values_to = "value") %>% 
+  group_by(intensity) %>% 
+  summarise(
+    mean = round(mean(value, na.rm = T),2),
+    median = round(median(value, na.rm = T),2),
+    sd = round(sd(value, na.rm = T),2)
+  )
+
+```
+
+# Now examine the same but for the validation data by Rune
+Here is like having ONE subject
+```{r, message=FALSE}
+
+rune_df <- read_csv(paste0(bd,"/RUNE_validation/","allEMO_validation_CLEAN.csv"))
+  
+
+rune_df %>%
+    select(video, emotion, starts_with("r_")) %>%
+    pivot_longer(starts_with("r_"), names_to = "rating") %>%
+    group_by(video, emotion) %>%
+    filter(value == max(value)) %>%
+    filter(value != 0) %>%
+    mutate(rating = str_remove(rating,"r_")) %>%
+    mutate(consistent = ifelse(emotion==rating,1,0)) %>%
+    ungroup %>% 
+    # group_by(emotion) %>%  # uncomment here to have the congruence by emotion
+    summarise(
+      congruence = round(sum(consistent)/n(),2)
+    )
+
+
+```
+
+
+
+# Calculate deviations of each subject from the validation data
+
+This should be done with RSA, that is: 
+- we take all the 56 x 6 rows of each sub, 
+- calculate the distance matrix
+- get the tril
+- calculate the distance matrix and the tril also for the validation data
+- calculate 1 - R between each sub and the validation
+
+First we need to import a few funs
+```{r, message=FALSE}
+# ----------- DDOS - Do Distance Or Similarity -----------
+# The input matrix should be observations-by-variables, that is:
+# - rows index observations
+# - columns index variables
+# This is the format required by dist(), while for cor() is the
+# opposite, so when using the cor() function we pass t(X) 
+
+library(proxy)
+
+DDOS <- function(X, method) {
+  
+  X[is.na(X)] = 0
+  
+  switch(method,
+         pearson = {
+           D <- 1 - cor(t(X), method = "pearson") %>% as.dist()
+         },
+         
+         spearman = {
+           D <- 1 - cor(t(X), method = "spearman") %>% as.dist()
+         },
+         
+         euclidean = {
+           D <- dist(X, method = "euclidean")
+         },
+         
+         cosine = {
+           D <- 1 - simil(X, method = "cosine")
+         },
+         
+         mahalanobis = {
+           D <- dist(X, method = "mahalanobis")
+         },
+         stop("Supported methods: 'pearson', 'spearman', 'euclidean', 'cosine' or 'mahalanobis'.")
+  )
+  return(D)
+}
+
+# # example usage:
+# DDOS(Y, method = "cosine")
+
+
+
+
+# ------------------- Ratings RDM calculation --------------------
+
+# # Function to calculate the ratings RDM for one sub
+# sub_id = "02"
+# dist_method_rating <- "euclidean"
+# rats <- read_csv(ratings_path)
+# ncomp_svd = 3
+
+do_RDM_ratings_one_sub <- function(rats, dist_method_rating) {
+  
+  rats_one_sub <- rats %>% select(starts_with("r_"))
+  
+  D_rats <- DDOS(rats_one_sub, method = dist_method_rating)
+  D_rats[is.na(D_rats)] <- 0
+  
+  D_feature_vector <- D_rats[!is.na(D_rats)]
+
+  return(D_feature_vector)
+  
+}
+
+
+test_tril <- do_RDM_ratings_one_sub(rune_df,dist_method_rating = "euclidean")
+
+
+```
+
+
+
+
+**VERY IMPORTANT** to make the comparison correct, we need to have the same order
+of movies!! Therefore use group_by(sub) and arrange(video)
+
+```{r}
+
+# first calculate the RDM_validation
+# NB: we nest it so that we can have the same df structure of the RDM_subs and 
+# easily join them
+RDM_validation <- rune_df %>% 
+  arrange(video) %>% 
+  nest %>% 
+  mutate(RDM_validation = map(data, ~ do_RDM_ratings_one_sub(.x, dist_method_rating = "euclidean"))) %>% 
+  select(RDM_validation)
+
+
+# calculate the RDM_subs
+RDM_subs <- df %>% 
+  group_by(sub) %>% 
+  arrange(sub,video) %>% 
+  nest %>%
+  mutate(RDM_subs = map(data, ~ do_RDM_ratings_one_sub(.x, dist_method_rating = "euclidean"))) %>% 
+  select(sub, RDM_subs)
+  
+
+# Put them together with a cross_join and finally calculate the similarity of each sub rating
+# to the reference estimated by Rune
+similarity_sub_rating_reference <- cross_join(RDM_subs,RDM_validation) %>%
+  mutate(
+    similarity_2_reference = list(RDM_subs, RDM_validation) %>% pmap_dbl(~ cor(.x, .y, method = "pearson"))  
+  ) %>% 
+  mutate(similarity_2_reference = round(similarity_2_reference, 2)) %>%
+  select(!starts_with("RDM")) %>% 
+  arrange(desc(similarity_2_reference))
+
+similarity_sub_rating_reference
+```
+
+
+# Relationship between congruence and similarity to the validation set
+
+This is interesting, since it's not trivial the fact that the similarity of each sub to the 
+normative rating data is proportional to the congruence. But actually it is!
+
+```{r, message=FALSE}
+congruence_and_similarity_to_reference <- inner_join(similarity_sub_rating_reference, df_congruence, by = "sub") 
+
+congruence_and_similarity_to_reference %>% 
+  ggplot(aes(x = ALL, y = similarity_2_reference)) +
+  geom_point() +
+  geom_label(aes(color = ALL, label = sub)) +
+  geom_smooth(method = "lm", se = F, color = "lightblue") +
+  theme_minimal() +
+  labs(
+    title = "Association between congruence and similarity to the reference",
+    x = "Congruence between highest rated emotion and video content",
+    y = "Similarity of each subject rating to the reference rating"
+  ) +
+  scale_color_gradient(low = "blue", high = "coral")
+
+fit <- lm(ALL ~ similarity_2_reference, data = congruence_and_similarity_to_reference)
+
+jtools::summ(fit)
+```
+
+
+# Plot all ratings for participants above and below a given congruence
+
+This is a great plot because it shows the difference between people with
+high and low congruence:
+
+- people with low congruence tend to give > 0 ratings to different emotions
+  for each movie
+  
+- on average the rating for the congruent movie appears to be similar for both
+  people above and below congruence, although in some cases it is higher for
+  people with high congruence
+
+
+```{r}
+
+congruence_threshold <- 0.85
+
+# tmp <- df_congruence %>%
+#   count(is_congruent = ALL >= congruence_threshold)
+
+n_above <- which(df_congruence$ALL >= congruence_threshold) %>% length
+n_below <- length(df_congruence$sub) - n_above
+
+df %>%
+  select(sub, starts_with("r_"), emotion) %>% 
+  inner_join(df_congruence %>% select(sub, ALL), by = "sub") %>% 
+  mutate(is_congruent = ifelse(ALL >= congruence_threshold, "ABOVE", "BELOW")) %>%
+  mutate(is_congruent = factor(is_congruent)) %>% 
+  select(-ALL) %>% 
+  group_by(sub, emotion, is_congruent) %>%
+  reframe(
+    across(starts_with("r_"), ~ round(mean(.),2))
+  ) %>% 
+  pivot_longer(cols = starts_with("r_"), names_to = "rating_type", values_to = "rating") %>%
+  ggplot(aes(x = rating_type, y = rating, color = is_congruent, group = sub)) +
+  geom_line(linewidth = 0.5, alpha = 0.7) +
+  geom_point(color = "grey") +
+  scale_y_continuous(limits = c(0, 10), breaks = seq(0, 10, by = 2)) +  # Setting y-axis limits and breaks
+  facet_grid(emotion ~ is_congruent, axes = "all", axis.labels = "all") +  
+  theme_minimal() +
+  labs(
+    title = paste0("Ratings for participants above or below congruence of ", congruence_threshold),
+    subtitle = paste0("n_above: ", n_above, " n_below: ", n_below)
+  )
+  
+  
+
+
+```
+
+
+# Relation with Arousal and Valence
+
+The correlation between Arousal and Valence - calculated within subjects - ranges from -0.76 to 0. There is no apparent correlation between this and congruence.
+
+```{r, message=FALSE}
+
+df_A <- read_csv(paste0(bd,"/","arousal_ratings.csv")) %>% 
+  select(sub,video,r_arousal,emotion)
+
+
+df_V <- read_csv(paste0(bd,"/","valence_ratings.csv")) %>% 
+  select(sub,video,r_valence)
+  
+
+df_AV <- inner_join(df_A, df_V, by = c("sub","video")) %>% 
+  select(sub, r_arousal, r_valence, emotion)
+
+ff <- df_AV %>% 
+  select(sub, r_arousal, r_valence) %>% 
+  group_by(sub) %>% 
+  nest %>% 
+  mutate(cor_AV = map_dbl(data, ~ cor(.x$r_arousal, .x$r_valence, method = "spearman"))) %>% 
+  arrange(cor_AV) %>% 
+  inner_join(
+    df_congruence %>% select(sub, ALL) %>% rename(congruence = ALL), 
+    by = "sub"
+  )
+
+
+ff %>% 
+  ggplot(aes(x = congruence, y = cor_AV)) + 
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  theme_minimal()
+
+
+```
+
+
+# RSA _between models_
+We find that the similarity is highly positive (0.4..0.6) and highly negative (-0.4..-0.6) in the **same locations** for arousal and emotion respectively.
+
+Is this a (mere) reflection that the two models are negatively correlated to each other? The simple analysis below shows that it is not the case.
+
+This opens the possibility that _different parts of the varibility in the fmri RDM are explained by emotion and arousal RDM_. If correct, this would be extremely interesting and valuable.
+
+```{r, message=FALSE}
+
+# calculate the RDMs for Emotion
+df_Emotion <- read_csv(paste0(bd,"/","emotion_ratings.csv"))
+
+RDMs_Emotion <- df_Emotion %>% 
+  # filter(emotion != "neutral") %>%  # with this, n_movies = 48
+  group_by(sub) %>% 
+  arrange(sub,emotion,video) %>% 
+  nest %>%
+  mutate(Emotion_triu = map(
+    data, ~ do_RDM_ratings_one_sub(.x, dist_method_rating = "euclidean")
+  )) %>% 
+  select(sub, Emotion_triu)
+
+
+# calculate the RDMs for Arousal
+df_Arousal <- read_csv(paste0(bd,"/","arousal_ratings.csv"))
+
+RDMs_Arousal <- df_Arousal %>% 
+  # filter(emotion != "neutral") %>%  # with this, n_movies = 48
+  group_by(sub) %>% 
+  arrange(sub,emotion,video) %>% 
+  nest %>%
+  mutate(Arousal_triu = map(
+    data, ~ do_RDM_ratings_one_sub(.x, dist_method_rating = "euclidean")
+  )) %>% 
+  select(sub, Arousal_triu)
+
+
+# calculate corr between Emotion RDM and Arousal RDM
+btw_models_RSA <- inner_join(RDMs_Emotion, RDMs_Arousal, by="sub") %>% 
+  mutate(R = map2_dbl(Emotion_triu, Arousal_triu, ~ cor(.x, .y, method = "spearman")))
+
+
+# plot between-models RSA across subs
+btw_models_RSA$R %>% boxplot
+points(rep(1, length(btw_models_RSA$R)), btw_models_RSA$R, col = "blue", pch = 16)
+text(rep(1, length(btw_models_RSA$R)), btw_models_RSA$R, labels = btw_models_RSA$sub, pos = 4, cex = 0.8, col = "red")
+
+
+```
+
+```{r}
+# Checking out the matrices from the triu in each sub
+
+n_movies = 56
+
+# Function to reconstruct the symmetric matrix from the lower triangular part
+reconstruct_symmetric_matrix <- function(triu_values, n) {
+  # Create an empty nxn matrix
+  mat <- matrix(0, n, n)
+  
+  # Fill the lower triangular part of the matrix
+  mat[lower.tri(mat, diag = FALSE)] <- triu_values
+  
+  # Mirror the lower triangular part to the upper triangular part
+  mat <- mat + t(mat)
+  
+  return(mat)
+}
+
+plot_heatmap <- function(M) {
+  heatmap(M, Rowv = NA, Colv = NA, symm=T, revC = T)
+}
+
+mat <- reconstruct_symmetric_matrix(RDMs_Emotion$Emotion_triu[[1]],n=n_movies)
+
+mat <- reconstruct_symmetric_matrix(RDMs_Arousal$Arousal_triu[[1]],n=n_movies)
+
+plot_heatmap(mat)
+
+heatmap(mat, symm = T)
+
+
+```
+
+
+```{r}
+
+# correlation between the mean/median RDM of Emotion and Arousal
+
+n_movies = 56
+
+mean_RDMs <- inner_join(RDMs_Emotion, RDMs_Arousal, by="sub") %>% 
+  unnest(cols = c(Emotion_triu, Arousal_triu)) %>% 
+  group_by(sub) %>% 
+  mutate(element_n = row_number()) %>%
+  ungroup() %>% 
+  group_by(element_n) %>% 
+  summarise(
+    Emotion_triu = median(Emotion_triu),
+    Arousal_triu = median(Arousal_triu)
+  )
+
+reconstruct_symmetric_matrix(mean_RDMs$Emotion_triu,n=n_movies) %>% heatmap(symm = T)
+
+reconstruct_symmetric_matrix(mean_RDMs$Arousal_triu,n=n_movies) %>% heatmap(symm = T)
+
+cor(
+  mean_RDMs$Emotion_triu,
+  mean_RDMs$Arousal_triu,
+  method = "spearman"
+)
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

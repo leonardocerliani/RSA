@@ -79,6 +79,7 @@ df_congruence <- calculate_congruence(df,"ALL") %>%
 df_congruence %>%
   ggplot(aes(x = reorder(sub, ALL), y = ALL)) +
   geom_bar(stat = "identity", color = "grey", fill = "lightblue") +
+    geom_hline(yintercept = 0.82, linetype = "dotted", color = "black", size = 1) +
   theme_minimal() +
   labs(title = "Congruence between displayed emotion and max rated emotion", x = "sub")
 
@@ -118,8 +119,10 @@ Here is like having ONE subject
 
 rune_df <- read_csv(paste0(bd,"/RUNE_validation/","allEMO_validation_CLEAN.csv"))
   
-
-
+# Here we test that the maximum emotion rating across six emotion is consistent 
+# with the actually displayed emotion in the video.
+# In the end we will have the percentage of movies that were correctly rated as that
+# emotion
 rune_df %>%
     select(video, emotion, starts_with("r_")) %>%
     pivot_longer(starts_with("r_"), names_to = "rating") %>%

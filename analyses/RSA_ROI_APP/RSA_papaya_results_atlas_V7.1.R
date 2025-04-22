@@ -79,19 +79,27 @@ results_files_display <- gsub("\\.RData$", "", results_files)
 results_file_choices <- setNames(results_files, results_files_display)
 
 
+# Nice fonts: "Coming Soon", "Handlee", "Overlock", "Montserrat"
+# For use below e.g. in bs.theme 
+FONT_PERSONALIZZATO <- "Coming Soon"
+
+library(showtext)
+font_add_google(FONT_PERSONALIZZATO)
+showtext_auto()
+
+
 ui <- fluidPage(
-  
-  
+
   # theme = bs_theme(),   # requires bs_themer() in the server
   # theme = bs_theme(bootswatch = "cerulean"),
   
-  
-  # Nice fonts: "Coming Soon"
-  
   theme = bs_theme(
     preset = "cerulean",
-    base_font = font_google("Coming Soon")
+    base_font = font_google(FONT_PERSONALIZZATO),
+    font_scale = 0.9
   ),
+
+
   
   # shinythemes::themeSelector(),
   # theme = shinytheme("united"),
@@ -235,7 +243,7 @@ server <- function(input, output, session) {
       RSA_mean_selected_row <- getReactableState("RSA_mean_table", "selected")
       rs = RSA_mean$roi[RSA_mean_selected_row]
         
-      cat("RSA_mean row : ", RSA_mean_selected_row, " ROI numba : ", rs, "\n")
+      # cat("RSA_mean row : ", RSA_mean_selected_row, " ROI numba : ", rs, "\n")
       ifelse(is.null(rs),1,rs)
     })
     
@@ -395,7 +403,7 @@ papaya_display <- function(model, atlas_filename, positive_min, positive_max, ne
 # Boxplot of different models for the selected ROI
 do_boxplot <- function(RSA, roi_numba, ttest_type, models_for_boxplot, MCP_correction_method) {
   
-  RSA %>% 
+  p <- RSA %>% 
     select(sub, roi, starts_with("rsa_")) %>% 
     filter(roi == roi_numba) %>% 
     select(starts_with("rsa_")) %>% 
@@ -409,17 +417,26 @@ do_boxplot <- function(RSA, roi_numba, ttest_type, models_for_boxplot, MCP_corre
       title = paste0("roi ", roi_numba),
       results.subtitle = TRUE,
       bf.message = FALSE,
-      ggsignif.args = list(textsize = 3, tip_length = 0.01),
+      ggsignif.args = list(textsize = 4, tip_length = 0.01),
       p.adjust.method = MCP_correction_method,
-      centrality.label.args = list(size  = 5)
+      centrality.label.args = list(size  = 5),
+      point.path = FALSE
     ) +
     labs(y = "RSA", x = NULL) +
     theme(
-      axis.text = element_text(size = 16),
+      text = element_text(size = 15, family = FONT_PERSONALIZZATO),
+      axis.text = element_text(size = 15),
       axis.title.y = element_text(size = 16),   # Only affects y-axis title
       axis.title.x = element_blank(),           # Hides x-axis title
-      plot.title = element_text(size = 18)
+      plot.title = element_text(size = 18),
+      plot.subtitle = element_text(size = 13)
     )
+  
+  # print(extract_stats(p))
+  
+  return(p)
+  
+  
 }
 
 

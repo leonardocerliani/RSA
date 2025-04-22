@@ -86,7 +86,7 @@ ui <- fluidPage(
   
   theme = bs_theme(
     preset = "cerulean",
-    base_font = font_google("Coming Soon")
+    base_font = font_google("Roboto")
   ),
   
   # shinythemes::themeSelector(),

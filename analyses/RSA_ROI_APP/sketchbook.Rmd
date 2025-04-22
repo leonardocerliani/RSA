@@ -37,8 +37,7 @@ n = 100
 df <- tibble(
   arousal = rnorm(n, 0, 1),
   aroval = rnorm(n, 0.1, 1),
-  emotion = rnorm(n, 0.5, 1),
-  valence = rnorm(n, -0.5, 1)
+  emotion = rnorm(n, 0.5, 1)
 )
 
 # df %>% 
@@ -48,14 +47,18 @@ df <- tibble(
 df %>%
   reframe(across(everything(), ~ t.test(.x, mu = 0, alternative = "greater")$p.value))
 
-df %>% 
+p <- df %>% 
   pivot_longer(cols = everything(), names_to = "cols", values_to = "value") %>% 
   ggwithinstats(
     x = cols,
     y = value,
     type = "np",
-    results.subtitle = FALSE,
+    results.subtitle = TRUE,
   )
+
+# extract_stats(p)
+
+p
 
 ```
 
@@ -356,8 +359,72 @@ shinyApp(ui, server)
 ```
 
 
+# Working on plot aesthetics
+```{r}
+
+library(tidyverse)
+library(ggstatsplot)
+
+n = 100
+
+df <- tibble(
+  arousal = rnorm(n, 0, 1),
+  aroval = rnorm(n, 0.1, 1),
+  emotion = rnorm(n, 0.5, 1)
+) %>% 
+  pivot_longer(cols = everything(), names_to = "cols", values_to = "value")
 
 
+df %>% 
+  ggwithinstats(
+    x = cols,
+    y = value,
+    type = "np",
+    results.subtitle = TRUE,
+  )
+
+
+```
+
+```{r}
+library(ggplot2) # Make sure ggplot2 is loaded
+
+library(bslib)
+
+library(showtext)
+font_add_google("Montserrat")
+showtext_auto()
+
+
+roi_numba=5
+MCP_correction_method = "none"
+ttest_type = "p"
+
+df <- df %>% 
+  mutate(model=cols)
+
+df %>%
+  ggwithinstats(
+  x = model, y = value,
+  type = ttest_type,   # p, np, r, b
+  title = paste0("roi ", roi_numba),
+  results.subtitle = TRUE,
+  bf.message = FALSE,
+  ggsignif.args = list(textsize = 3, tip_length = 0.01),
+  p.adjust.method = MCP_correction_method,
+  centrality.label.args = list(size  = 5),
+  point.path = FALSE
+  ) +
+  labs(y = "RSA", x = NULL) +
+  theme(
+    text = element_text(size = 15, family = "Coming Soon"),
+    axis.text = element_text(size = 16),
+    axis.title.y = element_text(size = 16),   # Only affects y-axis title
+    axis.title.x = element_blank(),           # Hides x-axis title
+    plot.title = element_text(size = 18, family = "Coming Soon"),
+    plot.subtitle = element_text(size = 15, family = "Coming Soon"), # Add margin
+  )
+```
 
 
 

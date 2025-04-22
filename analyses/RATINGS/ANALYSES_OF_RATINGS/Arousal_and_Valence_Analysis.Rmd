@@ -150,7 +150,7 @@ df_V %>%
 ```{r, message=FALSE}
 
 df_A <- read_csv(paste0(bd,"/","arousal_ratings.csv")) %>% 
-  filter(emotion != "neutral") %>% 
+  # filter(emotion != "neutral") %>% 
   mutate(high_low_code = str_match(high_low_code, "high|low")) %>% 
   select(sub, r_arousal, emotion, high_low_code) %>% 
   group_by(sub, emotion, high_low_code) %>% 
@@ -185,11 +185,13 @@ df_A %>%
 
 ```
 
+
+
 # Valence
 ```{r, message=FALSE}
 
-df_A <- read_csv(paste0(bd,"/","valence_ratings.csv")) %>% 
-  filter(emotion != "neutral") %>% 
+df_V <- read_csv(paste0(bd,"/","valence_ratings.csv")) %>% 
+  # filter(emotion != "neutral") %>% 
   mutate(r_valence = r_valence - 5) %>%   # REMOVE 5 FROM VALENCE
   mutate(high_low_code = str_match(high_low_code, "high|low")) %>% 
   select(sub, r_valence, emotion, high_low_code) %>% 
@@ -204,7 +206,7 @@ df_A <- read_csv(paste0(bd,"/","valence_ratings.csv")) %>%
     sem = round(sd(r_valence) / sqrt(n()),2)
   ) 
 
-df_A %>% 
+df_V %>% 
   ggplot(aes(x = emotion, y = mean_r_valence, fill = high_low_code)) +
   geom_bar(stat = "identity", position = position_dodge(), color = "black") +
   geom_errorbar(aes(

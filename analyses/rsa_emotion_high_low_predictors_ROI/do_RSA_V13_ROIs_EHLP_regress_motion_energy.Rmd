@@ -4,15 +4,16 @@ author: "LC"
 date: "2024-08-25"
 output: html_document
 params:
-  atlas_filename: Yeo7.nii.gz
+  atlas_filename: Yeo17.nii.gz
   remove_neutrals: "YES"
   minus_neutral: "NO"
   subs_set: "N26"
 ---
 
-# regress_motion_predictors
+# Regress motion energy predictors from the emotion, arousal, aroval
 The aim is to regress motion energy from the ratings RDM before calculating the 
-RSA. Since the order of stimuli is different for each participant, the "easiest"
+RSA. Since the order of stimuli is different for each participant - and therefore
+the flattened RDM has a different order for every participant - the "easiest"
 thing to do is to treat motion energy as another ratings_type.
 
 This will mean that in the calculated rdm df there will be also a (nested) column
@@ -21,19 +22,24 @@ from emotion/arousal/valence/aroval and then calculate the RSA.
 
 Motion energy was calculated here:
 
-```bash
-# Calculates the motion energy
-/data00/leonardo/RSA/prep_scripts/07_motion_energy_movies/do_motion_energy.ipynb
+```
+# 01: Calculate the motion energy
+root_dir : /data00/leonardo/RSA/prep_scripts/07_motion_energy_movies/
+script/nb : do_motion_energy.ipynb
 
-# Produces an output which is compatible with the other <model_type>_ratings.csv
+# 02 : Generate an output which is compatible with the other <model_type>_ratings.csv
 # in /data00/leonardo/RSA/analyses/RATINGS
+
 do_motion_energy_compatible_with_ratings.Rmd
+
+# The latter was done in R on the output of the python nb in order to keep mental
+# sanity at the expense of efficiency
 ```
 and saved into the file `motion_energy_ratings.csv` in `/data00/leonardo/RSA/analyses/RATINGS`.
 
-Or course the motion energy estimates are _not_ ratings, however after 1,000,000
-requests of "Why don't we do this and that...? It's easy!" I **had** to give up order
-and create some mess. So here it is. If you don't like it, go somewhere else.
+Or course the motion energy estimates are _not_ ratings, however after 1,000
+requests of "Why don't we do this and that...? It's easy!" I **had** to give up 
+consistency, again for the sake of mental sanity. 
 
 There are a few key modifications two do to make this work:
 
@@ -320,7 +326,7 @@ plot_tril(
 
 ```
 
-## Cross-correlation matrix
+## Cross-correlation matrix of all ratings RDMs - including motion energy
 
 ```{r}
 df <- RDMs_rats %>% unnest()
@@ -796,7 +802,7 @@ create_filename_results <- function(atlas_filename, copes_type, remove_neutrals)
   
   nsubs <- paste0("_N",length(subs))
   
-  results_filename <- paste0(atlas_root, "_reg_ME_", EV_abbr, option_MN, option_NN, nsubs)
+  results_filename <- paste0(atlas_root, EV_abbr, option_MN, option_NN, nsubs, "___ME_REG")
   return(paste0(bd_results,"/",results_filename,".RData"))
   
 }

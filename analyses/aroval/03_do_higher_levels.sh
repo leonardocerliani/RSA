@@ -4,7 +4,7 @@
 # of the original sub_list.txt.
 # I will modify it later to accept a new list of subs
 
-export model="arousal"
+export model="aroval"
 # copes : arousal | allMovies
 export ncopes=2
 

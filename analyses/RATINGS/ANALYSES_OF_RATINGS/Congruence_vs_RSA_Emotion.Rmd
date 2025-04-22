@@ -1,0 +1,199 @@
+---
+title: "Congruence vs RSA Emotion"
+author: "Leonardo Cerliani"
+date: "2024-12-17"
+output:
+  html_document:
+    self_contained: true
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    code_folding: hide
+    theme: cerulean 
+---
+
+
+```{r, message=FALSE}
+library(tidyverse)
+library(RColorBrewer)
+
+bd <- "/data00/leonardo/RSA/analyses/RATINGS"
+
+subs_file <- "/data00/leonardo/RSA/sub_list.txt"
+subs <- sprintf("%02d",readLines(subs_file) %>% as.numeric)
+
+# Load the preprocessed emotion ratings file
+# which was prepared with the 02_prepare_ratings_EMOTION.Rmd
+# located in /data00/leonardo/RSA/prep_scripts/05_prepare_ratings
+df <- read_csv(paste0(bd,"/","emotion_ratings.csv"))
+
+```
+
+
+# Previous version of congruence : congruence within participant
+```{r}
+
+calculate_congruence_initial <- function(df, highlow_flag = "ALL") {
+  
+  cat("highlow_flag = ", highlow_flag, "\n")
+
+  if (highlow_flag %in% c("high","low")) {
+    df <- df %>% filter(str_detect(high_low_code, highlow_flag))
+  }
+      
+  df_congruence <- df %>%
+    # Remove neutral first!
+    filter(emotion != "neutral") %>%
+    select(sub,original_code, emotion, starts_with("r_")) %>%
+    pivot_longer(starts_with("r_"), names_to = "rating") %>%
+    group_by(sub, original_code, emotion) %>%
+    filter(value == max(value)) %>%
+    filter(value != 0) %>%
+    mutate(rating = str_remove(rating,"r_")) %>%
+    mutate(consistent = ifelse(emotion==rating,1,0)) %>%
+    ungroup %>% 
+    group_by(sub) %>%  # here you could also group by emotion
+    summarise(
+      congruence = round(sum(consistent)/n(),2)
+    )   
+  
+  return(df_congruence)
+}
+
+
+# calculate congruence for ALL, high, low, using the fn above
+congruence_initial <- calculate_congruence_initial(df,"ALL") %>% 
+  rename(ALL = congruence) %>% 
+  inner_join(calculate_congruence_initial(df,"high"), by="sub") %>% 
+  rename(high = congruence) %>% 
+  inner_join(calculate_congruence_initial(df,"low"), by="sub") %>% 
+  rename(low = congruence)
+
+
+# OLE plot, suitable only for one of ALL, high, low at the time
+plot_congruence <- congruence_initial %>%
+  ggplot(aes(x = reorder(sub, ALL), y = ALL)) +
+  geom_bar(stat = "identity", color = "grey", fill = "lightblue") +
+  theme_minimal() +
+  labs(
+    title = "Congruence between displayed emotion and max rated emotion",
+    subtitle = paste0("mean : ", congruence_initial$ALL %>% mean %>% round(2)),
+    x = "sub"
+  ) +
+  geom_hline(yintercept = congruence_initial$ALL %>% mean, linetype = "dashed", color = "blue")
+
+plot_congruence
+
+congruence_initial %>%
+  pivot_longer(cols = c("ALL", "high", "low"), names_to = "intensity", values_to = "value") %>%
+  ggplot(aes(x = reorder(sub, value), y = value, fill = intensity)) +
+  geom_bar(stat = "identity", position = "dodge") + 
+  theme_minimal() +
+  theme(legend.position = "top") +
+  labs(x = "Subject", y = "Value", title = "Congruence across emotion intensity levels")
+
+
+# IMPORTANT!!! THE SLIGHT DISCREPANCY WRT TO THE PREVIOUS PLOT IS DUE TO THE FACT
+# THAT I DO NOT CONSIDER CONGRUENCE IN NEUTRAL MOVIES
+
+congruence_initial %>% 
+  pivot_longer(
+    cols = c("ALL","high","low"), names_to = "intensity", values_to = "congruence"
+  ) %>% 
+  ggstatsplot::ggwithinstats(
+    x = intensity,
+    y = congruence,
+    type = "parametric"
+  )
+
+```
+
+
+
+
+
+```{r}
+congruence_initial
+```
+
+# Load RSA scores
+```{r}
+bd_RSA <- "/data00/leonardo/RSA/analyses/RSA_ROI_APP/results_RSA_ROI"
+
+# "Yeo7_EHLP_RN_N26.RData"    roi 5
+# "Yeo17_EHLP_RN_N26.RData"   roi 10 
+# "HO_cort_EHLP_RN_N26.RData" roi 25 and 27
+
+RSA_set <- "HO_cort_EHLP_RN_N26.RData"
+roi_numba = 25
+
+load(paste0(bd_RSA, "/", RSA_set))
+
+cong <- congruence_initial %>% 
+  select(sub,ALL) %>% 
+  rename(congruence = ALL)
+
+plot_cong_vs_RSA <- RSA %>% 
+  select(sub,roi,rsa_rdm_emotion) %>% 
+  filter(roi == roi_numba) %>% 
+  inner_join(cong, by="sub") %>% 
+  ggplot(aes(x=congruence, y=rsa_rdm_emotion)) + 
+  geom_point() +
+  geom_text(aes(label = sub), vjust = -0.5, size = 5, family = "Arial Narrow") +
+  theme_minimal(base_size = 14) +
+  labs(title = paste0("ROI ", roi_numba, "  ", RSA_set)) +
+  theme(
+    text = element_text(family = "Arial Narrow")
+  )
+
+plot_congruence_styled <- plot_congruence +
+  theme(
+    text = element_text(family = "Arial Narrow"),
+    axis.text.x = element_text(size = 14, angle = 60),  # Rotate x-axis labels
+  )
+
+
+library(patchwork)
+# plot_cong_vs_RSA / plot_congruence
+plot_cong_vs_RSA + plot_congruence_styled
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

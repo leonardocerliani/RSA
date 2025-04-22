@@ -4,4 +4,7 @@ analyses_data/
 testing/
 ratings_check/
 dogit.sh
-
+.vscode/
+.Xauthoriy
+nohup*
+venv*/

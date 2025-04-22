@@ -1,0 +1,276 @@
+---
+title: "RSA single tests"
+subtitle: "Designing an interface to show only specific RSA tests"
+author: "LC"
+date: "2025-01-06"
+output:
+  html_document:
+    theme: cerulean
+    code_folding: hide
+---
+
+```{r, message=FALSE}
+library(tidyverse)
+library(ggstatsplot)
+library(coin) # permutation tests
+
+
+bd_results="/data00/leonardo/RSA/analyses/RSA_ROI_APP/results_RSA_ROI"
+
+```
+
+
+
+```{r}
+SUBS_SET = "N25"
+RSA_flavour=paste0("Yeo7_EHLP_RN_",SUBS_SET,".RData")
+roi_numba = 5
+load(paste0(bd_results,"/",RSA_flavour))
+
+```
+
+
+
+```{r}
+# Extract the df of roi-specific RSA values across subs and models
+get_roi_specific_data <- function(RSA=RSA, roi_numba=1) {
+  
+  roi_specific_data <- RSA %>% 
+    select(sub, roi, starts_with("rsa_")) %>% 
+    filter(roi == roi_numba) %>% 
+    select(starts_with("rsa_"))
+  
+  return(roi_specific_data)
+}
+
+# Prepare the data for the ggwithinstats boxplot and show it
+do_boxplot <- function(roi_specific_data, ttest_type="p") {
+  roi_specific_data %>% 
+    select(!rsa_rdm_aroval) %>%     # REMOVE AROVAL
+    pivot_longer(cols = starts_with("rsa_"), names_to = "model") %>%
+    mutate(
+      model = str_replace(model, "rsa_rdm_",""),
+      model = factor(model, levels = c("emotion", "arousal", "valence", "aroval")) # Set desired order
+    ) %>% 
+    ggwithinstats(
+      x = model, y = value,
+      type = ttest_type,   # p, np, r, b
+      title = paste0("roi ", roi_numba),
+      results.subtitle = TRUE,
+      bf.message = FALSE,
+      ggsignif.args = list(textsize = 3, tip_length = 0.01),
+      p.adjust.method = "fdr",
+      centrality.label.args = list(size  = 5)
+    ) +
+    theme(
+      axis.text = element_text(size = 16),   # Font size for axis text (labels)
+      axis.title = element_text(size = 16),  # Font size for axis titles
+      plot.title = element_text(size = 18)   # Font size for the plot title
+    )
+}
+
+
+
+# RSA_flavour="Yeo7_EHLP_RN_N26.RData"
+# roi_numba = 5
+# load(paste0(bd_results,"/",RSA_flavour))
+  
+roi_specific_data = get_roi_specific_data(RSA, roi_numba=roi_numba)
+
+p <- do_boxplot(roi_specific_data, ttest_type = "p")
+p
+
+
+
+
+extract_stats(p)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+models <- c("arousal","emotion","valence","aroval")
+model_pairs <- combn(models, 2, simplify = F)
+# model_pairs
+
+reverse_pairs <- lapply(model_pairs, function(pair) rev(pair))
+model_pairs <- unique(c(model_pairs, reverse_pairs))
+# model_pairs
+```
+
+
+
+```{r}
+
+# models <- c("arousal","emotion","valence","aroval")
+# model_pairs <- combn(models, 2, simplify = FALSE)
+
+# get the df of two models from roi_specific_data
+get_df_two_models <- function(roi_specific_data, pair) {
+  
+  dta <- roi_specific_data %>% 
+  rename_with(~ str_replace(., "^rsa_rdm_", ""), everything()) %>% 
+  mutate(block = row_number()) %>%
+  mutate(block = factor(block)) %>% 
+  select(unlist(pair),block) %>%
+  pivot_longer(cols = !starts_with("block"), names_to = "x", values_to = "y") %>%
+  mutate(x = factor(x)) %>% 
+  arrange(x) %>% 
+  select(y,x,block)
+  
+  return(dta)
+}
+
+
+
+# get the results of permutation testing
+get_test_result <- function(pair, roi_specific_data) {
+  # Get the data for the current pair
+  df_two <- get_df_two_models(roi_specific_data, pair)
+  
+  # Perform the Wilcoxon signed-rank test
+  res <- wilcoxsign_test(y ~ x | block, data = df_two, distribution = "exact", alternative="less")
+  
+  # Return the result as a tibble
+  tibble(
+    model_1 = pair[1],
+    model_2 = pair[2],
+    p_value = pvalue(res),
+    statistic = statistic(res)
+  )
+}
+
+# Use map_dfr to apply the function to all pairs and combine results into a single dataframe
+test_results <- model_pairs %>% map_dfr(~ get_test_result(.x, roi_specific_data))
+
+
+# Perform FDR correction on the p-values in the test_results dataframe
+test_results <- test_results %>%
+  mutate(
+    p_value_fdr = p.adjust(p_value, method = "fdr"),  # Apply FDR correction
+    sig_after_fdr = if_else(p_value_fdr < 0.05, 1, 0)  # Create 'sig' column
+  )
+
+test_results # %>% filter(sig_after_fdr == 1)
+```
+
+
+
+# Try specifying it from ggwithinstats
+
+```{r}
+# Prepare the data for the ggwithinstats boxplot and show it
+do_boxplot <- function(roi_specific_data, ttest_type="p") {
+  roi_specific_data %>% 
+    pivot_longer(cols = starts_with("rsa_"), names_to = "model") %>%
+    mutate(
+      model = str_replace(model, "rsa_rdm_",""),
+      model = factor(model, levels = c("emotion", "arousal", "valence", "aroval")) # Set desired order
+    ) %>% 
+    ggwithinstats(
+      x = model, y = value,
+      type = ttest_type,   # p, np, r, b
+      title = paste0("roi ", roi_numba),
+      results.subtitle = TRUE,
+      bf.message = FALSE,
+      ggsignif.args = list(textsize = 3, tip_length = 0.01),
+      p.adjust.method = "fdr",
+      centrality.label.args = list(size  = 5)
+    ) +
+    theme(
+      axis.text = element_text(size = 16),   # Font size for axis text (labels)
+      axis.title = element_text(size = 16),  # Font size for axis titles
+      plot.title = element_text(size = 18)   # Font size for the plot title
+    )
+}
+
+roi_specific_data = get_roi_specific_data(RSA, roi_numba=roi_numba)
+
+p <- do_boxplot(roi_specific_data, ttest_type = "np")
+p
+
+
+roi_numba = 5
+
+df_long <- roi_specific_data %>% 
+    pivot_longer(cols = starts_with("rsa_"), names_to = "model") %>%
+    mutate(
+      model = str_replace(model, "rsa_rdm_",""),
+      model = factor(model, levels = c("emotion", "arousal", "valence", "aroval")) # Set desired order
+    )
+
+p <- df_long %>% 
+    ggwithinstats(
+      x = model, y = value,
+      type = "p",   # p, np, r, b
+      title = paste0("roi ", roi_numba),
+      results.subtitle = TRUE,
+      bf.message = FALSE,
+      ggsignif.args = list(textsize = 3, tip_length = 0.01),
+      p.adjust.method = "fdr",
+      centrality.label.args = list(size  = 5)
+    ) +
+    theme(
+      axis.text = element_text(size = 16),   # Font size for axis text (labels)
+      axis.title = element_text(size = 16),  # Font size for axis titles
+      plot.title = element_text(size = 18)   # Font size for the plot title
+    )
+
+p
+
+p %>% extract_stats()
+
+```
+
+
+```{r}
+
+
+p <- df_long %>% 
+    ggwithinstats(
+      x = model, y = value,
+      type = "np",   # p, np, r, b
+      title = paste0("roi ", roi_numba),
+      results.subtitle = TRUE,
+      bf.message = FALSE,
+      ggsignif.args = list(textsize = 3, tip_length = 0.01),
+      p.adjust.method = "fdr",
+      centrality.label.args = list(size  = 5)
+    )
+
+p
+
+
+```
+
+
+```{r}
+extract_stats(p)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
