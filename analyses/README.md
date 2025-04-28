@@ -55,6 +55,19 @@ Just a few coordinates here. The process is better explained in the header of `d
 
 NB: _I do know_ that motion energy is _not_ a _"rating"_, but this was a hack (motivated by last minute decisions on a work that spans almost one year), and so I had to sacrifice some consistency in the naming in order to make it easier for the Rmd to do the job (and to preserve mental sanity).
 
+**IMPORTANT**: also, to keep things "simple", now in the RATINGS dir there are two separate motion_energy files:
+
+```
+motion_energy_TOTAL_ratings.csv    -->    do_RSA_V13_ROIs_EHLP_regress_motion_energy.Rmd
+motion_energy_SUBSAMP_ratings.csv  -->    do_RSA_V13_ROIs_EHLP_regress_motion_energy_SUBSAMP.Rmd
+```
+
+Before running either one or the other analysis make sure you cp the appropriate file onto 
+
+```
+motion_energy_ratings.csv
+```
+
 
 ```mermaid
 graph TD
