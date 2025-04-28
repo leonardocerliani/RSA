@@ -12,7 +12,7 @@ usage() {
     echo "<minus_neutral> should be either YES or NO"
     echo "<subs_set should be either N14 or N26>"
     echo
-    echo e.g. ./do_RSA_ROI.sh Yeo7.nii.gz "YES" "NO" "N26"
+    echo e.g. ./do_RSA_ROI_V1.sh Yeo7.nii.gz "YES" "NO" "N26"
     echo 
     exit 1
 }
@@ -77,9 +77,23 @@ Rscript -e "rmarkdown::render(
 pid2=$!
 
 
+# Run the RMarkdown file for EHLP : using ratings RDMs _after_ regressing motion_energy SUBSAMP
+Rscript -e "rmarkdown::render(
+    '$root/rsa_emotion_high_low_predictors_ROI/do_RSA_V13_ROIs_EHLP_regress_motion_energy_SUBSAMP.Rmd',
+    params = list(
+        atlas_filename = '$atlas_filename',
+        remove_neutrals = '$remove_neutrals',
+        minus_neutral = '$minus_neutral',
+        subs_set = '$subs_set'
+    )
+)" &
+pid3=$!
+
+
+
 
 # Wait for background processes to finish
-wait $pid1 $pid2
+wait $pid1 $pid2 $pid3
 
 # Remove the html's
 rm ${root}/rsa_emotion_high_low_predictors_ROI/do_RSA_V13_ROIs_EHLP.html

@@ -1,0 +1,51 @@
+---
+title: "do_motion_energy_compatible_with_ratings"
+author: "LC"
+date: "2025-04-18"
+output: html_document
+---
+
+```{r, message=F}
+library(tidyverse)
+
+
+ratings = read_csv("emotion_ratings.csv") %>% 
+  select(!starts_with("r_"))
+
+
+df_me <- read_csv("motion_energy_SUBSAMP.csv") %>%
+  rename(video = Filename) %>%
+  mutate(emotion = str_to_lower(Emotion_Type)) %>%
+  mutate(across(starts_with("Motion_Energy"), scale)) %>%  # Scale all Motion_Energy columns
+  rename_with(~paste0("r_me_", seq_along(.)), starts_with("Motion_Energy")) %>%  # Rename columns to r_me_1, r_me_2, ...
+  select(video, emotion, starts_with("r_me")) %>%   # Select the desired columns
+  mutate(emotion = str_replace(emotion,"sadness","sad"))
+
+
+df_me
+```
+
+
+
+
+```{r}
+df_to_write <- ratings %>% 
+  group_by(sub) %>% 
+  inner_join(df_me, by=c("video","emotion")) %>% 
+  ungroup() %>%
+  # Ensure all r_me_* columns are numeric (if there's any list-like structure)
+  mutate(across(starts_with("r_me"), as.numeric)) %>%
+  relocate(sub, video, starts_with("r_me"))  # Ensure the correct column order
+
+# Define the output path
+bd_ratings = "/data00/leonardo/RSA/analyses/RATINGS"
+
+# Save the resulting dataframe as CSV
+readr::write_csv(
+  df_to_write,
+  paste0(bd_ratings, "/motion_energy_SUBSAMP_ratings.csv")
+)
+
+```
+
+
