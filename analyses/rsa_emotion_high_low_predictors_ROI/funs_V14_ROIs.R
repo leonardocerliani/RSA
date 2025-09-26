@@ -84,137 +84,51 @@ plot_tril <- function(tril, model, source_copes_info=df_path_copes,
 
 
 
-# # OLD VERSION OF THE DISTANCE CALCULATION: DOES NOT DEAL WITH
-# # SINGULAR MATRIX FOR THE MAHALANOBIS DISTANCE
-# # SEE BELOW FOR NEW VERSION
-# #
-# # ----------- DDOS - Do Distance Or Similarity -----------
-# # The input matrix should be observations-by-variables, that is:
-# # - rows index observations
-# # - columns index variables
-# # This is the format required by dist(), while for cor() is the
-# # opposite, so when using the cor() function we pass t(X)
-# #
-# # example usage:
-# # DDOS(Y, method = "cosine")
-# #
-# # Output : vector with the tril of the D[n,n] matrix of length (n^2 - n)/2
-# DDOS_vec <- function(X, method) {
-# 
-#   # Replace NA values with 0
-#   X[is.na(X)] <- 0
-# 
-#   # Demean each column
-#   X <- scale(X, center = TRUE, scale = FALSE)
-# 
-#   # Calculate the distance or similarity
-#   switch(method,
-#          pearson = {
-#            D <- 1 - cor(t(X), method = "pearson") %>% as.dist()
-#          },
-# 
-#          spearman = {
-#            D <- 1 - cor(t(X), method = "spearman") %>% as.dist()
-#          },
-# 
-#          euclidean = {
-#            D <- dist(X, method = "euclidean")
-#          },
-# 
-#          cosine = {
-#            D <- 1 - simil(X, method = "cosine")
-#          },
-# 
-#          mahalanobis = {
-#            D <- dist(X, method = "mahalanobis")
-#          },
-#          stop("Supported methods: 'pearson', 'spearman', 'euclidean', 'cosine' or 'mahalanobis'.")
-#   )
-#   return(D[!is.na(D)])
-# }
 
-
-
-# # ---------------- NEW VERSION OF DISTANCES CALCULATION - BEGIN ----------------
-# DDOS_vec: Compute distances or similarities between observations
+# ----------- DDOS - Do Distance Or Similarity -----------
+# The input matrix should be observations-by-variables, that is:
+# - rows index observations
+# - columns index variables
+# This is the format required by dist(), while for cor() is the
+# opposite, so when using the cor() function we pass t(X) 
 #
-# Input:
-#   X          : observations-by-variables matrix (rows = observations, columns = features)
-#   method     : distance/similarity method, one of
-#                  "pearson"      - Pearson correlation distance (1 - r)
-#                  "spearman"     - Spearman correlation distance (1 - rho)
-#                  "euclidean"    - Euclidean distance
-#                  "cosine"       - Cosine distance (1 - cosine similarity)
-#                  "mahalanobis"  - Mahalanobis distance
-#   mahal_option : option for singular covariance when using Mahalanobis:
-#                  "identity" - fallback to identity matrix (reduces to Euclidean)
-#                  "pseudo"   - fallback to pseudoinverse (MASS::ginv)
+# example usage:
+# DDOS(Y, method = "cosine")
 #
-# Output:
-#   A vector with the lower-triangular part of the distance matrix
-#   (length = n*(n-1)/2 for n observations)
-#
-# Example usage:
-#   DDOS_vec(Y, method = "cosine")
-#   DDOS_vec(Y, method = "mahalanobis", mahal_option = "pseudo")
-
-library(proxy)   # for dist
-# library(MASS)    # for ginv
-# DO NOT IMPORT MASS, IT MESSES UP WITH dplyr::select
-
-
-# Custom Mahalanobis distance function for proxy::dist
-mahal_custom <- function(x, y, Sigma) {
-  delta <- x - y
-  sqrt(t(delta) %*% Sigma %*% delta)
-}
-
-# Default Mahalanobis option
-mahalanobis_flavour <- 'identity'  # 'identity' or 'pseudo'
-
-DDOS_vec <- function(X,
-                     method = c("pearson", "spearman", "euclidean", "cosine", "mahalanobis"),
-                     mahal_option = mahalanobis_flavour) {
-  
-  method <- match.arg(method)
-  mahal_option <- match.arg(mahal_option)
+# Output : vector with the tril of the D[n,n] matrix of length (n^2 - n)/2 
+DDOS_vec <- function(X, method) {
   
   # Replace NA values with 0
   X[is.na(X)] <- 0
   
-  # Demean columns
+  # Demean each column
   X <- scale(X, center = TRUE, scale = FALSE)
   
-  D <- switch(method,
-              pearson    = 1 - cor(t(X), method = "pearson") %>% as.dist(),
-              spearman   = 1 - cor(t(X), method = "spearman") %>% as.dist(),
-              euclidean  = dist(X, method = "euclidean"),
-              cosine     = 1 - simil(X, method = "cosine"),
-              mahalanobis = {
-                # Compute covariance
-                Sigma <- cov(X)
-                # Try solving; fallback if singular
-                Sigma_inv <- tryCatch(
-                  solve(Sigma),
-                  error = function(e) {
-                    message("Covariance singular: using fallback")
-                    if (mahal_option == "identity") diag(ncol(X))
-                    else MASS::ginv(Sigma)
-                  }
-                )
-                # Compute all pairwise Mahalanobis distances
-                proxy::dist(X, method = mahal_custom, Sigma = Sigma_inv)
-              },
-              stop("Supported methods: 'pearson', 'spearman', 'euclidean', 'cosine', or 'mahalanobis'")
+  # Calculate the distance or similarity
+  switch(method,
+         pearson = {
+           D <- 1 - cor(t(X), method = "pearson") %>% as.dist()
+         },
+         
+         spearman = {
+           D <- 1 - cor(t(X), method = "spearman") %>% as.dist()
+         },
+         
+         euclidean = {
+           D <- dist(X, method = "euclidean")
+         },
+         
+         cosine = {
+           D <- 1 - simil(X, method = "cosine")
+         },
+         
+         mahalanobis = {
+           D <- dist(X, method = "mahalanobis")
+         },
+         stop("Supported methods: 'pearson', 'spearman', 'euclidean', 'cosine' or 'mahalanobis'.")
   )
-  
   return(D[!is.na(D)])
 }
-# # ---------------- NEW VERSION OF DISTANCES CALCULATION - END ----------------
-
-
-
-
 
 
 

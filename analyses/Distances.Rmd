@@ -1,0 +1,241 @@
+---
+title: "distances"
+author: "LC"
+date: "2025-09-22"
+output: html_document
+---
+
+
+```{r}
+# Example: 100 observations, 10 features
+set.seed(123)
+X <- matrix(rnorm(1000), nrow = 100, ncol = 10)  # 100x10
+
+# Pick two rows (vectors) to compare
+v <- X[1, ]
+w <- X[2, ]
+
+# Euclidean distance between v and w
+euclid <- sqrt(sum((v - w)^2))
+euclid <- sqrt( t(v - w)%*%(v - w) )
+euclid
+
+# Mahalanobis distance
+# Covariance matrix of the 100 rows (features = columns)
+# solve(Sigma) in R is the inv(cov(X))
+Sigma <- cov(X)   # 10x10 covariance matrix
+mahal <- sqrt(t(v - w) %*% solve(Sigma) %*% (v - w))
+mahal
+
+
+```
+
+```{r}
+DDOS_vec <- function(X, method) {
+
+  # Replace NA values with 0
+  X[is.na(X)] <- 0
+
+  # Demean each column
+  X <- scale(X, center = TRUE, scale = FALSE)
+
+  # Calculate the distance or similarity
+  D <- switch(method,
+    pearson = 1 - cor(t(X), method = "pearson") %>% as.dist(),
+    spearman = 1 - cor(t(X), method = "spearman") %>% as.dist(),
+    euclidean = dist(X, method = "euclidean"),
+    cosine = 1 - simil(X, method = "cosine"),
+    mahalanobis = {
+      Sigma <- cov(X)
+      # fallback to identity if singular
+      if (det(Sigma) == 0) {
+        Sigma <- diag(ncol(X))
+      } else {
+        
+      }
+      n <- nrow(X)
+      # Compute pairwise distances using stats::mahalanobis
+      Dmat <- matrix(0, n, n)
+      for (i in 1:(n-1)) {
+        for (j in (i+1):n) {
+          delta <- X[i, ] - X[j, ]
+          Dmat[i, j] <- sqrt(stats::mahalanobis(delta, center = FALSE, cov = Sigma))
+          Dmat[j, i] <- Dmat[i, j]
+        }
+      }
+      as.dist(Dmat)
+    },
+    stop("Supported methods: 'pearson', 'spearman', 'euclidean', 'cosine' or 'mahalanobis'.")
+  )
+
+  return(D[!is.na(D)])
+}
+
+```
+
+
+
+# Custom mahalanobis function falling back on identity matrix if det(Sigma) == 0
+
+```{r}
+
+# Custom Mahalanobis distance function for proxy::dist
+mahal_custom <- function(x, y, Sigma) {
+  delta <- x - y
+  sqrt(t(delta) %*% Sigma %*% delta)
+}
+
+# DDOS_vec: distances or similarities
+DDOS_vec <- function(X, method = c("pearson", "spearman", "euclidean", "cosine", "mahalanobis")) {
+  
+  method <- match.arg(method)
+  
+  # Replace NA values with 0
+  X[is.na(X)] <- 0
+  
+  # Demean columns
+  X <- scale(X, center = TRUE, scale = FALSE)
+  
+  D <- switch(method,
+    pearson    = 1 - cor(t(X), method = "pearson") %>% as.dist(),
+    spearman   = 1 - cor(t(X), method = "spearman") %>% as.dist(),
+    euclidean  = dist(X, method = "euclidean"),
+    cosine     = 1 - simil(X, method = "cosine"),
+    mahalanobis = {
+      # Compute covariance
+      Sigma <- tryCatch(solve(cov(X)), error = function(e) diag(ncol(X)))  # fallback to identity if singular
+      # Compute all pairwise distances using proxy::dist()
+      proxy::dist(X, method = mahal_custom, Sigma = Sigma)
+    },
+    stop("Supported methods: 'pearson', 'spearman', 'euclidean', 'cosine', or 'mahalanobis'")
+  )
+  
+  return(D[!is.na(D)])
+}
+
+
+
+set.seed(123)
+X <- matrix(rnorm(1000), nrow = 100, ncol = 10)  # 100x10
+
+
+v <- DDOS_vec(X, method = "euclidean")
+length(v)
+
+v <- DDOS_vec(X, method = "mahalanobis")
+length(v)
+
+
+X <- matrix(rnorm(30), nrow = 3, ncol = 10)
+v <- DDOS_vec(X, method = "euclidean")
+v <- DDOS_vec(X, method = "mahalanobis")
+length(v)
+
+
+
+X <- matrix(rnorm(10), nrow = 5, ncol = 2)
+X <- cbind(X, X[,1] + X[,2])  # 3rd column = col1 + col2
+Sigma <- cov(X)
+det(Sigma)  # should be 0 (or very close due to rounding)
+
+
+```
+
+
+# Custom mahalanobis distance using pinv (for cases where Sigma is rank deficient)
+```{r}
+
+# ------------------------- DDOS_vec -------------------------
+# DDOS_vec: Compute distances or similarities between observations
+#
+# Input:
+#   X          : observations-by-variables matrix (rows = observations, columns = features)
+#   method     : distance/similarity method, one of
+#                  "pearson"      - Pearson correlation distance (1 - r)
+#                  "spearman"     - Spearman correlation distance (1 - rho)
+#                  "euclidean"    - Euclidean distance
+#                  "cosine"       - Cosine distance (1 - cosine similarity)
+#                  "mahalanobis"  - Mahalanobis distance
+#   mahal_option : option for singular covariance when using Mahalanobis:
+#                  "identity" - fallback to identity matrix (reduces to Euclidean)
+#                  "pseudo"   - fallback to pseudoinverse (MASS::ginv)
+#
+# Output:
+#   A vector with the lower-triangular part of the distance matrix
+#   (length = n*(n-1)/2 for n observations)
+#
+# Example usage:
+#   DDOS_vec(Y, method = "cosine")
+#   DDOS_vec(Y, method = "mahalanobis", mahal_option = "pseudo")
+
+library(proxy)   # for dist
+
+# Custom Mahalanobis distance function for proxy::dist
+mahal_custom <- function(x, y, Sigma) {
+  delta <- x - y
+  sqrt(t(delta) %*% Sigma %*% delta)
+}
+
+# Default Mahalanobis option
+mahalanobis_flavour <- 'pseudo'  # 'identity' or 'pseudo'
+
+DDOS_vec <- function(X,
+                     method = c("pearson", "spearman", "euclidean", "cosine", "mahalanobis"),
+                     mahal_option = mahalanobis_flavour) {
+  
+  method <- match.arg(method)
+  mahal_option <- match.arg(mahal_option)
+  
+  # Replace NA values with 0
+  X[is.na(X)] <- 0
+  
+  # Demean columns
+  X <- scale(X, center = TRUE, scale = FALSE)
+  
+  D <- switch(method,
+    pearson    = 1 - cor(t(X), method = "pearson") %>% as.dist(),
+    spearman   = 1 - cor(t(X), method = "spearman") %>% as.dist(),
+    euclidean  = dist(X, method = "euclidean"),
+    cosine     = 1 - simil(X, method = "cosine"),
+    mahalanobis = {
+      # Compute covariance
+      Sigma <- cov(X)
+      # Try solving; fallback if singular
+      Sigma_inv <- tryCatch(
+        solve(Sigma),
+        error = function(e) {
+          message("Covariance singular: using fallback")
+          if (mahal_option == "identity") diag(ncol(X))
+          else MASS::ginv(Sigma)
+        }
+      )
+      # Compute all pairwise Mahalanobis distances
+      proxy::dist(X, method = mahal_custom, Sigma = Sigma_inv)
+    },
+    stop("Supported methods: 'pearson', 'spearman', 'euclidean', 'cosine', or 'mahalanobis'")
+  )
+  
+  return(D[!is.na(D)])
+}
+```
+
+
+```{r}
+# full rank (hopefully)
+X <- matrix(rnorm(10000), nrow = 100, ncol = 10)  # 100x10
+
+v <- DDOS_vec(X, method = "euclidean")
+v <- DDOS_vec(X, method = "mahalanobis")
+
+# rank deficient
+X <- matrix(rnorm(10), nrow = 5, ncol = 2)
+X <- cbind(X, X[,1] + X[,2])  # 3rd column = col1 + col2
+v <- DDOS_vec(X, method = "euclidean")
+v <- DDOS_vec(X, method = "mahalanobis")
+length(v)
+
+
+```
+
+
+

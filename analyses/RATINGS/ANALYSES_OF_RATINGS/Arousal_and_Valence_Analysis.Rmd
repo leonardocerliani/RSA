@@ -28,13 +28,13 @@ subs <- sprintf("%02d",readLines(subs_file) %>% as.numeric)
 # IMPORTANT: REMOVE NEUTRAL !!
 
 df_A <- read_csv(paste0(bd,"/","arousal_ratings.csv")) %>% 
-  filter(emotion != "neutral") %>% 
+  filter(emotion != "neutral") %>%
   select(sub,video,r_arousal,emotion)
 
 
 # Subtract 5 for valence only
 df_V <- read_csv(paste0(bd,"/","valence_ratings.csv")) %>%
-  filter(emotion != "neutral") %>% 
+  filter(emotion != "neutral") %>%
   select(sub,video,r_valence,emotion) %>% 
   mutate(r_valence = r_valence - 5)
 
@@ -42,7 +42,6 @@ df_V <- read_csv(paste0(bd,"/","valence_ratings.csv")) %>%
 df_AV <- inner_join(df_A, df_V, by = c("sub","video","emotion")) %>% 
   select(sub, r_arousal, r_valence,emotion)
 ```
-
 
 
 

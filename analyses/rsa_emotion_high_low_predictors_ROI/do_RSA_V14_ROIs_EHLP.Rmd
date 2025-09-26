@@ -1,23 +1,62 @@
 ---
 title: "do_RSA_v12_ROIs_EHLP"
 author: "LC"
-date: "2024-08-25"
+date: "2024-09-21"
 output: html_document
 params:
-  atlas_filename: Yeo7.nii.gz
+  atlas_filename: Yeo17.nii.gz
   remove_neutrals: "YES"
   minus_neutral: "NO"
   subs_set: "N26"
 ---
 
-# update notes V13
+## How to use this notebook.
+Here we include two modifications of the RSA calculation:
+
+- selecting only the most discriminatory elements in RDM_rats using a RM-ANOVA or three paired ttests
+
+- using the residuals of each rdm_[type] with respect to the other two, e.g. 
+residuals of rdm_emotion wrt rdm_aroval and rdm_arousal (using a GLM)
+
+NOTE THAT ALL OF THIS INVOLVES ONLY RDM_rats, WE ARE NOT DEALING WITH THE RAW RATINGS.
+
+It is possible to switch between these options in the code below (around lines 550-555):
+```
+# Use the following to use the residuals instead of the original RDM_rats 
+# Replace the RDMs_rats with RDMs_rats_parcorr
+RDMs_rats <- RDMs_rats_parcorr
+
+# Use only one of the following to carry out the selection of RDM_rats elements either on RM-ANOVA or three paired ttests
+
+# Uncomment below to use the sig from RM-ANOVA
+idx_sig <- which(RDMs_RM_ANOVA_results$p < p_thresh)
+
+# # Uncomment below to use the sig from 3 paired ttest
+# idx_sig <- which(RDMs_RM_ttest_results$sig == 1)
+```
+
+
+
+
+
+# V14
+Improving the use of behavioural RDM
+- select the most substantial difference across all elements of the behavioural RDM
+  by carrying our an RM-ANOVA on all elements of the RDM and retaining only those
+  where the RM-ANOVA is sig
+
+- when carrying out the RDMBrain ~ RDMBehavioural correlation, use partial correlations
+  for the latter, e.g. R(RDMBrain ~ RDM_Emotion | RDM_Aroval, RDM_Arousal)
+
+
+# V13
 - saving RSA_volumes_df in the .RData 
 
-# Update notes v12
+# v12
 - saving elements for app
 - updating ROIs folder to analyses/ROIS_REPO
 
-# Update notes v11
+# v11
 - option to remove neutral
 - updated load_sub_copes to select the path column
 - switched from heatmap to ComplexHeatmap
@@ -50,9 +89,11 @@ library(grid)  # For gpar()
 # library(heatmaply)
 library(papayaWidget)
 library(ggstatsplot)
+library(rstatix)
 
 
-source("funs_V13_ROIs.R")
+
+source("funs_V14_ROIs.R")
 ```
 
 
@@ -124,7 +165,11 @@ bd_atlases = paste0(bd,"/ROIS_REPO")
 bd_results = paste0(bd,"/RSA_ROI_APP/results_RSA_ROI")
 
 
-ratings_type <- c("emotion","arousal","valence","aroval")
+
+# ********** NB VALENCE REMOVED: WE USE ONLY AROVAL NOW **********
+ratings_type <- c("emotion","arousal","aroval")
+# ********** NB VALENCE REMOVED: WE USE ONLY AROVAL NOW **********
+
 
 
 rsa_flavour="rsa_emotion_high_low_predictors_ROI"
@@ -146,7 +191,6 @@ subs <- sprintf("%02d",readLines(subs_file) %>% as.numeric)
 if (params$subs_set == "N14")  {
   subs <- c("02","03","12","11","22","09","29","28","26","32","23","15","20","19")  
 }
-
 
 
 # ---------- N25 : remove sub 07 --------------------
@@ -204,6 +248,7 @@ cat(
 # df_path_copes
 # length(copes_numba)
 
+# for each sub: 12 copes : 6 emotions x 2 intensities
 df_path_copes
 
 ```
@@ -282,6 +327,155 @@ plot_tril(
 ```
 
 
+# Calcule the residuals of each rdm_[emotion/arousal/aroval] after regressing out the other two.
+# We wil use this later in the calculation of the RSA
+```{r}
+
+# Calculate the residuals of e.g. rdm_emotion wrt rdm_aroval and rdm_arousal and
+# rename the columns inside RDMs_rats_parcorr to match those in RDMs_rats
+RDMs_rats_parcorr <- RDMs_rats %>%
+  mutate(
+    rdm_emotion_resid = pmap(
+      list(rdm_emotion, rdm_arousal, rdm_aroval),
+      ~ resid(glm(..1 ~ cbind(..2, ..3)))
+    ),
+    rdm_arousal_resid = pmap(
+      list(rdm_arousal, rdm_emotion, rdm_aroval),
+      ~ resid(glm(..1 ~ cbind(..2, ..3)))
+    ),
+    rdm_aroval_resid = pmap(
+      list(rdm_aroval, rdm_emotion, rdm_arousal),
+      ~ resid(glm(..1 ~ cbind(..2, ..3)))
+    )
+  ) %>%
+  select(-c("rdm_emotion", "rdm_arousal","rdm_aroval")) %>% 
+  rename(
+    rdm_emotion = rdm_emotion_resid,
+    rdm_arousal = rdm_arousal_resid,
+    rdm_aroval  = rdm_aroval_resid
+  )
+
+
+
+# Function to compute pairwise correlations
+rdm_pairwise_corrs <- function(RDMs_rats, emo = "rdm_emotion", aro = "rdm_arousal", aroval = "rdm_aroval") {
+  RDMs_rats %>%
+    mutate(
+      emo_aro    = map2_dbl(.data[[emo]], .data[[aro]],    ~ round(cor(.x, .y), 2)),
+      emo_aroval = map2_dbl(.data[[emo]], .data[[aroval]], ~ round(cor(.x, .y), 2)),
+      aro_aroval = map2_dbl(.data[[aro]], .data[[aroval]], ~ round(cor(.x, .y), 2))
+    ) %>%
+    select(sub, emo_aro, emo_aroval, aro_aroval)
+}
+
+# Before: use original columns
+pairwise_corrs_BEFORE <- rdm_pairwise_corrs(RDMs_rats)
+pairwise_corrs_BEFORE
+
+# After: use residualized columns
+pairwise_corrs_AFTER  <- rdm_pairwise_corrs(RDMs_rats_parcorr)
+pairwise_corrs_AFTER
+
+```
+
+
+# RM-ANOVA and three-ttests on each element of the RDM_rats to identify the locations
+# where there is a sig difference
+```{r}
+
+library(rstatix)
+
+# set the threshold for the p value below which we consider the results
+# significant, both for RM-ANOVA and for the three paired ttest
+p_thresh <- 0.001
+
+# fn to transform the RDM values to z scores
+zscore_RDMs <- function(RDMs) {
+  RDMs %>%
+    mutate(
+      rdm_emotion = map(rdm_emotion, ~ as.numeric(scale(.x))),
+      rdm_arousal = map(rdm_arousal, ~ as.numeric(scale(.x))),
+      rdm_aroval  = map(rdm_aroval,  ~ as.numeric(scale(.x)))
+    )
+}
+
+RDMs_rats_Z <- zscore_RDMs(RDMs_rats);
+
+
+# reshape to long format for RM-ANOVA
+RDMs_rats_long <- RDMs_rats %>%
+  mutate(idx = map(rdm_emotion, ~ seq_along(.x))) %>%  # index for each element
+  unnest(c(rdm_emotion, rdm_arousal, rdm_aroval, idx)) %>%   # expand all list-columns %>%
+  pivot_longer(
+    cols = starts_with("rdm_"),
+    names_to = "RDM_type",
+    values_to = "value"
+  )
+
+
+# ------------ RM-ANOVA ----------------
+
+# nest by idx and calculate RM-ANOVA
+RDMs_RM_ANOVA <- RDMs_rats_long %>%
+  group_by(idx) %>%
+  nest() %>% 
+  
+  # calculate RM-ANOVA per idx
+  mutate(rm_anova = map(data, ~ anova_test(data = .x,
+                                           dv = value,
+                                           wid = sub,
+                                           within = RDM_type)))
+
+
+# Get the results
+RDMs_RM_ANOVA_results <- RDMs_RM_ANOVA %>%
+  mutate(rm_anova_tbl = map(rm_anova, ~ .x$ANOVA)) %>%  # extract the inner tibble
+  select(idx, rm_anova_tbl) %>%
+  unnest(rm_anova_tbl) %>%
+  select(-c(Effect), RDM_element = idx)
+
+
+RDMs_RM_ANOVA_results %>% 
+  filter(p < p_thresh)
+
+
+# ----------------- 3 paired ttests --------------------
+
+RDMs_RM_ttest_results <- RDMs_rats_long %>%
+  group_by(idx) %>%
+  nest() %>%
+  mutate(
+    pvals = map(data, ~ tibble(
+      emo_aro    = t.test(.x$value[.x$RDM_type=="rdm_emotion"], 
+                           .x$value[.x$RDM_type=="rdm_arousal"], 
+                           paired = TRUE)$p.value,
+      emo_aroval = t.test(.x$value[.x$RDM_type=="rdm_emotion"], 
+                           .x$value[.x$RDM_type=="rdm_aroval"], 
+                           paired = TRUE)$p.value,
+      aro_aroval = t.test(.x$value[.x$RDM_type=="rdm_arousal"], 
+                           .x$value[.x$RDM_type=="rdm_aroval"], 
+                           paired = TRUE)$p.value
+    ))
+  ) %>%
+  select(RDM_element = idx, pvals) %>%
+  unnest(pvals) %>% 
+  # create a column showing where all three ttest are sig
+  mutate(sig = if_else(emo_aro < p_thresh & emo_aroval < p_thresh & aro_aroval < p_thresh, 1, 0))
+
+RDMs_RM_ttest_results %>% 
+  filter(sig == 1)
+
+
+idx_sig_RM_ANOVA = which(RDMs_RM_ANOVA_results$p < p_thresh)
+idx_sig_ttest = which(RDMs_RM_ttest_results$sig == 1)
+
+shared_idx <- intersect(idx_sig_RM_ANOVA, idx_sig_ttest)
+length(shared_idx)
+
+```
+
+
+
 
 
 # Calculate FMRI RDMs
@@ -329,8 +523,7 @@ RDMs_fmri <- subs %>% future_map_dfr(
   ~ {
     paste0("Calculating RDMs for sub ",.x,"\n") %>% cat
     do_RDM_fmri(.x, copes_numba, df_path_copes)
-  },
-  .options = furrr::furrr_options(seed = TRUE, stdout = TRUE)
+  }
 )
 
 plan(sequential)
@@ -339,6 +532,47 @@ plan(sequential)
 
 ```
 
+
+# DANGER AHEAD: 
+MODIFICATION TO INCLUDE ONLY THE SIG ELEMENTS OF THE RDM
+AND USE RESIDUALS OF THE RDM FOR THE RSA.
+
+We now want to run the RSA only on the sig elements of the RDM and using
+the parcorr versions of the RDM. 
+
+In order not to create too much mess, we will simply 
+1. filter the elements in RDMs_fmri and RDMs_rats
+2. replace `RDMs_rats` with `RDMs_rats_parcorr`
+
+So **THE ORIGINAL `RDMs_fmri` AND `RDMs_rats` WILL BE OVERWRITTEN!!!**
+
+```{r}
+# READ THE WARNING ABOVE!!!
+
+# replace the RDMs_rats with RDMs_rats_parcorr
+RDMs_rats <- RDMs_rats_parcorr
+
+# # Uncomment below to use the sig from RM-ANOVA
+# idx_sig <- which(RDMs_RM_ANOVA_results$p < p_thresh)
+
+# Uncomment below to use the sig from 3 paired ttest
+idx_sig <- which(RDMs_RM_ttest_results$sig == 1)
+
+# retain for each rdm for each sub only the elements which are in idx_sig[ttest/RM_ANOVA]
+# both for RDMs_fmri (colum rdm_fmri) and RDMs_rats (columns rdm_emotion, rdm_arousal, rdm_aroval)
+RDMs_rats <- RDMs_rats %>%
+  mutate(
+    rdm_emotion = map(rdm_emotion, ~ .x[idx_sig]),
+    rdm_arousal = map(rdm_arousal, ~ .x[idx_sig]),
+    rdm_aroval  = map(rdm_aroval,  ~ .x[idx_sig])
+  )
+
+RDMs_fmri <- RDMs_fmri %>%
+  mutate(
+    rdm_fmri = map(rdm_fmri, ~ .x[idx_sig])
+  )
+
+```
 
 
 
@@ -610,7 +844,7 @@ create_filename_results <- function(atlas_filename, copes_type, remove_neutrals)
   
   nsubs <- paste0("_N",length(subs))
   
-  results_filename <- paste0(atlas_root, EV_abbr, option_MN, option_NN, nsubs)
+  results_filename <- paste0(atlas_root, EV_abbr, option_MN, option_NN, nsubs, "___sig_parcorr")
   return(paste0(bd_results,"/",results_filename,".RData"))
   
 }
