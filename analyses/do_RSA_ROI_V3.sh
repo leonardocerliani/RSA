@@ -68,7 +68,8 @@ Rscript -e "rmarkdown::render(
         subs_set = '$subs_set',
         RSA_on_residuals = '$RSA_on_residuals',
         filter_RDMs = '$filter_RDMs'
-    )
+    ),
+    quiet = TRUE
 )" &
 pid1=$!
 
@@ -110,4 +111,4 @@ wait $pid1 $pid2 $pid3
 rm ${root}/rsa_emotion_high_low_predictors_ROI/do_RSA_${RSA_version}_ROIs_EHLP.html
 
 
-echo -e "\nAll RMarkdown files have been processed."
+# echo -e "\nAll RMarkdown files have been processed."

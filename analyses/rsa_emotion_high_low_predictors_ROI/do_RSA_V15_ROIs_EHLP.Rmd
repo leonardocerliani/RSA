@@ -22,6 +22,14 @@ params:
   rdm_[behaviour] from the chosen one for RSA (e.g. emotion | arousal, aroval).
   Now we carry out the regression also on the RDM_fMRI before calculating the RSA
 
+- **IMPORTANT** : the changes in this version demanded for modifications also in the
+  app and in the analysis launcher. So now this is the correspondence:
+  - `do_RSA_V15_ROIs_EHLP.Rmd`
+  - `RSA_papaya_results_atlas_V8.R`
+  - `do_RSA_ROI_V3.sh`
+  the latter now only requires the name of the atlas. All the other options should
+  be manually set up in the header of the script
+
 
 # V14
 Improving the use of behavioural RDM
@@ -54,6 +62,10 @@ Abbreviations:
 - sub : subjects(s)
 - rat : rating(s)
 
+
+
+
+
 # Load libraries
 ```{r load_libraries, message=F}
 
@@ -79,6 +91,7 @@ library(rstatix)
 
 
 source("funs_V15_ROIs.R")
+
 ```
 
 
@@ -131,12 +144,40 @@ copes_type <- ifelse(
 )
 
 
+RSA_on_residuals <- params$RSA_on_residuals
+
+filter_RDMs <- params$filter_RDMs
+
 # Atlases repos:
 # https://www.lead-dbs.org/helpsupport/knowledge-base/atlasesresources/cortical-atlas-parcellations-mni-space/
 # https://github.com/neurodata/neuroparc
 # https://www.fmrib.ox.ac.uk/datasets/brainmap+rsns/
 
 ```
+
+
+# Check the params the Rmd is running
+```{r}
+# Create a unique temporary file (using UUID)
+tmpfile <- file.path(tempdir(), paste0("rsa_params_", uuid::UUIDgenerate(), ".txt"))
+
+# Prepare lines to write: empty line + title + actual parameters
+lines_to_write <- c(
+  "",  # empty line
+  "Params being used by the Rmd:",
+  paste(names(params), params, sep = "=")
+)
+
+# Write lines to the temp file
+writeLines(lines_to_write, con = tmpfile)
+
+# Print the file to terminal
+system(paste("cat", shQuote(tmpfile)))
+
+# Delete the temporary file immediately
+unlink(tmpfile)
+```
+
 
 
 
@@ -188,6 +229,13 @@ if (params$subs_set == "N25")  {
 if (params$subs_set == "N23")  {
   subs <- setdiff(subs, c("07","34","16"))  
 }
+
+
+
+
+
+
+
 
 
 ```
@@ -757,8 +805,6 @@ do_RSA_on_residuals <- function(RDMs_fmri, RDMs_rats, ratings_type, dist_method_
 # Compute the RSA
 ```{r}
 
-RSA_on_residuals = FALSE
-filter_RDMs = FALSE   
 
 # Filter the RDMs (both fmri and behav, of course) based on the results
 # of RM-anova or three paired ttests
@@ -1133,8 +1179,6 @@ RSA_volumes_df <- ratings_type %>% map_dfc(
 # mean_RDMs_fmri
 # mean_RDMs_rats
 
-
-
 create_filename_results <- function(
     atlas_filename, 
     subs, 
@@ -1226,5 +1270,7 @@ save(
 
 
 ```
+
+
 
 
