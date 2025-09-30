@@ -1,0 +1,152 @@
+---
+title: "tree of atlases"
+author: "LC"
+date: "2025-09-28"
+output: html_document
+---
+
+
+links:
+- [examples of collapsibleTree](https://adeelk93.github.io/collapsibleTree/)
+- [intro to data.tree](https://cran.r-project.org/web/packages/data.tree/vignettes/data.tree.html)
+
+
+# Building a tree of atlases
+
+I want to make a tree that shows starting from Yeo7 ROI5 all the regions that it is split into.
+
+Not that when I say "split into" I mean also regions in another atlas which might only intersect
+the original region. Yeo17 is indeed a subdivision of Yeo7, but HO and Anatomy toolbox atlases have
+different boundaries.
+
+To do this, I first worked in python in the `do_regions_tree.py`. The idea is to put all the
+atlases in a numpy array, and then 
+- remove all the zeros (regions with no labels)
+- take all the *unique* columns - this will give for each voxel the 'philogenetic' tree of which region
+  they come from in the parent atlas
+  
+Then we simply transpose this np array, and transform it into a df. At this point we can 
+visualize the whole tree with collapsibleTrees. I asked chatgpt to translate the code from python 
+to R and checked it, so now there is the whole code starting from the nii of the atlases.
+
+
+
+```{r}
+library(RNifti)
+library(dplyr)
+library(purrr)
+library(collapsibleTree)
+library(data.tree)
+
+Yeo7_ROI = 5
+
+# 1. List of atlas files
+atlases <- c(
+  "Yeo7.nii.gz",
+  "Yeo17.nii.gz",
+  "HO_cort.nii.gz",
+  "anatomy_toolbox_for_RSA.nii.gz"
+)
+
+n_atlases <- length(atlases)
+
+# 2. Read and flatten NIfTI images using purrr
+nii_list <- purrr::map(atlases, ~ {
+  img <- readNifti(.x)
+  as.integer(c(img))  # flatten and convert to integer
+})
+
+# 3. Combine into matrix
+nii <- do.call(rbind, nii_list)  # n_atlases x n_voxels
+
+# 4. Remove columns that contain any zero
+nii <- nii[, colSums(nii == 0) == 0]
+
+# 5. Retain unique columns
+col_strings <- map_chr(as.data.frame(nii), ~ paste(.x, collapse = "_"))
+nii <- nii[, !duplicated(col_strings)]
+
+# 6. Keep only columns where first row == 5
+nii <- nii[, nii[1, ] == Yeo7_ROI]
+
+# # 7. Visualize heatmap
+# heatmap(nii)
+
+# 8. Transpose and convert to data.frame
+paths <- t(nii)
+df <- as.data.frame(paths)
+colnames(df) <- paste0("Level", seq_len(ncol(df)))
+
+cat('There are ', dim(df)[1], 'regions in the phylogenetic tree of the ROIs')
+
+# 9. Write CSV
+colnames(df) <- c("Yeo7","Yeo17","HO_cort","anatomy_toolbox")
+write.csv(df, paste0("Phylogenetic_tree_Yeo7_ROI",Yeo7_ROI,".csv"), row.names = FALSE)
+
+df
+```
+
+
+```{r}
+# 10. Convert to data.tree and plot
+collapsibleTree(
+  df, 
+  root = NULL,
+  hierarchy = colnames(df), 
+  collapsed = FALSE
+)
+```
+
+
+
+Only attempts below, probably not very useful.
+
+
+Here I try to transform it into a data.tree object because apparently it is
+possible to add rich HTML in the tooltip with tooltipHTML
+
+```{r}
+library(data.tree)
+library(collapsibleTree)
+
+# make a copy
+ff <- df
+
+# ensure all columns are character
+# ff[] <- lapply(ff, as.character)
+ff[] <- map(ff, as.character)
+
+# create a pathString for each row
+# ff$pathString <- apply(ff, 1, function(x) paste(c("nii_root", x), collapse = "/"))
+ff$pathString <- pmap_chr(ff, ~ paste(c("nii_root", ...), collapse = "/"))
+
+
+# convert to data.tree
+tree <- as.Node(ff, pathName = "pathString")
+
+# # inspect
+# print(tree)
+
+# plot collapsible tree
+collapsibleTree(tree, root = NULL, collapsed = FALSE)
+
+```
+
+
+
+```{r}
+# fill = "Color",
+#   nodeSize = "leafCount",
+
+
+collapsibleTree(
+  df, 
+  root = NULL,
+  colnames(df),  # defines the hierarchy
+  collapsed = FALSE,
+  # nodeSize = "leafCount"
+)
+
+```
+
+
