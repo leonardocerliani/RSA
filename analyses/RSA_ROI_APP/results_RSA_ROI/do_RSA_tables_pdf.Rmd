@@ -5,6 +5,11 @@ date: "2025-09-30"
 output: html_document
 ---
 
+NB: this script uses the `do_RSA_tables_pdf_FUNCTIONS.R`
+
+The `Phylogenetic_tree_Yeo7_ROI[5/7].csv` used by `create_roi_filter()` come from
+the Phylogenetic ROI tree created in `ROIS_REPO`
+
 
 ```{r message=FALSE}
 library(tidyverse)
@@ -12,16 +17,24 @@ library(BayesFactor)
 library(gt)
 library(webshot2)  # for saving as PDF
 library(stringr)
+```
 
+
+
+```{r message=FALSE}
 source("do_RSA_tables_pdf_FUNCTIONS.R")
 
 root="/data00/leonardo/RSA/analyses/RSA_ROI_APP/results_RSA_ROI"
 
-
-# roi_filter <- c()
-
 atlas_name <- "Yeo7"
+atlas_name <- "Yeo17"
+atlas_name <- "HO_cort"
+atlas_name <- "anatomy_toolbox"
+
 ROI_Yeo7_number = 5  # 5 or 7
+
+# ------- end of user-defined parameters
+
 
 # Make a list of all the RData results for one atlas
 RData_files <- make_rdata_list(atlas_name)
@@ -31,16 +44,30 @@ results <- RData_files %>%
   map_dfr(~ rsa_stats_table(.x$file, .x$atlas, .x$label)) %>% 
   arrange(roi)
 
+# Return the list of the regions to examine for that atlas_name and choice of ROI_Yeo7_number
+atlas_roi_filter <- create_roi_filter(atlas_name, ROI_Yeo7_number)
 
 # Produces the gt_table for the desired ROIs for that atlas
-gt_table <- make_rsa_gt_table_colored(results, roi_filter = NULL)
+gt_table <- make_rsa_gt_table_colored(results, roi_filter = atlas_roi_filter)
 gt_table
 
-# Saves it into a pdf file
-gtsave(gt_table, paste0(atlas_name, "_rsa_table.pdf"))
-
+# # Saves it into a pdf file
+# gtsave(gt_table, paste0(atlas_name, "_rsa_table.pdf"))
 
 ```
+
+# Return the list of the regions to examine for that atlas_name and choice of ROI_Yeo7_number
+```{r, message=FALSE}
+create_roi_filter <- function(atlas_name, ROI_Yeo7_number) {
+ ROIs_phylo_tree <- read_csv(paste0("Phylogenetic_tree_Yeo7_ROI",ROI_Yeo7_number,".csv"))
+ roi_filter <- ROIs_phylo_tree[[atlas_name]] %>% unique
+ return(roi_filter)
+}
+
+roi_filter <- create_roi_filter(atlas_name, ROI_Yeo7_number)
+
+```
+
 
 
 # Build the list that will be fed into the function to compute all the stats
@@ -70,8 +97,6 @@ RData_files <- make_rdata_list(atlas_name)
 
 
 ```
-
-
 
 
 

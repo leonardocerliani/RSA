@@ -45,7 +45,7 @@ atlases <- c(
   "Yeo7.nii.gz",
   "Yeo17.nii.gz",
   "HO_cort.nii.gz",
-  "anatomy_toolbox_for_RSA.nii.gz"
+  "anatomy_toolbox.nii.gz"
 )
 
 n_atlases <- length(atlases)

@@ -21,6 +21,14 @@ make_rdata_list <- function(atlas_name) {
 
 
 
+# Return the list of the regions to examine for that atlas_name and choice of ROI_Yeo7_number
+create_roi_filter <- function(atlas_name, ROI_Yeo7_number) {
+  ROIs_phylo_tree <- read_csv(paste0("Phylogenetic_tree_Yeo7_ROI",ROI_Yeo7_number,".csv"))
+  roi_filter <- ROIs_phylo_tree[[atlas_name]] %>% unique
+  return(roi_filter)
+}
+
+
 # Runs all the ttest and ttestBF and returns them in a df
 rsa_stats_table <- function(file_path, atlas, label) {
   
@@ -94,7 +102,8 @@ make_rsa_gt_table_colored <- function(results, roi_filter = NULL) {
   
   # Ensure atlas, roi, label are first columns
   results <- results %>% select(atlas, roi, label, everything()) %>% 
-    mutate(roi_group = paste0("ROI ", roi))
+    mutate(roi_group = paste0("ROI ", roi)) %>% 
+    select(-roi)
   
   # Build initial gt table, grouped by ROI
   gt_table <- results %>%
