@@ -1,0 +1,388 @@
+---
+title: "sketches"
+author: "LC"
+date: "2025-09-30"
+output: html_document
+---
+
+
+```{r message=FALSE}
+library(tidyverse)
+library(BayesFactor)
+library(gt)
+library(webshot2)  # for saving as PDF
+library(stringr)
+
+source("do_RSA_tables_pdf_FUNCTIONS.R")
+
+root="/data00/leonardo/RSA/analyses/RSA_ROI_APP/results_RSA_ROI"
+
+
+# roi_filter <- c()
+
+atlas_name <- "Yeo7"
+ROI_Yeo7_number = 5  # 5 or 7
+
+# Make a list of all the RData results for one atlas
+RData_files <- make_rdata_list(atlas_name)
+
+# Run all the ttest and ttestBF and report the results
+results <- RData_files %>% 
+  map_dfr(~ rsa_stats_table(.x$file, .x$atlas, .x$label)) %>% 
+  arrange(roi)
+
+
+# Produces the gt_table for the desired ROIs for that atlas
+gt_table <- make_rsa_gt_table_colored(results, roi_filter = NULL)
+gt_table
+
+# Saves it into a pdf file
+gtsave(gt_table, paste0(atlas_name, "_rsa_table.pdf"))
+
+
+```
+
+
+# Build the list that will be fed into the function to compute all the stats
+```{r}
+
+make_rdata_list <- function(atlas_name) {
+  # Define all possible filename patterns
+  files <- c(
+    paste0(atlas_name, "_N26__EER.RData"),
+    paste0(atlas_name, "_N26_filtered_EER.RData"),
+    paste0(atlas_name, "_N26_res_EER.RData"),
+    paste0(atlas_name, "_N26_res_filtered_EER.RData")
+  )
+  
+  # Define corresponding labels
+  labels <- c("original", "filtered", "res", "res_filtered")
+  
+  # Build list of lists
+  rdata_list <- map2(files, labels, ~ list(file = .x, atlas = atlas_name, label = .y))
+  
+  rdata_list
+}
+
+RData_files <- make_rdata_list(atlas_name)
+
+
+
+
+```
+
+
+
+
+
+# Function to compute the table of ttest + BF01
+```{r}
+
+rsa_stats_table <- function(file_path, atlas, label) {
+  
+  # Internal helper to load the RData
+  load_RData <- function(file_path) {
+    local({
+      load(file_path)  # assumes object inside is named RSA
+      RSA %>% dplyr::select(sub, roi, dplyr::starts_with('rsa'))
+    })
+  }
+  
+  # Load the data
+  df <- load_RData(file_path)
+  
+  # Detect RSA columns
+  rsa_cols <- grep("^rsa_rdm", names(df), value = TRUE)
+  roi_list <- unique(df$roi)
+  
+  # Iterate over ROIs
+  results <- map_dfr(roi_list, function(r) {
+    df_roi <- df %>% filter(roi == r)
+    
+    # One-sample t-tests
+    t_tests <- map(rsa_cols, function(col) {
+      t_res <- t.test(df_roi[[col]])
+      bf_res <- ttestBF(df_roi[[col]], mu = 0)
+      bf01 <- 1 / as.vector(bf_res)  # correct BF01
+      
+      paste0("T=", round(t_res$statistic, 2),
+             ", p=", round(t_res$p.value, 3),
+             ", BF01=", round(bf01, 2))
+    })
+    names(t_tests) <- paste0(gsub("rsa_rdm_", "", rsa_cols), "_vs_0")
+    
+    # Paired comparisons
+    combs <- combn(rsa_cols, 2, simplify = FALSE)
+    paired_tests <- map(combs, function(pair) {
+      t_res <- t.test(df_roi[[pair[1]]], df_roi[[pair[2]]], paired = TRUE)
+      bf_res <- ttestBF(df_roi[[pair[1]]], df_roi[[pair[2]]], paired = TRUE)
+      bf01 <- 1 / as.vector(bf_res)
+      
+      paste0("T=", round(t_res$statistic, 2),
+             ", p=", round(t_res$p.value, 3),
+             ", BF01=", round(bf01, 2))
+    })
+    names(paired_tests) <- map_chr(combs, ~ paste0(gsub("rsa_rdm_", "", .x[1]),
+                                                   "_vs_",
+                                                   gsub("rsa_rdm_", "", .x[2])))
+    
+    tibble(
+      atlas = atlas,   # NEW: first column
+      roi = r,
+      label = label,
+      !!!t_tests,
+      !!!paired_tests
+    )
+  })
+  
+  results
+}
+```
+
+
+# Run the function on all RDatas
+```{r}
+
+results <- map_dfr(RData_files, ~ rsa_stats_table(.x$file, .x$atlas, .x$label)) %>% 
+  arrange(roi)
+
+# results
+
+```
+
+
+# Build the gt_table (colors)
+P < 0.05 are in green, BF01> 3 are in darkblue
+
+```{r}
+
+make_rsa_gt_table_colored <- function(results, roi_filter = NULL) {
+  
+  # Optionally filter ROIs
+  if (!is.null(roi_filter)) {
+    results <- results %>% filter(roi %in% roi_filter)
+  }
+  
+  # Ensure atlas, roi, label are first columns
+  results <- results %>% select(atlas, roi, label, everything()) %>% 
+    mutate(roi_group = paste0("ROI ", roi))
+  
+  # Build initial gt table, grouped by ROI
+  gt_table <- results %>%
+    gt(groupname_col = "roi_group") %>%
+    tab_header(
+      title = "RSA Summary Table",
+      subtitle = "T-tests and Bayes Factors per ROI"
+    ) %>%
+    cols_label(
+      atlas = "ROI/Atlas",
+      label = "RSA flavour",
+      emotion_vs_0 = "Emotion ≠ 0",
+      aroval_vs_0 = "AroVal ≠ 0",
+      arousal_vs_0 = "Arousal ≠ 0",
+      emotion_vs_arousal = "Emotion ≠ Arousal",
+      emotion_vs_aroval = "Emotion ≠ AroVal",
+      arousal_vs_aroval = "AroVal ≠ Arousal"
+    ) %>%
+    tab_style(
+      style = cell_text(weight = "bold"),
+      locations = cells_column_labels(everything())
+    ) %>%
+    tab_style(
+      style = cell_text(weight = "bold"),
+      locations = cells_row_groups()
+    ) %>%
+    tab_style(
+      style = cell_text(weight = "bold", size = px(16)),
+      locations = cells_title(groups = "title")
+    ) %>%
+    tab_style(
+      style = cell_text(weight = "bold", size = px(14)),
+      locations = cells_title(groups = "subtitle")
+    ) %>%
+    tab_options(
+      table.font.size = px(12),
+      heading.title.font.size = px(16),
+      heading.subtitle.font.size = px(14)
+    )
+  
+  # Apply colored text based on p < 0.05 (green) and BF01 > 3 (blue)
+  for (col_name in names(results)[-(1:3)]) {  # skip atlas, roi, label
+    # green text for p < 0.05
+    rows_green <- which(as.numeric(str_extract(results[[col_name]], "(?<=p=)[0-9\\.e-]+")) < 0.05)
+    if (length(rows_green) > 0) {
+      gt_table <- gt_table %>%
+        tab_style(
+          style = cell_text(color = "darkgreen", weight = "bold"),
+          locations = cells_body(columns = all_of(col_name), rows = rows_green)
+        )
+    }
+    
+    # blue text for BF01 > 3
+    rows_blue <- which(as.numeric(str_extract(results[[col_name]], "(?<=BF01=)[0-9\\.e-]+")) > 3)
+    if (length(rows_blue) > 0) {
+      gt_table <- gt_table %>%
+        tab_style(
+          style = cell_text(color = "darkblue", weight = "bold"),
+          locations = cells_body(columns = all_of(col_name), rows = rows_blue)
+        )
+    }
+  }
+  
+  gt_table
+}
+
+
+# Preview
+gt_table <- make_rsa_gt_table_colored(results)
+# gt_table <- make_rsa_gt_table_colored(results, roi_filter = 5)
+
+gt_table
+
+```
+
+
+
+```{r}
+
+gtsave(gt_table, paste0(atlas_name, "_rsa_table.pdf"))
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Table with bold only (OLE)
+```{r, eval=FALSE}
+# Build the gt_table
+P < 0.05 and BF01> 3 are in bold
+```{r}
+
+make_rsa_gt_table <- function(results, roi_filter = NULL) {
+  
+  # Optionally filter ROIs
+  if (!is.null(roi_filter)) {
+    results <- results %>% filter(roi %in% roi_filter)
+  }
+  
+  # Ensure atlas, roi, label are first columns
+  results <- results %>% select(atlas, roi, label, everything())
+  
+  # Compute bold flags (p < 0.05 or BF01 > 3)
+  bold_flags <- results %>%
+    select(-atlas, -roi, -label) %>%
+    map_df(~{
+      p_val <- as.numeric(str_extract(.x, "(?<=p=)[0-9\\.e-]+"))
+      bf01_val <- as.numeric(str_extract(.x, "(?<=BF01=)[0-9\\.e-]+"))
+      (p_val < 0.05 | bf01_val > 3)
+    })
+  
+  # Attach the atlas, roi, label columns
+  bold_flags <- bind_cols(results %>% select(atlas, roi, label), bold_flags)
+  
+  # Create gt table
+  gt_table <- results %>%
+    gt(groupname_col = "roi") %>%   # keep ROI as visible column
+    tab_header(
+      title = "RSA Summary Table",
+      subtitle = "T-tests and Bayes Factors per ROI"
+    ) %>%
+    cols_label(
+      atlas = "ROI/Atlas",
+      roi = "ROI",
+      label = "RSA flavour",
+      emotion_vs_0 = "Emotion ≠ 0",
+      aroval_vs_0 = "AroVal ≠ 0",
+      arousal_vs_0 = "Arousal ≠ 0",
+      emotion_vs_arousal = "Emotion ≠ Arousal",
+      emotion_vs_aroval = "Emotion ≠ AroVal",
+      arousal_vs_aroval = "AroVal ≠ Arousal"
+    ) %>%
+    # Bold column headers
+    tab_style(
+      style = cell_text(weight = "bold"),
+      locations = cells_column_labels(everything())
+    ) %>%
+    # Bold title
+    tab_style(
+      style = cell_text(weight = "bold", size = px(16)),
+      locations = cells_title(groups = "title")
+    ) %>%
+    # Bold subtitle
+    tab_style(
+      style = cell_text(weight = "bold", size = px(14)),
+      locations = cells_title(groups = "subtitle")
+    ) %>%
+    tab_options(
+      table.font.size = px(12),
+      heading.title.font.size = px(16),
+      heading.subtitle.font.size = px(14)
+    )
+  
+  # Apply bold formatting to flagged cells
+  for (col_name in names(results)[-(1:3)]) {  # skip atlas, roi, label
+    rows_to_bold <- which(bold_flags[[col_name]])
+    if (length(rows_to_bold) > 0) {
+      gt_table <- gt_table %>%
+        tab_style(
+          style = cell_text(weight = "bold"),
+          locations = cells_body(
+            columns = all_of(col_name),
+            rows = rows_to_bold
+          )
+        )
+    }
+  }
+  
+  return(gt_table)
+}
+
+
+# Preview
+# gt_table <- make_rsa_gt_table(results)
+gt_table <- make_rsa_gt_table(results, roi_filter = 5)
+
+gt_table
+```
+```
+
+
+
+
+

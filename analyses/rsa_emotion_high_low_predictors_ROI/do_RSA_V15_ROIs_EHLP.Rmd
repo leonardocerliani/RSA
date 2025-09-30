@@ -24,11 +24,13 @@ params:
 
 - **IMPORTANT** : the changes in this version demanded for modifications also in the
   app and in the analysis launcher. So now this is the correspondence:
+  
   - `do_RSA_V15_ROIs_EHLP.Rmd`
   - `RSA_papaya_results_atlas_V8.R`
   - `do_RSA_ROI_V3.sh`
+  
   the latter now only requires the name of the atlas. All the other options should
-  be manually set up in the header of the script
+  be manually set up in the header of the bash script.
 
 
 # V14
@@ -54,13 +56,6 @@ Improving the use of behavioural RDM
 - switched from heatmap to ComplexHeatmap
 
 
-# Load libraries and define parameters
-
-NB: this Rmd can be used for all types of ratings: emotion, arousal, valence
-
-Abbreviations:
-- sub : subjects(s)
-- rat : rating(s)
 
 
 
@@ -302,7 +297,7 @@ region_labels <- atlas_nii[atlas_nii > 0] %>% unique %>% sort
 # Calculate RATINGS RDMs
 ```{r, message=FALSE}
 # NB: ratings_type is now a *vector*, e.g.: 
-# ratings_type <- c("emotion","arousal","valence","aroval")
+# ratings_type <- c("emotion","arousal","aroval")
 # to test the fn below for one rating type : do_RDMs_rats("emotion")
 
 do_RDMs_rats <- function(ratings_type, remove_neutrals) {
