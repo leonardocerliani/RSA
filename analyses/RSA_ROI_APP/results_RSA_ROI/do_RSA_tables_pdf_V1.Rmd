@@ -27,9 +27,9 @@ source("do_RSA_tables_pdf_FUNCTIONS.R")
 root="/data00/leonardo/RSA/analyses/RSA_ROI_APP/results_RSA_ROI"
 
 atlas_name <- "Yeo7"
-atlas_name <- "Yeo17"
-atlas_name <- "HO_cort"
-atlas_name <- "anatomy_toolbox"
+# atlas_name <- "Yeo17"
+# atlas_name <- "HO_cort"
+# atlas_name <- "anatomy_toolbox"
 
 ROI_Yeo7_number = 5  # 5 or 7
 
@@ -55,6 +55,15 @@ gt_table
 # gtsave(gt_table, paste0(atlas_name, "_rsa_table.pdf"))
 
 ```
+
+# ---------------------------- IMPORTANT -------------------------------------
+
+**THE CHUNKS BELOW NEED NOT TO BE RUN.**
+
+They refer to the development stage. Now all these functions are stored 
+in `do_RSA_tables_pdf_FUNCTIONS.R`. The pdf is generated already at the end
+of the previous chunk.
+
 
 # Return the list of the regions to examine for that atlas_name and choice of ROI_Yeo7_number
 ```{r, message=FALSE}

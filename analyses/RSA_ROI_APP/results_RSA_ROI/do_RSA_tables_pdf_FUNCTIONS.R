@@ -161,7 +161,7 @@ make_rsa_gt_table_colored <- function(results, roi_filter = NULL) {
     if (length(rows_blue) > 0) {
       gt_table <- gt_table %>%
         tab_style(
-          style = cell_text(color = "darkblue", weight = "bold"),
+          style = cell_text(color = "darkred", weight = "bold"),
           locations = cells_body(columns = all_of(col_name), rows = rows_blue)
         )
     }
@@ -169,6 +169,84 @@ make_rsa_gt_table_colored <- function(results, roi_filter = NULL) {
   
   gt_table
 }
+
+
+
+
+
+
+
+
+
+make_rsa_gt_table_colored_single_ROI <- function(results, roi_filter = NULL) {
+  
+  # Optionally filter ROIs
+  if (!is.null(roi_filter)) {
+    results <- results %>% filter(roi %in% roi_filter)
+  }
+  
+  # Ensure atlas, roi, label are first columns
+  results <- results %>% select(atlas, roi, label, everything())
+  
+  # Create a roi_group column
+  results <- results %>% mutate(roi_group = paste0("ROI ", roi))
+  
+  # Split by ROI group
+  roi_list <- split(results, results$roi_group)
+  
+  # Generate a gt table for each ROI separately
+  gt_tables <- lapply(roi_list, function(df) {
+    
+    gt_tbl <- gt(df %>% select(-roi_group), groupname_col = "roi_group") %>%
+      cols_label(
+        atlas = "ROI/Atlas",
+        label = "RSA flavour",
+        emotion_vs_0 = "Emotion ≠ 0",
+        aroval_vs_0 = "AroVal ≠ 0",
+        arousal_vs_0 = "Arousal ≠ 0",
+        emotion_vs_arousal = "Emotion ≠ Arousal",
+        emotion_vs_aroval = "Emotion ≠ AroVal",
+        arousal_vs_aroval = "AroVal ≠ Arousal"
+      ) %>%
+      tab_style(
+        style = cell_text(weight = "bold"),
+        locations = cells_column_labels(everything())
+      ) %>%
+      tab_style(
+        style = cell_text(weight = "bold"),
+        locations = cells_row_groups()
+      ) %>%
+      tab_options(
+        table.font.size = px(12)
+      )
+    
+    # Apply colored text based on p < 0.05 (green) and BF01 > 3 (red)
+    for (col_name in names(df)[-(1:3)]) {  # skip atlas, roi, label
+      rows_green <- which(as.numeric(str_extract(df[[col_name]], "(?<=p=)[0-9\\.e-]+")) < 0.05)
+      if (length(rows_green) > 0) {
+        gt_tbl <- gt_tbl %>%
+          tab_style(
+            style = cell_text(color = "darkgreen", weight = "bold"),
+            locations = cells_body(columns = all_of(col_name), rows = rows_green)
+          )
+      }
+      
+      rows_red <- which(as.numeric(str_extract(df[[col_name]], "(?<=BF01=)[0-9\\.e-]+")) > 3)
+      if (length(rows_red) > 0) {
+        gt_tbl <- gt_tbl %>%
+          tab_style(
+            style = cell_text(color = "darkred", weight = "bold"),
+            locations = cells_body(columns = all_of(col_name), rows = rows_red)
+          )
+      }
+    }
+    
+    gt_tbl
+  })
+  
+  gt_tables
+}
+
 
 
 
