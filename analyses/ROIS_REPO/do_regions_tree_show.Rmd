@@ -38,7 +38,8 @@ library(purrr)
 library(collapsibleTree)
 library(data.tree)
 
-Yeo7_ROI = 5
+# OFC=5  vATTN=4
+Yeo7_ROI = 4
 
 # 1. List of atlas files
 atlases <- c(

@@ -1,5 +1,14 @@
 
-# Ignore all directories
-*/
-
-
+# Ignore the following directories
+jubrain/
+.vscode/
+Smith2009/
+.Xauthority
+Cerebellum/
+Doucet2019/
+Schaefer100.nii.gz Schaefer1000.nii.gz Schaefer200.nii.gz Schaefer400.nii.gz
+emotion_modulation_mask emotion_modulation_mask.nii.gz emotion_modulation_per_lobe.nii.gz
+emotion_modulation_mask/
+striatal_connectivity/
+striatal_connectivity striatal_connectivity_sub3.nii.gz striatal_connectivity_sub7.nii.gz
+Doucet2019 Doucet2019.nii.gz
