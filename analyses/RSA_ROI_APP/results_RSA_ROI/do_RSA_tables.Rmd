@@ -1,13 +1,13 @@
 ---
 title: "sketches"
 author: "LC"
-date: "2025-09-30"
+date: "2025-10-16"
 output: html_document
 ---
 
 NB: this script uses the `do_RSA_tables_pdf_FUNCTIONS.R`
 
-The `Phylogenetic_tree_Yeo7_ROI[5/7].csv` used by `create_roi_filter()` come from
+The `Phylogenetic_tree_Yeo7_ROI[5/4].csv` used by `create_roi_filter()` come from
 the Phylogenetic ROI tree created in `ROIS_REPO`
 
 
@@ -17,24 +17,35 @@ library(BayesFactor)
 library(gt)
 library(webshot2)  # for saving as PDF
 library(stringr)
+library(tictoc)
+
+
+source("do_RSA_tables_FUNCTIONS.R")
+
+# Set root and output folder
+root <- "/data00/leonardo/RSA/analyses/RSA_ROI_APP/results_RSA_ROI"
+tables_dir <- file.path(root, "Tables")
+
+# Create Output Tables folder if it doesn't exist
+if (!dir.exists(tables_dir)) dir.create(tables_dir)
+
+
+ROI_Yeo7_number = 4  # OFC=5  vATTN=4
+
 ```
 
 
-
+# V1 - One atlas at the time table 
+NB: saving is disabled since it fails and this code is just to check a basic version of the output
 ```{r message=FALSE}
-source("do_RSA_tables_pdf_FUNCTIONS.R")
 
-root="/data00/leonardo/RSA/analyses/RSA_ROI_APP/results_RSA_ROI"
-
-atlas_name <- "Yeo7"
-# atlas_name <- "Yeo17"
+# atlas_name <- "Yeo7"
+atlas_name <- "Yeo17"
 # atlas_name <- "HO_cort"
 # atlas_name <- "anatomy_toolbox"
 
-ROI_Yeo7_number = 5  # 5 or 7
 
 # ------- end of user-defined parameters
-
 
 # Make a list of all the RData results for one atlas
 RData_files <- make_rdata_list(atlas_name)
@@ -54,7 +65,193 @@ gt_table
 # # Saves it into a pdf file
 # gtsave(gt_table, paste0(atlas_name, "_rsa_table.pdf"))
 
+
 ```
+
+
+
+# V2 - All atlases at once for each of Yeo7 ROI 4 or 5
+There is a main header for each atlas, however for atlases with many regions
+it is very difficult to read the header for ROIs down the line.
+```{r, message=FALSE}
+
+tic("Full RSA table generation")
+
+atlas_list <- c("Yeo7", "Yeo17", "HO_cort", "anatomy_toolbox")
+# atlas_list <- c("Yeo7", "Yeo17")
+
+
+Yeo7_ROI <- paste0("Yeo", ROI_Yeo7_number)
+
+# Create the output directory if it doesn't exist
+if (!dir.exists("./Tables")) dir.create("./Tables")
+
+# make all tables
+all_gt_tables <- map(atlas_list, function(atlas) {
+  RData_files <- make_rdata_list(atlas)
+  results <- RData_files %>%
+    map_dfr(~ rsa_stats_table(.x$file, .x$atlas, .x$label)) %>%
+    arrange(roi)
+  roi_filter <- create_roi_filter(atlas, ROI_Yeo7_number)
+  make_rsa_gt_table_colored(results, roi_filter = roi_filter)
+})
+
+# save each table to a temporary HTML inside ./Tables
+tmp_files <- map2(all_gt_tables, atlas_list, function(tab, name) {
+  tmp <- file.path("./Tables", paste0(name, "_tmp.html"))
+  gtsave(tab, tmp, inline_css = TRUE)
+  tmp
+})
+
+# merge all HTMLs into one
+html_all <- map_chr(tmp_files, readr::read_file) %>%
+  paste(collapse = "<div style='page-break-after:always;'></div>")
+
+# Write combined HTML into ./Tables
+final_html <- file.path("./Tables", paste0("combined_RSA_tables_", Yeo7_ROI, ".html"))
+writeLines(html_all, final_html)
+
+# Convert HTML to PDF inside ./Tables
+final_pdf <- file.path("./Tables", paste0("combined_RSA_tables_", Yeo7_ROI, ".pdf"))
+webshot(final_html, final_pdf, vwidth = 1200)
+
+# Remove temporary files
+tmp_files <- unlist(tmp_files)
+tmp_files <- tmp_files[file.exists(tmp_files)]
+file.remove(tmp_files)
+
+toc()
+
+```
+
+
+
+# V3 - Single ROI tables and then merge them into HTML or pdf, to have headers for each ROI
+Now there is no main title, instead all the ROIs are treated as single tables
+and then merged into a single HTML / PDF file. In this way there is a header
+for each ROI
+```{r, message=FALSE}
+
+atlas_list <- c("Yeo7", "Yeo17", "HO_cort", "anatomy_toolbox")
+# atlas_list <- c("Yeo7", "Yeo17")
+
+# make all tables
+all_gt_tables <- map(atlas_list, function(atlas) {
+  RData_files <- make_rdata_list(atlas)
+  results <- RData_files %>%
+    map_dfr(~ rsa_stats_table(.x$file, .x$atlas, .x$label)) %>%
+    arrange(roi)
+  
+  roi_filter <- create_roi_filter(atlas, ROI_Yeo7_number)
+  
+  # returns a list of gt tables per ROI
+  make_rsa_gt_table_colored_single_ROI(results, roi_filter = roi_filter)
+})
+
+# Flatten the list (all tables across all atlases)
+all_gt_tables <- unlist(all_gt_tables, recursive = FALSE)
+
+# Save each table to a temporary HTML inside ./Tables
+tmp_files <- map2(all_gt_tables, seq_along(all_gt_tables), function(tab, idx) {
+  tmp <- file.path("./Tables", paste0("tmp_table_", idx, ".html"))
+  gtsave(tab, tmp, inline_css = TRUE)
+  tmp
+})
+
+# Convert tmp_files list to character vector and keep only existing files
+tmp_files <- unlist(tmp_files)
+tmp_files <- tmp_files[file.exists(tmp_files)]
+
+# Merge all HTMLs into one
+html_all <- map_chr(tmp_files, readr::read_file) %>%
+  paste(collapse = "<div style='page-break-after:always;'></div>")
+
+# Save combined HTML
+Yeo7_ROI <- paste0("Yeo", ROI_Yeo7_number)
+
+final_html <- file.path("./Tables", paste0("combined_RSA_tables_all_headers_", Yeo7_ROI, ".html"))
+writeLines(html_all, final_html)
+
+# Convert to PDF
+final_pdf <- file.path("./Tables", paste0("combined_RSA_tables_all_headers_", Yeo7_ROI, ".pdf"))
+webshot(final_html, final_pdf, vwidth = 1200)
+
+# Remove temporary files safely
+file.remove(tmp_files)
+```
+
+
+
+
+# V4 - Reactable table in a standalone HTML
+Stand-alone HTML in Reactable so that one can filter for atlas, ROI number and 
+RSA flavour.
+
+NB: the reactable HTML comes with a folder, but it's not necessary to use the
+ordering and filtering widgets
+```{r, message=FALSE}
+library(tidyverse)
+library(stringr)
+library(reactable)
+library(htmlwidgets)
+library(htmltools)  # for tags
+
+atlas_list <- c("Yeo7", "Yeo17", "HO_cort", "anatomy_toolbox")
+# atlas_list <- c("Yeo7", "Yeo17")
+
+
+# Combine all results into a plain data frame
+df <- map_dfr(atlas_list, function(atlas) {
+  RData_files <- make_rdata_list(atlas)
+  
+  results <- RData_files %>%
+    map_dfr(~ rsa_stats_table(.x$file, .x$atlas, .x$label)) %>%
+    arrange(roi)
+  
+  roi_filter <- create_roi_filter(atlas, ROI_Yeo7_number)
+  results <- results %>% filter(roi %in% roi_filter)
+  
+  results %>% mutate(atlas = atlas, roi_group = paste0("ROI ", roi))
+}) %>%
+  select(atlas, roi_group, label, everything(), -roi) %>%
+  mutate(across(everything(), as.character))  # ensure all columns are simple text
+
+# Create reactable
+react_tbl <- reactable(
+  df,
+  filterable = TRUE,         # adds a textbox filter to each column
+  bordered = FALSE,
+  striped = TRUE,
+  highlight = TRUE,
+  compact = TRUE,
+  defaultPageSize = 20,
+  showPageSizeOptions = TRUE,
+  style = list(fontFamily = "Arial Narrow")  # set font
+)
+
+react_tbl
+
+# Save as standalone HTML inside ./Tables
+output_file <- file.path(tables_dir, paste0("rsa_reactable_Yeo", ROI_Yeo7_number, ".html"))
+saveWidget(
+  react_tbl,
+  output_file,
+  selfcontained = TRUE
+)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
 
 # ---------------------------- IMPORTANT -------------------------------------
 
