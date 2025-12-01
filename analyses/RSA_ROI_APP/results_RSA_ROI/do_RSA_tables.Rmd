@@ -12,9 +12,9 @@ the Phylogenetic ROI tree created in `ROIS_REPO`
 
 
 ```{r message=FALSE}
+library(gt)
 library(tidyverse)
 library(BayesFactor)
-library(gt)
 library(webshot2)  # for saving as PDF
 library(stringr)
 library(tictoc)
@@ -32,6 +32,13 @@ if (!dir.exists(tables_dir)) dir.create(tables_dir)
 
 ROI_Yeo7_number = 4  # OFC=5  vATTN=4
 
+
+if (ROI_Yeo7_number == 4) {
+  atlas_list <- c("Yeo7", "Yeo17", "HO_cort", "anatomy_toolbox", "AT_insula")
+} else {
+  atlas_list <- c("Yeo7", "Yeo17", "HO_cort", "anatomy_toolbox")
+}
+
 ```
 
 
@@ -40,9 +47,10 @@ NB: saving is disabled since it fails and this code is just to check a basic ver
 ```{r message=FALSE}
 
 # atlas_name <- "Yeo7"
-atlas_name <- "Yeo17"
+# atlas_name <- "Yeo17"
 # atlas_name <- "HO_cort"
 # atlas_name <- "anatomy_toolbox"
+atlas_name <- "AT_insula"
 
 
 # ------- end of user-defined parameters
@@ -56,7 +64,11 @@ results <- RData_files %>%
   arrange(roi)
 
 # Return the list of the regions to examine for that atlas_name and choice of ROI_Yeo7_number
-atlas_roi_filter <- create_roi_filter(atlas_name, ROI_Yeo7_number)
+atlas_roi_filter <- if (atlas_name != "AT_insula") {
+  create_roi_filter(atlas_name, ROI_Yeo7_number)
+} else {
+  NULL  # or `character(0)` if you prefer an empty vector
+}
 
 # Produces the gt_table for the desired ROIs for that atlas
 gt_table <- make_rsa_gt_table_colored(results, roi_filter = atlas_roi_filter)
@@ -77,7 +89,7 @@ it is very difficult to read the header for ROIs down the line.
 
 tic("Full RSA table generation")
 
-atlas_list <- c("Yeo7", "Yeo17", "HO_cort", "anatomy_toolbox")
+# # Just for testing - atlas list defined in the first chunk
 # atlas_list <- c("Yeo7", "Yeo17")
 
 
@@ -92,9 +104,16 @@ all_gt_tables <- map(atlas_list, function(atlas) {
   results <- RData_files %>%
     map_dfr(~ rsa_stats_table(.x$file, .x$atlas, .x$label)) %>%
     arrange(roi)
-  roi_filter <- create_roi_filter(atlas, ROI_Yeo7_number)
+  
+  if (atlas != "AT_insula") {
+    roi_filter <- create_roi_filter(atlas, ROI_Yeo7_number)
+  } else {
+    roi_filter <- NULL  # or character(0) if you prefer
+  }
+  
   make_rsa_gt_table_colored(results, roi_filter = roi_filter)
 })
+
 
 # save each table to a temporary HTML inside ./Tables
 tmp_files <- map2(all_gt_tables, atlas_list, function(tab, name) {
@@ -132,7 +151,7 @@ and then merged into a single HTML / PDF file. In this way there is a header
 for each ROI
 ```{r, message=FALSE}
 
-atlas_list <- c("Yeo7", "Yeo17", "HO_cort", "anatomy_toolbox")
+# # Just for testing - atlas list defined in the first chunk
 # atlas_list <- c("Yeo7", "Yeo17")
 
 # make all tables
@@ -142,7 +161,11 @@ all_gt_tables <- map(atlas_list, function(atlas) {
     map_dfr(~ rsa_stats_table(.x$file, .x$atlas, .x$label)) %>%
     arrange(roi)
   
-  roi_filter <- create_roi_filter(atlas, ROI_Yeo7_number)
+  if (atlas != "AT_insula") {
+    roi_filter <- create_roi_filter(atlas, ROI_Yeo7_number)
+  } else {
+    roi_filter <- NULL  # or character(0) if you prefer
+  }
   
   # returns a list of gt tables per ROI
   make_rsa_gt_table_colored_single_ROI(results, roi_filter = roi_filter)
@@ -196,9 +219,9 @@ library(reactable)
 library(htmlwidgets)
 library(htmltools)  # for tags
 
-atlas_list <- c("Yeo7", "Yeo17", "HO_cort", "anatomy_toolbox")
+# # Just for testing - atlas list defined in the first chunk
 # atlas_list <- c("Yeo7", "Yeo17")
-
+# atlas_list <- c("AT_insula")
 
 # Combine all results into a plain data frame
 df <- map_dfr(atlas_list, function(atlas) {
@@ -208,8 +231,10 @@ df <- map_dfr(atlas_list, function(atlas) {
     map_dfr(~ rsa_stats_table(.x$file, .x$atlas, .x$label)) %>%
     arrange(roi)
   
-  roi_filter <- create_roi_filter(atlas, ROI_Yeo7_number)
-  results <- results %>% filter(roi %in% roi_filter)
+  if (atlas != "AT_insula") {
+    roi_filter <- create_roi_filter(atlas, ROI_Yeo7_number)
+    results <- results %>% filter(roi %in% roi_filter)
+  }
   
   results %>% mutate(atlas = atlas, roi_group = paste0("ROI ", roi))
 }) %>%
@@ -240,9 +265,6 @@ saveWidget(
 )
 
 ```
-
-
-
 
 
 

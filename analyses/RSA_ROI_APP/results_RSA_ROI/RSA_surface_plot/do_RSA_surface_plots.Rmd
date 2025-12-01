@@ -1,0 +1,190 @@
+---
+title: "RSA surface plots"
+author: "LC"
+date: "2025-12-01"
+output: html_document
+---
+
+
+## Generating brain-wide maps of RSA stats
+
+This notebook takes as input:
+1. the saved RSA `.data` files in the folder `/data00/leonardo/RSA/analyses/RSA_ROI_APP/results_RSA_ROI`
+
+2. the various atlases used to calculate the RSA, which are in the `ROIS_REPO` folder, but also here in the `atlas` subfolder for convenience
+
+Given a specific atlas - we will likely use HO - it produces a nifti with the desired stat for every region in the atlas, therefore the output are *three* nifti images, one for each model.
+
+Available stats are: T, p, BF01
+
+**NB** For purposes of visualization the p value is represented as 1-p and the T as abs(T) 
+
+
+```{r}
+library(RNifti)
+library(tidyverse)
+library(BayesFactor)
+library(papayaWidget)
+
+
+results_dir="/data00/leonardo/RSA/analyses/RSA_ROI_APP/results_RSA_ROI"
+
+# Define the desired atlas. One of "Yeo7", "Yeo17", "HO_cort", "anatomy_toolbox", "AT_insula"
+atlas = "HO_cort"
+
+# Define the desired stat in the cell where the writing of the nifti happens. All the stats have already been calculated.
+```
+
+
+
+# Load the results from the RSA analysis
+```{r}
+
+load(paste0(results_dir, "/",atlas,"_N26__EER.RData"))
+
+nii <- RNifti::readNifti(paste0("./atlases/",atlas,".nii.gz"))
+
+# # Just checking
+# seq(max(nii)) %>% walk(~ {
+#   nvox <- which(nii == .x) %>% length()
+#   cat("ROI ",.x," is ",nvox," voxels\n")
+# })
+
+```
+
+
+
+
+```{r, eval=FALSE}
+
+# Preparation: How to get all the values
+x <- rnorm(1000, mean = 1, sd = 1)
+
+res_t = t.test(x = x, mu = 0, alternative = "greater")
+
+bf_obj <- ttestBF(x = x, mu = 0)
+bf10 <- BayesFactor::extractBF(bf_obj)$bf
+bf01 <- 1/bf10
+
+cat("T=", res_t$statistic, " p=", res_t$p.value, " BF01=", bf01)
+
+```
+
+
+
+
+```{r}
+
+# Function to estimate the stats for each ROI
+one_sample_test <- function(vals) {
+  res <- t.test(vals, mu = 0, alternative = "two.sided")
+  T <- abs(res$statistic)
+  p <- 1 - res$p.value
+  
+  bf_obj <- BayesFactor::ttestBF(x = vals, mu = 0)
+  BF10 <- BayesFactor::extractBF(bf_obj)$bf
+  BF01 <- 1 / BF10
+  
+  return(c(T, p, BF01))
+}
+
+
+# Get the stats for each roi
+stats <- RSA %>% 
+  select(-c(starts_with("rdm_"))) %>% 
+  group_by(roi) %>% 
+  reframe(
+    emotion_T = one_sample_test(rsa_rdm_emotion)[1],
+    emotion_p = one_sample_test(rsa_rdm_emotion)[2],
+    emotion_BF01 = one_sample_test(rsa_rdm_emotion)[3],
+    
+    arousal_T = one_sample_test(rsa_rdm_arousal)[1],
+    arousal_p = one_sample_test(rsa_rdm_arousal)[2],
+    arousal_BF01 = one_sample_test(rsa_rdm_arousal)[3],
+    
+    aroval_T = one_sample_test(rsa_rdm_aroval)[1],
+    aroval_p = one_sample_test(rsa_rdm_aroval)[2],
+    aroval_BF01 = one_sample_test(rsa_rdm_aroval)[3]
+  )
+
+
+```
+
+
+
+
+## Define the desired stat and generate the maps in the nifti files
+
+```{r}
+
+# Define the desired stat: one of T, p (1-p) or BF01
+stat_val = "T"
+
+
+nROIs <- max(stats$roi)
+
+generate_map <- function(model, stat_val) {
+  
+  nii_tmp <- nii
+  
+  seq(nROIs) %>% map(~{
+    idx <- which(nii == .x)
+    val_to_fill <- stats %>% filter(roi == .x) %>% select(paste0(model,"_",stat_val)) %>% pull
+    
+    # Note the <<-
+    nii_tmp[idx] <<- val_to_fill
+  })
+  
+  filename <- paste0("RSA_",model,"_", atlas,"_",stat_val,".nii.gz")
+
+  RNifti::writeNifti(nii_tmp, filename)
+  
+}
+
+
+c("emotion", "arousal", "aroval") %>% walk(~ generate_map(.x,stat_val))
+
+```
+
+
+
+## Make sure you created all the images you want to inspect before running the following cell
+NB: just to test, in reality it gets difficult with all the possible choices (T,p,BF01) and the range of colormaps in papaya is not great. 
+```{r}
+
+# Choose what to display: emotion, arousal, aroval and the stat
+
+model2display <- "emotion"
+atlas2display <- "HO_cort"
+stat2display <- "T"
+
+atlas_dir <- paste0(results_dir, '/RSA_surface_plot/atlases')
+
+Dummy=paste0(atlas_dir,"/Dummy.nii.gz")
+MNI=paste0(atlas_dir,"/MNI152_T1_2mm_brain.nii.gz")
+overlay <- paste0(
+  results_dir,"/RSA_surface_plot/RSA_",
+  model2display,"_",
+  atlas2display,"_",
+  stat2display,".nii.gz"
+)
+
+papaya(
+  c(Dummy, MNI, overlay),
+  option = list(
+    papayaOptions(lut = "Grayscale"),
+    papayaOptions(lut = "Grayscale"),
+    papayaOptions(lut = "Red Overlay", min = 3, max = 4)
+  ),
+  interpolation = FALSE
+)
+```
+
+
+
+
+
+
+
+
+
