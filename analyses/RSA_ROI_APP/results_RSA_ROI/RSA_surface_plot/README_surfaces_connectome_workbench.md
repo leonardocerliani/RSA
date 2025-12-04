@@ -41,6 +41,8 @@ wb_command -volume-to-surface-mapping \
   -enclosing
 ```
 
+To import the mapped `.gii` files in the connectome workbench, just open them from the File menu (several files can be imported at once) 
+
 
 
 In the original pictures, the inflated surface is used, however I think that the result is much better with the midthickness surface
@@ -50,9 +52,74 @@ In the original pictures, the inflated surface is used, however I think that the
 Pay particular attention to the settings:
 
 - interpolate colors darkens the regions with lower T (increasing the visual contrast with the high T regions)
-- the only decent colormap is the `ROY-BIG-BL`
+- the only decent colormap is the `ROY-BIG-BL`. In the original image, the color map is the `magma`
 - value range should be `Fixed` between 0 and 4
 - zero values should be mapped to cover remaining unmapped surface regions
 
 ![image-20251203073808970](./assets/wb_options.png)
 
+
+
+## Final version
+
+`~/GDrive/NEUROIMAGING/RSA/paper_RSA/results/surface_maps`
+
+
+
+- `./RSA/do_mapping_to_connectome_workbench.sh`  : script to dilate the results and map them on the inflated surface - the surface file has been copied inside this subdir for simplicity
+- `./connectome_workbench_RSA` : portable version of the tut data, to map the images
+- `./connectome_workbench_RSA/kkz.scene` : the file you can double click to open 
+- to export an image, go to File > Capture Image
+
+
+
+```bash
+#!/bin/bash
+
+# define the radius of the spherical kernel
+r=6
+
+reference_surface="Q1-Q6_R440.L.inflated.32k_fs_LR.surf.gii"
+
+atlas="HO_cort"
+
+for model in emotion arousal aroval; do
+
+  for stat in T p BF01; do
+
+    echo mapping RSA_${model}_${atlas}_${stat}
+
+    # dilate using maximum filtering (-dilF)
+    fslmaths RSA_${model}_${atlas}_${stat} \
+      -kernel sphere $r -dilF \
+      dil${r}_RSA_${model}_${atlas}_${stat}
+
+    # map on the surface using the enclosing option to prevent interpolation 
+    wb_command -volume-to-surface-mapping \
+      dil${r}_RSA_${model}_${atlas}_${stat}.nii.gz \
+      ${reference_surface} \
+      mapped_RSA_${model}_${atlas}_${stat}.func.gii \
+      -enclosing
+    
+  done
+
+done
+
+rm dil*
+```
+
+
+
+## Final result
+
+![image-20251204120147364](./assets/final-image.png)
+
+
+
+## Appendix - How to save a Scene
+
+Once you import the mapped `.gii` into the wb, you need to save a scene otherwise they will be lost, and all the procedure need to be run again.
+
+Saving a scene is a quite idiosyncratic process, for which I couldn't find any documentation. Basically first you do all what you want in terms of import, settings, colorbars, and then you need to go in the Scenes dialogue, and choose the button `Create Scene > Add`. Not necessarily all will be saved, since you should probably also go to `File > Save/Manage Files`, however if you are lucky, a dialogue will prompt you to do this when you try to close the wb.
+
+![image-20251204120818891](./assets/scenes-dialogue.png)
