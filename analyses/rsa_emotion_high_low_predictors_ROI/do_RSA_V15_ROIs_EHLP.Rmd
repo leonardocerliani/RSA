@@ -4,7 +4,7 @@ author: "LC"
 date: "2024-09-30"
 output: html_document
 params:
-  atlas_filename: Yeo7.nii.gz
+  atlas_filename: Yeo17.nii.gz
   remove_neutrals: "YES"
   minus_neutral: "NO"
   subs_set: "N26"

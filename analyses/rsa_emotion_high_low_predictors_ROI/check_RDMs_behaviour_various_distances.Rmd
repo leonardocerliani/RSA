@@ -1,0 +1,279 @@
+---
+title: "Check Behavioral RDMs - Various Distance Metrics"
+author: "LC"
+date: "2026-02-01"
+output: html_document
+---
+
+# Purpose
+Compare behavioral RDMs calculated with different distance metrics:
+- Euclidean
+- Mahalanobis
+- Cosine
+
+This script loads behavioral ratings and visualizes how different distance metrics affect RDM structure.
+
+# Load libraries
+```{r load_libraries, message=FALSE}
+library(tidyverse)
+library(ComplexHeatmap)
+library(circlize)
+library(grid)
+
+source("funs_V15_CROSSNOBIS_ROIs.R")
+```
+
+# Define paths and parameters
+```{r}
+bd <- "/data00/leonardo/RSA/analyses"
+bd_ratings <- paste0(bd, "/RATINGS")
+
+# Ratings types to analyze
+ratings_type <- c("emotion", "arousal", "aroval")
+
+# Distance methods to compare
+distance_methods <- c("euclidean", "mahalanobis", "cosine")
+
+# Subject list
+subs_file <- "/data00/leonardo/RSA/sub_list.txt"
+subs <- sprintf("%02d", readLines(subs_file) %>% as.numeric)
+
+# Remove neutrals
+remove_neutrals <- "YES"
+```
+
+# Load and prepare behavioral ratings
+```{r, message=FALSE}
+load_ratings <- function(ratings_type, remove_neutrals) {
+  
+  ratings_path <- paste0(bd_ratings, "/", ratings_type, "_ratings.csv")
+  rats <- read_csv(ratings_path)
+  
+  # Average across movies for emotion predictors model
+  rats <- rats %>% 
+    select(sub, emotion, high_low_code, starts_with("r_")) %>% 
+    mutate(emotion = paste0(emotion, "_", str_match(high_low_code, "high|low"))) %>% 
+    select(-high_low_code) %>% 
+    group_by(sub, emotion) %>% 
+    reframe(across(starts_with("r_"), median, na.rm = TRUE)) %>% 
+    ungroup() %>% 
+    arrange(sub, emotion)
+  
+  if (remove_neutrals == "YES") {
+    rats <- rats %>% filter(!str_detect(emotion, "neutral"))
+  }
+  
+  return(rats)
+}
+
+# Load all rating types
+ratings_list <- map(ratings_type, ~ load_ratings(.x, remove_neutrals)) %>%
+  set_names(ratings_type)
+
+cat("Loaded ratings for:", paste(ratings_type, collapse = ", "), "\n")
+cat("Number of subjects:", length(subs), "\n")
+cat("Number of conditions:", nrow(ratings_list$emotion %>% filter(sub == subs[1])), "\n")
+```
+
+# Calculate RDMs for each distance method
+```{r}
+calculate_RDMs_all_methods <- function(rats, distance_methods, subs) {
+  
+  # Filter for relevant subjects
+  rats_filtered <- rats %>% filter(sub %in% subs)
+  
+  # Calculate RDM for each distance method
+  rdms <- map(distance_methods, function(dist_method) {
+    
+    cat("  Calculating with", dist_method, "distance...\n")
+    
+    rats_filtered %>%
+      select(sub, starts_with("r_")) %>%
+      group_by(sub) %>%
+      nest() %>%
+      mutate(rdm = map(data, ~ DDOS_vec(.x, method = dist_method))) %>%
+      select(sub, rdm)
+    
+  }) %>%
+    set_names(distance_methods)
+  
+  return(rdms)
+}
+
+# Calculate RDMs for all rating types and distance methods
+cat("\nCalculating RDMs...\n")
+all_rdms <- map(ratings_type, function(rt) {
+  cat("Processing", rt, "ratings:\n")
+  calculate_RDMs_all_methods(ratings_list[[rt]], distance_methods, subs)
+}) %>%
+  set_names(ratings_type)
+
+cat("\nRDM calculation complete!\n")
+```
+
+# Compute mean RDMs across subjects
+```{r}
+compute_mean_rdm <- function(rdms_df) {
+  # Extract all RDMs as matrix
+  rdm_matrix <- map(rdms_df$rdm, ~ .x) %>%
+    do.call(rbind, .)
+  
+  # Compute column-wise mean
+  colMeans(rdm_matrix)
+}
+
+# Compute mean RDMs for all combinations
+mean_rdms <- map(ratings_type, function(rt) {
+  map(distance_methods, function(dm) {
+    compute_mean_rdm(all_rdms[[rt]][[dm]])
+  }) %>%
+    set_names(distance_methods)
+}) %>%
+  set_names(ratings_type)
+
+cat("\nMean RDMs computed for all combinations\n")
+```
+
+# Convert tril vector to full matrix for plotting
+```{r}
+tril_to_matrix <- function(tril_vec) {
+  n <- (1 + sqrt(1 + 8 * length(tril_vec))) / 2
+  mat <- matrix(0, n, n)
+  mat[lower.tri(mat)] <- tril_vec
+  mat <- mat + t(mat)
+  diag(mat) <- NA  # Set diagonal to NA for visualization
+  return(mat)
+}
+
+# Get condition labels
+condition_labels <- ratings_list$emotion %>% 
+  filter(sub == subs[1]) %>% 
+  pull(emotion)
+```
+
+# Plot comparison for each rating type
+```{r, fig.width=15, fig.height=5}
+for (rt in ratings_type) {
+  
+  cat("\n=== Plotting", rt, "RDMs ===\n")
+  
+  # Create matrices for each distance method
+  matrices <- map(distance_methods, ~ tril_to_matrix(mean_rdms[[rt]][[.x]]))
+  
+  # Find global min/max for consistent color scale
+  all_values <- unlist(matrices)
+  vmin <- min(all_values, na.rm = TRUE)
+  vmax <- max(all_values, na.rm = TRUE)
+  
+  color_map <- colorRamp2(
+    c(vmin, (vmin + vmax) / 2, vmax),
+    c("blue", "white", "red")
+  )
+  
+  # Create heatmaps
+  ht_list <- NULL
+  for (i in seq_along(distance_methods)) {
+    dm <- distance_methods[i]
+    mat <- matrices[[i]]
+    rownames(mat) <- condition_labels
+    colnames(mat) <- condition_labels
+    
+    ht <- Heatmap(
+      mat,
+      name = paste(rt, dm, sep = "\n"),
+      col = color_map,
+      cluster_rows = FALSE,
+      cluster_columns = FALSE,
+      show_row_dend = FALSE,
+      show_column_dend = FALSE,
+      column_title = dm,
+      row_names_side = "left",
+      column_names_side = "top",
+      column_names_rot = 60,
+      row_names_gp = gpar(fontsize = 8),
+      column_names_gp = gpar(fontsize = 8),
+      width = unit(40, "mm"),
+      height = unit(40, "mm"),
+      rect_gp = gpar(col = "white", lwd = 0.5),
+      heatmap_legend_param = list(
+        title = "Distance",
+        direction = "vertical"
+      )
+    )
+    
+    if (is.null(ht_list)) {
+      ht_list <- ht
+    } else {
+      ht_list <- ht_list + ht
+    }
+  }
+  
+  # Draw combined heatmap
+  draw(ht_list, 
+       column_title = paste("Mean", rt, "RDMs - Distance Method Comparison"),
+       column_title_gp = gpar(fontsize = 14, fontface = "bold"))
+}
+```
+
+# Correlation between distance methods
+```{r}
+cat("\n=== Correlations Between Distance Methods ===\n\n")
+
+for (rt in ratings_type) {
+  cat("Rating type:", rt, "\n")
+  
+  # Create correlation matrix
+  cor_mat <- matrix(1, nrow = 3, ncol = 3)
+  rownames(cor_mat) <- distance_methods
+  colnames(cor_mat) <- distance_methods
+  
+  for (i in 1:(length(distance_methods) - 1)) {
+    for (j in (i + 1):length(distance_methods)) {
+      r <- cor(mean_rdms[[rt]][[i]], mean_rdms[[rt]][[j]])
+      cor_mat[i, j] <- r
+      cor_mat[j, i] <- r
+    }
+  }
+  
+  print(round(cor_mat, 3))
+  cat("\n")
+}
+```
+
+# Summary statistics
+```{r}
+cat("\n=== Summary Statistics ===\n\n")
+
+for (rt in ratings_type) {
+  cat("Rating type:", rt, "\n")
+  
+  for (dm in distance_methods) {
+    rdm_vec <- mean_rdms[[rt]][[dm]]
+    cat(sprintf("  %s: mean=%.3f, sd=%.3f, min=%.3f, max=%.3f\n",
+                dm,
+                mean(rdm_vec, na.rm = TRUE),
+                sd(rdm_vec, na.rm = TRUE),
+                min(rdm_vec, na.rm = TRUE),
+                max(rdm_vec, na.rm = TRUE)))
+  }
+  cat("\n")
+}
+```
+
+# Conclusions
+
+This analysis compares three distance metrics for behavioral RDMs:
+
+1. **Euclidean**: Standard L2 distance
+2. **Mahalanobis**: Accounts for covariance structure (scaled by inverse covariance)
+3. **Cosine**: Measures angle between vectors (insensitive to magnitude)
+
+**Key Observations**:
+- Correlations between methods show how similar the resulting RDM structures are
+- Different metrics may emphasize different aspects of the data
+- For scalar ratings (arousal), Mahalanobis ≈ standardized Euclidean
+- Cosine distance is scale-invariant, focusing on pattern similarity
+
+**For RSA**: Since we correlate RDMs, constant scaling factors don't affect results. However, different metrics can capture different aspects of dissimilarity that may relate differently to neural RDMs.
+
+**Note**: Residualization (if needed) happens at the RDM level in the main RSA pipeline, not at the ratings level. This script shows the raw RDM structure for each distance metric.

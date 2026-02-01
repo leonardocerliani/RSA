@@ -46,6 +46,7 @@ df <- read_csv(paste0(bd,"/","emotion_ratings.csv"))
 
 ```
 
+
 # Emotion
 
 ## Examine congruence

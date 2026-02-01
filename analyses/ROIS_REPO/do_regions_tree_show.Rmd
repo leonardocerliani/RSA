@@ -37,9 +37,10 @@ library(dplyr)
 library(purrr)
 library(collapsibleTree)
 library(data.tree)
+library(htmlwidgets)
 
 # OFC=5  vATTN=4
-Yeo7_ROI = 4
+Yeo7_ROI = 5
 
 # 1. List of atlas files
 atlases <- c(
@@ -90,13 +91,44 @@ df
 
 ```{r}
 # 10. Convert to data.tree and plot
-collapsibleTree(
+tree <- collapsibleTree(
   df, 
   root = NULL,
   hierarchy = colnames(df), 
   collapsed = FALSE
 )
+
+tree
+
+# NB: to have colors, use collapsibleTreeSummary
+# with the `attribute` parameter. See last cell below
+
+htmlwidgets::saveWidget(tree, paste0("collapsibleTree_Yeo",Yeo7_ROI,".html"), selfcontained = TRUE)
+
+
 ```
+
+
+
+
+```{r}
+
+df %>%
+  collapsibleTree(
+    root = NULL,
+    hierarchy = c("Yeo7","Yeo17","HO_cort","anatomy_toolbox"), 
+    collapsed = FALSE,
+    fill = c(
+      rep("brown", length(unique(df$Yeo7))),
+      rep("khaki", length(unique(paste(df$Yeo7, df$Yeo17)))),
+      rep("blue", length(unique(paste(df$Yeo7, df$Yeo17, df$HO_cort)))),
+      rep("orange", length(unique(paste(df$Yeo7, df$Yeo17, df$HO_cort, df$anatomy_toolbox))))
+    )
+  )
+
+```
+
+
 
 
 
@@ -149,5 +181,100 @@ collapsibleTree(
 )
 
 ```
+
+
+
+
+```{r}
+# Data from US Forest Service DataMart
+species <- read.csv("https://apps.fs.usda.gov/fia/datamart/CSV/REF_SPECIES_GROUP.csv")
+```
+
+
+```{r}
+collapsibleTree(
+  species,
+  hierarchy = c("REGION", "CLASS", "NAME"),
+  fill = c(
+    # The root
+    "seashell",
+    # Unique regions
+    rep("brown", length(unique(species$REGION))),
+    # Unique classes per region
+    rep("khaki", length(unique(paste(species$REGION, species$CLASS)))),
+    # Unique names per region
+    rep("forestgreen", length(unique(paste(species$NAME, species$REGION))))
+  )
+)
+```
+
+
+```{r}
+collapsibleTreeSummary(
+  warpbreaks,
+  c("wool", "tension", "breaks"),
+  attribute = "breaks",
+  maxPercent = 50
+)
+```
+
+
+```{r}
+warpbreaks
+
+```
+
+
+
+
+
+
+
+
+```{r}
+# Create a simple org chart
+org <- data.frame(
+  Manager = c(
+    NA, "Ana", "Ana", "Bill", "Bill", "Bill", "Claudette", "Claudette", "Danny",
+    "Fred", "Fred", "Grace", "Larry", "Larry", "Nicholas", "Nicholas"
+  ),
+  Employee = c(
+    "Ana", "Bill", "Larry", "Claudette", "Danny", "Erika", "Fred", "Grace",
+    "Henri", "Ida", "Joaquin", "Kate", "Mindy", "Nicholas", "Odette", "Peter"
+  ),
+  Title = c(
+    "President", "VP Operations", "VP Finance", "Director", "Director", "Scientist",
+    "Manager", "Manager", "Jr Scientist", "Operator", "Operator", "Associate",
+     "Analyst", "Director", "Accountant", "Accountant"
+  )
+)
+
+# Add in colors and sizes
+org$Color <- org$Title
+levels(org$Color) <- colorspace::rainbow_hcl(11)
+
+# Use unsplash api to add in random photos to tooltip
+org$tooltip <- paste0(
+  org$Employee,
+  "<br>Title: ",
+  org$Title,
+  "<br><img src='https://picsum.photos/200/300'>"
+)
+
+collapsibleTreeNetwork(
+  org,
+  attribute = "Title",
+  fill = "Color",
+  nodeSize = "leafCount",
+  tooltipHtml = "tooltip"
+)
+```
+
+
+
+
+
+
+
 
 

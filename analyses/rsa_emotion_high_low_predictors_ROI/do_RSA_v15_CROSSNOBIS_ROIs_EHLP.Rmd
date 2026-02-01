@@ -1,0 +1,826 @@
+---
+title: "do_RSA_v15_CROSSNOBIS_ROIs_EHLP"
+author: "LC"
+date: "2026-02-01"
+output: html_document
+params:
+  atlas_filename: test_ROI_crossnobis.nii.gz
+  remove_neutrals: "YES"
+  minus_neutral: "NO"
+  subs_set: "N26"
+  RSA_on_residuals: FALSE
+  filter_RDMs: FALSE
+  crossnobis_cov_method: "shrinkage"  # shrinkage or pseudoinverse
+---
+
+
+# V15 CROSSNOBIS
+- This version implements crossnobis distance for fMRI RDM computation
+- Based on V15 but uses first-level run-wise copes instead of 2nd-level copes
+- Crossnobis: leave-one-run-out Mahalanobis distance across runs
+- **Data structure**: 8 runs × 14 copes = 112 files per subject
+- **Only fMRI RDM changes** - behavioral RDMs and RSA method stay identical to V15
+
+**IMPORTANT**: This is a work-in-progress version.
+Currently implements:
+- df_path_copes creation from first-level directories
+- Metadata addition (emotion labels)
+
+NOT YET IMPLEMENTED:
+- load_sub_copes_crossnobis
+- DDOS_crossnobis
+- do_RDM_fmri_crossnobis
+- Full RSA pipeline
+
+# Load libraries
+```{r load_libraries, message=F}
+
+library(future)
+library(tidyverse)
+library(furrr)
+library(tictoc)
+library(RNifti)
+library(proxy) # distances
+library(DT)
+library(formattable)
+library(janitor)
+library(ComplexHeatmap)
+library(circlize)  # For color mapping functions
+library(grid)  # For gpar()
+library(papayaWidget)
+library(ggstatsplot)
+library(rstatix)
+library(corpcor)  # For shrinkage covariance estimation
+
+source("funs_V15_CROSSNOBIS_ROIs.R")
+
+```
+
+
+# Copes/emotion dictionary specific for emotion_prediction
+```{r}
+metadata_copes <- tribble(
+  ~cope, ~emotion,
+  1, "anger_high",
+  2, "anger_low",
+  3, "disgust_high",
+  4, "disgust_low",
+  5, "fear_high",
+  6, "fear_low",
+  7, "happy_high",
+  8, "happy_low",
+  9, "neutral_high",
+  10, "neutral_low",
+  11, "pain_high",
+  12, "pain_low",
+  13, "sad_high",
+  14, "sad_low"
+)
+```
+
+
+# Options for different flavours
+```{r}
+
+# Choose one set of ROIs - e.g. an atlas - from ${bd_atlases} (ROIS_REPO)
+atlas_filename <- params$atlas_filename
+
+# Do you want to remove neutral cope(s) from the RSA analysis?
+remove_neutrals <- params$remove_neutrals
+
+RSA_on_residuals <- params$RSA_on_residuals
+
+filter_RDMs <- params$filter_RDMs
+
+```
+
+
+# Check the params the Rmd is running
+```{r}
+# Create a unique temporary file (using UUID)
+tmpfile <- file.path(tempdir(), paste0("rsa_params_", uuid::UUIDgenerate(), ".txt"))
+
+# Prepare lines to write: empty line + title + actual parameters
+lines_to_write <- c(
+  "",  # empty line
+  "Params being used by the Rmd:",
+  paste(names(params), params, sep = "=")
+)
+
+# Write lines to the temp file
+writeLines(lines_to_write, con = tmpfile)
+
+# Print the file to terminal
+system(paste("cat", shQuote(tmpfile)))
+
+# Delete the temporary file immediately
+unlink(tmpfile)
+```
+
+
+# Define paths and analysis-specific options
+```{r}
+
+bd <- "/data00/leonardo/RSA/analyses"
+bd_ratings <- paste0(bd, "/RATINGS")
+bd_atlases <- paste0(bd, "/ROIS_REPO")
+bd_results <- paste0(bd, "/RSA_ROI_APP/results_RSA_ROI")
+
+# ********** NB VALENCE REMOVED: WE USE ONLY AROVAL NOW **********
+ratings_type <- c("emotion", "arousal", "aroval")
+# ********** NB VALENCE REMOVED: WE USE ONLY AROVAL NOW **********
+
+rsa_flavour <- "rsa_emotion_high_low_predictors_ROI"
+
+# Choose the distance metric to use
+# For crossnobis, dist_method_fmri will be "crossnobis"
+dist_method_rating <- "euclidean"
+dist_method_fmri <- "crossnobis"  # NEW: crossnobis distance
+dist_method_rsa <- "pearson"
+
+# Vector of zeropadded sub_ids
+subs_file <- "/data00/leonardo/RSA/sub_list.txt"
+subs <- sprintf("%02d", readLines(subs_file) %>% as.numeric)
+
+# ---------- ONLY TOP RATERS BELOW ------------
+if (params$subs_set == "N14") {
+  subs <- c("02", "03", "12", "11", "22", "09", "29", "28", "26", "32", "23", "15", "20", "19")
+}
+
+# ---------- N25 : remove sub 07 --------------------
+if (params$subs_set == "N25") {
+  subs <- setdiff(subs, "07")
+}
+
+# ---------- N23 : remove subs 07,34,16  ------------
+if (params$subs_set == "N23") {
+  subs <- setdiff(subs, c("07", "34", "16"))
+}
+
+```
+
+
+# CROSSNOBIS: Create df_path_copes from first-level directories
+This is the main difference from V15. We now scan first-level directories
+for run-wise cope files instead of using 2nd-level aggregated copes.
+
+Expected structure:
+`/data01/.../sub-XX/fmri/.../sub-XX_run-N_preproc_reg.feat/reg_standard/stats/copeM.nii.gz`
+
+The resulting `df_path_copes` will have columns: sub, run, cope, path
+
+```{r, message=FALSE}
+
+# Base directory for first-level copes
+bd_copes_1st_level <- "/data01/7T_Emotion_Insula/Data_analysis/RSA/prep_data"
+
+# Import df_path_copes using the crossnobis-specific function
+# Pass subs vector so it can construct paths directly
+df_path_copes <- import_df_path_copes_crossnobis(
+  bd_copes = bd_copes_1st_level,
+  subs = subs,
+  runs = 1:8,
+  copes = 1:14
+)
+
+# Add metadata (emotion labels)
+df_path_copes <- df_path_copes %>%
+  inner_join(metadata_copes, by = "cope") %>%
+  relocate(sub, run, cope, emotion, path)
+
+# If remove_neutrals is "YES", remove neutral copes
+if (remove_neutrals == "YES") {
+  df_path_copes <- df_path_copes %>%
+    filter(!str_detect(emotion, "neutral")) %>%
+    arrange(sub, run, cope)
+}
+
+# Add label column (same as emotion for this analysis)
+df_path_copes$label <- df_path_copes$emotion
+
+# Get vectors of unique runs and copes
+runs_numba <- df_path_copes$run %>% unique() %>% sort()
+copes_numba <- df_path_copes$cope %>% unique() %>% sort()
+
+# Summary
+cat("\n=== DF_PATH_COPES SUMMARY ===\n")
+cat("Total files:", nrow(df_path_copes), "\n")
+cat("Subjects:", length(unique(df_path_copes$sub)), "\n")
+cat("Runs:", paste(runs_numba, collapse = ", "), "\n")
+cat("Copes:", paste(copes_numba, collapse = ", "), "\n")
+cat("Files per subject:", nrow(df_path_copes %>% filter(sub == subs[1])), "\n")
+
+```
+
+
+# Display df_path_copes for validation
+```{r}
+cat("\n=== FIRST 20 ROWS ===\n")
+df_path_copes %>% 
+  head(20) %>% 
+  datatable()
+```
+
+
+# Validation: Check one subject's files
+```{r}
+test_sub <- subs[1]
+
+cat("\n=== FILES FOR SUBJECT", test_sub, "===\n")
+
+df_test_sub <- df_path_copes %>% filter(sub == test_sub)
+
+cat("Total files for this subject:", nrow(df_test_sub), "\n")
+cat("Expected:", length(runs_numba), "runs ×", length(copes_numba), "copes =", 
+    length(runs_numba) * length(copes_numba), "files\n")
+
+# Check if all files exist
+cat("\nChecking if files exist...\n")
+files_exist <- file.exists(df_test_sub$path)
+cat("Files that exist:", sum(files_exist), "/", length(files_exist), "\n")
+
+if (!all(files_exist)) {
+  cat("\nWARNING: Some files do not exist!\n")
+  cat("Missing files:\n")
+  print(df_test_sub$path[!files_exist])
+} else {
+  cat("✓ All files exist!\n")
+}
+
+# Show breakdown by run and cope
+cat("\n=== BREAKDOWN BY RUN ===\n")
+df_test_sub %>%
+  group_by(run) %>%
+  summarise(n_copes = n(), .groups = "drop") %>%
+  print()
+
+```
+
+
+# Read atlas and create a vector of atlas labels
+```{r}
+
+atlas_path <- paste0(bd_atlases, "/", atlas_filename)
+
+atlas_nii <- readNifti(atlas_path)
+region_labels <- atlas_nii[atlas_nii > 0] %>% unique %>% sort
+
+cat("Atlas:", atlas_filename, "\n")
+cat("Number of regions:", length(region_labels), "\n")
+
+```
+
+
+# Calculate FMRI RDMs using CROSSNOBIS
+**IMPORTANT:** This uses crossnobis distance (leave-one-run-out Mahalanobis)
+instead of the euclidean distance used in V15.
+
+```{r}
+
+cat("\n=== STARTING CROSSNOBIS RDM CALCULATION ===\n")
+cat("This will take some time...\n\n")
+
+# Create progress log file
+log_file <- paste0("crossnobis_progress_", 
+                   gsub("\\.nii\\.gz$", "", atlas_filename), 
+                   "_", format(Sys.time(), "%Y%m%d_%H%M%S"), 
+                   ".log")
+
+cat("Progress will be logged to:", log_file, "\n\n")
+
+# Write log header
+cat("=== CROSSNOBIS RDM CALCULATION LOG ===\n", file = log_file)
+cat("Started:", format(Sys.time()), "\n", file = log_file, append = TRUE)
+cat("Atlas:", atlas_filename, "\n", file = log_file, append = TRUE)
+cat("Subjects:", length(subs), "\n", file = log_file, append = TRUE)
+cat("ROIs:", length(region_labels), "\n", file = log_file, append = TRUE)
+cat("Cov method:", params$crossnobis_cov_method, "\n", file = log_file, append = TRUE)
+cat(rep("-", 60), "\n\n", file = log_file, append = TRUE, sep = "")
+
+# Verify environment variables are set
+cat("BLAS Threading Environment Variables:\n")
+cat("  OPENBLAS_NUM_THREADS =", Sys.getenv("OPENBLAS_NUM_THREADS"), "\n")
+cat("  MKL_NUM_THREADS =", Sys.getenv("MKL_NUM_THREADS"), "\n")
+cat("  OMP_NUM_THREADS =", Sys.getenv("OMP_NUM_THREADS"), "\n\n")
+
+# Use sequential processing
+plan(sequential)
+
+tic("Total time for all subjects")
+
+RDMs_fmri <- subs %>% map_dfr(
+  ~ {
+    # Progress message
+    msg_start <- paste0("[", format(Sys.time(), "%H:%M:%S"), "] Processing subject ", .x, "...")
+    cat(msg_start, "\n")
+    cat(msg_start, "\n", file = log_file, append = TRUE)
+    
+    tic_start <- Sys.time()
+    
+    result <- do_RDM_fmri_crossnobis(
+      sub_id = .x,
+      runs_numba = runs_numba,
+      copes_numba = copes_numba,
+      df_path_copes = df_path_copes,
+      atlas_nii = atlas_nii,
+      region_labels = region_labels,
+      cov_method = params$crossnobis_cov_method
+    )
+    
+    elapsed <- as.numeric(difftime(Sys.time(), tic_start, units = "secs"))
+    msg_done <- paste0("  ✓ Subject ", .x, " completed in ", 
+                      round(elapsed, 1), " sec (", 
+                      round(elapsed/60, 1), " min)")
+    cat(msg_done, "\n")
+    cat(msg_done, "\n", file = log_file, append = TRUE)
+    
+    return(result)
+  }
+)
+
+total_time <- toc()
+
+# Write completion to log
+cat("\n", rep("=", 60), "\n", file = log_file, append = TRUE, sep = "")
+cat("COMPLETED:", format(Sys.time()), "\n", file = log_file, append = TRUE)
+cat("Total time:", round(total_time$toc - total_time$tic, 1), "sec (", 
+    round((total_time$toc - total_time$tic)/60, 1), "min)\n", 
+    file = log_file, append = TRUE)
+cat(rep("=", 60), "\n", file = log_file, append = TRUE, sep = "")
+
+cat("\n=== CROSSNOBIS RDM CALCULATION COMPLETE ===\n")
+cat("Total subjects:", length(unique(RDMs_fmri$sub)), "\n")
+cat("Total ROIs:", length(unique(RDMs_fmri$roi)), "\n")
+cat("Total RDMs:", nrow(RDMs_fmri), "\n")
+
+```
+
+
+# Display RDMs_fmri structure
+```{r}
+cat("\n=== RDMs_fmri STRUCTURE ===\n")
+cat("Dimensions:", nrow(RDMs_fmri), "rows ×", ncol(RDMs_fmri), "columns\n")
+cat("RDM vector length:", length(RDMs_fmri$rdm_fmri[[1]]), "\n")
+cat("Expected for", length(copes_numba), "copes:", 
+    length(copes_numba) * (length(copes_numba) - 1) / 2, "\n\n")
+
+RDMs_fmri %>% 
+  head(10) %>%
+  datatable()
+```
+
+
+# Noise ceiling and floor
+```{r}
+
+# ref: [Nili2014](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1003553#pcbi.1003553.s007) and also Supplmentary materials
+
+# Upper bound (tight ceiling):
+# 1. Take each subject's RDM → apply the correlation-appropriate transform
+#    (e.g., z-transform for Pearson, rank-transform for Spearman).
+# 2. Compute the average (centroid) RDM across subjects.
+# 3. Correlate this average RDM with each subject's RDM, then average these correlations.
+# → This overestimates the true fit (since the centroid is "fitted" to all data) → upper bound.
+
+# Lower bound (floor):
+# 1. Leave-one-subject-out (LOSO). For each subject:
+#    - Correlate that subject's RDM with the average of all other subjects' RDMs
+#      (after the same transform).
+# 2. Average these correlations across subjects.
+# → This underestimates the true fit (since each subject has less data to "anchor" the average) → lower bound.
+
+# So:
+# Upper bound = correlation(sub, centroid) averaged across subs.
+# Lower bound = correlation(sub, mean-of-others) averaged across subs.
+
+# This matches the intuition:
+# - If your model correlation is below the floor, it's worse than what's expected from noisy data.
+# - If it's between the floor and ceiling, the model explains some meaningful structure.
+# - If it reaches the ceiling, it's as good as possible given the experimental noise.
+
+
+
+# Step 1. Group data per ROI
+df_noise <- RDMs_fmri %>%
+  group_by(roi) %>%
+  nest() %>%
+  mutate(
+    noise = map(data, ~ {
+      roi_data <- .x
+
+      # Step 2. Z-transform all subject RDMs
+      # Each rdm_fmri is a numeric vector → standardize to mean 0, sd 1
+      z_rdms <- map(roi_data$rdm_fmri, ~ as.numeric(scale(.x, center = TRUE, scale = TRUE)))
+
+      # Step 3. Compute noise ceiling and floor for each subject
+      map_dfr(seq_along(z_rdms), function(i) {
+        sub_id  <- roi_data$sub[i]
+        sub_rdm <- z_rdms[[i]]
+
+        # (a) Lower bound (noise floor): mean of all *other* subjects
+        mean_others <- reduce(z_rdms[-i], `+`) / (length(z_rdms) - 1)
+
+        # (b) Upper bound (noise ceiling): mean of *all* subjects (centroid)
+        mean_all <- reduce(z_rdms, `+`) / length(z_rdms)
+
+        tibble(
+          sub = sub_id,
+          noise_floor   = cor(sub_rdm, mean_others),  # conservative bound
+          noise_ceiling = cor(sub_rdm, mean_all)      # optimistic bound
+        )
+      })
+    })
+  ) %>%
+  select(roi, noise) %>%
+  unnest(noise) %>%
+  ungroup()
+
+# Step 4. Average across subjects per ROI → final summary
+df_noise_summary <- df_noise %>%
+  group_by(roi) %>%
+  summarize(
+    noise_floor   = mean(noise_floor, na.rm = TRUE),
+    noise_ceiling = mean(noise_ceiling, na.rm = TRUE)
+  ) %>%
+  ungroup()
+
+df_noise_summary
+
+
+```
+
+
+# Calculate RATINGS RDMs
+```{r, message=FALSE}
+# NB: ratings_type is now a *vector*, e.g.: 
+# ratings_type <- c("emotion","arousal","aroval")
+# to test the fn below for one rating type : do_RDMs_rats("emotion")
+
+do_RDMs_rats <- function(ratings_type, remove_neutrals) {
+
+  ratings_path <- paste0(bd_ratings,"/",ratings_type,"_ratings.csv")
+  rats <- read_csv(ratings_path)
+  
+  
+  # ------- IMPORTANT : AVG ACROSS MOVIES FOR EMOTION PREDICTORS MODEL -----
+  rats <- rats %>% 
+    select(sub, emotion, high_low_code, starts_with("r_")) %>% 
+    # ------ specific for emotion_high_low_predictors -----------
+    mutate(emotion = paste0(emotion, "_", str_match(high_low_code, "high|low")) ) %>% 
+    select(-high_low_code) %>% 
+    # ------ specific for emotion_high_low_predictors -----------
+    group_by(sub, emotion) %>% 
+    reframe(across(starts_with("r_"), median, na.rm = TRUE)) %>% 
+    ungroup %>% 
+    arrange(sub, emotion)
+  
+  # ------- IMPORTANT : AVG ACROSS MOVIES FOR EMOTION PREDICTORS MODEL -----
+  
+  
+  if (remove_neutrals == "YES") {
+    rats <- rats %>% filter(!str_detect(emotion, "neutral"))
+  }
+  
+  rdm <- rats %>%
+    filter(sub %in% subs) %>%
+    select(sub, starts_with("r_")) %>%
+    group_by(sub) %>%
+    nest %>%
+    mutate(!!paste0("RDM_",ratings_type) := data %>% map(~ DDOS_vec(.x, dist_method_rating))) %>%
+    ungroup %>% 
+    # remove the sub with the prospect of merging rdms of different ratings/models
+    select(!data)
+  
+  return(rdm)
+  
+}
+
+# calculate rdms for all ratings_type and return one column for each ratings_type
+RDMs_rats <- map_dfc(ratings_type, ~ do_RDMs_rats(.x, remove_neutrals)) %>%
+  # remove the duplicated sub_ columns (generated by do_RDMs_rats) 
+  janitor::clean_names() %>% 
+  mutate(sub = sub_1) %>% 
+  select(sub, starts_with("rdm"))
+
+```
+
+
+# RM-ANOVA and three-ttests on each element of the RDM_rats
+These will be used to select the elements of (residualized) fmri and behavioural rdms
+
+```{r}
+
+library(rstatix)
+
+# set the threshold for the p value below which we consider the results
+# significant, both for RM-ANOVA and for the three paired ttest
+p_thresh <- 0.001
+
+# fn to transform the RDM values to z scores
+zscore_RDMs <- function(RDMs) {
+  RDMs %>%
+    mutate(
+      rdm_emotion = map(rdm_emotion, ~ as.numeric(scale(.x))),
+      rdm_arousal = map(rdm_arousal, ~ as.numeric(scale(.x))),
+      rdm_aroval  = map(rdm_aroval,  ~ as.numeric(scale(.x)))
+    )
+}
+
+RDMs_rats_Z <- zscore_RDMs(RDMs_rats);
+
+
+# reshape to long format for RM-ANOVA
+RDMs_rats_long <- RDMs_rats %>%
+  mutate(idx = map(rdm_emotion, ~ seq_along(.x))) %>%  # index for each element
+  unnest(c(rdm_emotion, rdm_arousal, rdm_aroval, idx)) %>%   # expand all list-columns %>%
+  pivot_longer(
+    cols = starts_with("rdm_"),
+    names_to = "RDM_type",
+    values_to = "value"
+  )
+
+
+# ------------ RM-ANOVA ----------------
+
+# nest by idx and calculate RM-ANOVA
+RDMs_RM_ANOVA <- RDMs_rats_long %>%
+  group_by(idx) %>%
+  nest() %>% 
+  
+  # calculate RM-ANOVA per idx
+  mutate(rm_anova = map(data, ~ anova_test(data = .x,
+                                           dv = value,
+                                           wid = sub,
+                                           within = RDM_type)))
+
+
+# Get the results
+RDMs_RM_ANOVA_results <- RDMs_RM_ANOVA %>%
+  mutate(rm_anova_tbl = map(rm_anova, ~ .x$ANOVA)) %>%  # extract the inner tibble
+  select(idx, rm_anova_tbl) %>%
+  unnest(rm_anova_tbl) %>%
+  select(-c(Effect), RDM_element = idx)
+
+
+RDMs_RM_ANOVA_results %>% 
+  filter(p < p_thresh)
+
+
+# ----------------- 3 paired ttests --------------------
+
+RDMs_RM_ttest_results <- RDMs_rats_long %>%
+  group_by(idx) %>%
+  nest() %>%
+  mutate(
+    pvals = map(data, ~ tibble(
+      emo_aro    = t.test(.x$value[.x$RDM_type=="rdm_emotion"], 
+                           .x$value[.x$RDM_type=="rdm_arousal"], 
+                           paired = TRUE)$p.value,
+      emo_aroval = t.test(.x$value[.x$RDM_type=="rdm_emotion"], 
+                           .x$value[.x$RDM_type=="rdm_aroval"], 
+                           paired = TRUE)$p.value,
+      aro_aroval = t.test(.x$value[.x$RDM_type=="rdm_arousal"], 
+                           .x$value[.x$RDM_type=="rdm_aroval"], 
+                           paired = TRUE)$p.value
+    ))
+  ) %>%
+  select(RDM_element = idx, pvals) %>%
+  unnest(pvals) %>% 
+  # create a column showing where all three ttest are sig
+  mutate(sig = if_else(emo_aro < p_thresh & emo_aroval < p_thresh & aro_aroval < p_thresh, 1, 0))
+
+RDMs_RM_ttest_results %>% 
+  filter(sig == 1)
+
+
+idx_sig_RM_ANOVA = which(RDMs_RM_ANOVA_results$p < p_thresh)
+idx_sig_ttest = which(RDMs_RM_ttest_results$sig == 1)
+
+shared_idx <- intersect(idx_sig_RM_ANOVA, idx_sig_ttest)
+
+cat(
+  'After filtering at p < ', p_thresh, '  ', 
+  length(shared_idx), '/', length(RDMs_rats$rdm_emotion[[1]]), 
+  'rdm elements were retained'
+)
+
+```
+
+
+# Calculate REGULAR RSA
+```{r}
+do_regular_RSA <- function(RDMs_fmri, RDMs_rats, ratings_type, dist_method_rsa = "spearman") {
+  
+  cat('Carrying out Regular RSA with original rdm \n')
+  
+  rats_rdm_colnames <- paste0("rdm_", ratings_type)
+  
+  RSA <- right_join(RDMs_fmri, RDMs_rats, by = "sub") %>%
+    group_by(sub) %>%
+    mutate(
+      across(
+        all_of(rats_rdm_colnames),
+        ~ map2_dbl(.x, rdm_fmri, ~ cor(.x, .y, method = dist_method_rsa)),
+        .names = "rsa_{.col}"
+      )
+    ) %>%
+    mutate(across(starts_with("rsa_"), round, 3)) %>%
+    ungroup()
+  
+  return(RSA)
+}
+
+```
+
+
+# Calculate RSA RESIDUALS
+```{r}
+do_RSA_on_residuals <- function(RDMs_fmri, RDMs_rats, ratings_type, dist_method_rsa = "spearman") {
+  
+  cat('Carrying out RSA on residual rdm \n')
+  
+  rats_rdm_colnames <- paste0("rdm_", ratings_type)
+  
+  RSA <- right_join(RDMs_fmri, RDMs_rats, by = "sub") %>%
+    group_by(sub, roi) %>% 
+    mutate(
+      across(
+        all_of(rats_rdm_colnames),
+        
+        ~ map2_dbl(.x, rdm_fmri, function(behav_vec, fmri_vec) {
+          
+          regressors_colnames <- setdiff(rats_rdm_colnames, cur_column())
+          
+          regressors_mat <- map(regressors_colnames, ~ get(.x)[[1]]) %>% 
+            set_names(regressors_colnames) %>% 
+            bind_cols() %>% 
+            as.matrix()
+          
+          fmri_res  <- resid(glm(fmri_vec ~ regressors_mat))
+          behav_res <- resid(glm(behav_vec ~ regressors_mat))
+          
+          cor(fmri_res, behav_res, method = dist_method_rsa)
+        }),
+        .names = "rsa_{.col}"
+      )
+    ) %>%
+    ungroup()
+  
+  return(RSA)
+}
+
+```
+
+
+# Compute the RSA
+```{r}
+
+idx_sig <- idx_sig_ttest
+
+if (params$filter_RDMs) {
+  cat('Filtering the rdm according to the most discriminative ones. \n')
+  
+  RDMs_rats <- RDMs_rats %>%
+    mutate(
+      rdm_emotion = map(rdm_emotion, ~ .x[idx_sig]),
+      rdm_arousal = map(rdm_arousal, ~ .x[idx_sig]),
+      rdm_aroval  = map(rdm_aroval,  ~ .x[idx_sig])
+    )
+  
+  RDMs_fmri <- RDMs_fmri %>%
+    mutate(
+      rdm_fmri = map(rdm_fmri, ~ .x[idx_sig])
+    )
+}
+
+
+if (params$RSA_on_residuals) {
+  
+  cat("Running RSA on residuals\n")
+  RSA <- do_RSA_on_residuals(
+    RDMs_fmri, RDMs_rats, ratings_type, dist_method_rsa = "pearson"
+  )
+} else {
+  
+  cat("Running regular RSA\n")
+  RSA <- do_regular_RSA(
+    RDMs_fmri, RDMs_rats, ratings_type, dist_method_rsa = "pearson"
+  )
+}
+
+```
+
+
+# Get the mean RSA for each ratings_type
+```{r}
+RSA_mean <- RSA %>%
+  select(roi, starts_with("rsa_")) %>%
+  group_by(roi) %>%
+  reframe(
+    across(
+      starts_with("rsa_"),
+      list(mean = ~ round(mean(.x, na.rm = TRUE), 2))
+    )
+  ) %>% 
+  rename_with(
+    ~ str_replace(.x, "rsa_rdm_", ""),
+    starts_with("rsa_")
+  )
+
+RSA_mean %>% datatable()
+```
+
+
+# Calculate mean tril for ratings and for fmri
+```{r}
+get_elementwise_mean <- function(mydf, nested_col, fun=mean) {
+  m <- matrix(
+    mydf[[nested_col]] %>% unlist,
+    nrow = nrow(mydf),
+    ncol = length(mydf[[nested_col]][[1]]),
+    byrow = TRUE
+  )
+  
+  m_summary <- apply(m, 2, fun)
+  return(m_summary)
+}
+
+
+# mean RDMs_rats
+mean_RDMs_rats <- RDMs_rats %>% select(starts_with("rdm_")) %>% colnames %>%  
+  map_dfc(~{
+    mean_tril <- get_elementwise_mean(RDMs_rats, .x, fun = mean)
+    tibble(!!.x := mean_tril)
+  })
+
+
+
+# mean RDMs_fmri
+plan(multisession, workers = 5)
+
+mean_RDMs_fmri <- RDMs_fmri$roi %>% unique %>% 
+  future_map_dfr(~{
+    mean_tril <- get_elementwise_mean(RDMs_fmri %>% filter(roi == .x), "rdm_fmri")
+    tibble(roi = .x, mean_tril = mean_tril)
+  }) %>% 
+  group_by(roi) %>% 
+  nest
+
+plan(sequential)
+```
+
+
+# Create the volumes with the RSA_mean
+```{r}
+
+RSA_volumes_df <- ratings_type %>% map_dfc(
+  ~ {
+    nii <- atlas_nii %>% as.vector()
+    
+    for (ROI_numba in RSA_mean$roi) {
+      idx_ROI <- which(nii == ROI_numba)
+      val_ROI <- RSA_mean %>% filter(roi == ROI_numba) %>% select(starts_with(.x)) %>% pull
+      nii[idx_ROI] = val_ROI
+    }
+    return( tibble(!! .x := nii) )
+  }
+)
+
+```
+
+
+# Save results in RSA_ROI_APP/results_RSA_ROI
+```{r}
+
+results_file <- create_filename_results(
+    atlas_filename, 
+    subs, 
+    RSA_on_residuals, 
+    filter_RDMs,
+    dist_method_rating,
+    dist_method_fmri,
+    dist_method_rsa,
+    bd_results
+)
+
+
+cat("Results will be saved to:\n")
+cat(results_file, "\n\n")
+
+# save the results
+save(
+  RSA, 
+  RSA_mean, 
+  atlas_filename, 
+  mean_RDMs_fmri, 
+  mean_RDMs_rats, 
+  df_path_copes, 
+  subs, 
+  RSA_volumes_df,
+  df_noise_summary,
+  file = results_file
+)
+
+cat("Results saved successfully!\n")
+
+```

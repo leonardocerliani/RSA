@@ -1,0 +1,335 @@
+---
+title: "Explore model collinearity"
+author: "LC"
+date: "2026-01-23"
+output: html_document
+---
+
+```{r, message=FALSE}
+library(tidyverse)
+library(RColorBrewer)
+library(ggplot2)
+library(reshape2)
+library(proxy)
+
+bd <- "/data00/leonardo/RSA/analyses/RATINGS"
+
+subs_file <- "/data00/leonardo/RSA/sub_list.txt"
+subs <- sprintf("%02d",readLines(subs_file) %>% as.numeric)
+
+# Load the preprocessed emotion ratings file
+# which was prepared with the 02_prepare_ratings_EMOTION.Rmd
+# located in /data00/leonardo/RSA/prep_scripts/05_prepare_ratings
+df_emotion <- read_csv(paste0(bd,"/","emotion_ratings.csv")) %>% select(sub, starts_with("r_"))
+df_arousal <- read_csv(paste0(bd,"/","arousal_ratings.csv")) %>% select(sub, r_arousal)
+df_aroval <- read_csv(paste0(bd,"/","aroval_ratings.csv")) %>% select(sub, starts_with("r_"))
+
+```
+
+
+# Edoardo code for calculating distances
+
+```{r}
+
+# NB: this code has Edoardo modifications for mahalanobis distance
+
+# ----------- DDOS - Do Distance Or Similarity -----------
+# Computes a representational dissimilarity matrix (RDM) between observations.
+#
+# INPUT:
+# - X: observations-by-variables matrix
+#     rows    = stimuli / conditions
+#     columns = features (e.g., voxels, ratings)
+#
+# Distances:
+# - dist() operates on rows (used directly)
+# - cor() operates on columns, so X is transposed internally
+# - Mahalanobis distance computed as: sqrt((x_i − x_j)^T Σ^−1 (x_i − x_j)),
+#   where Σ is the feature covariance matrix estimated from X. (cf. Walther et al 2016)
+#
+# Supported methods:
+# - euclidean, cosine, pearson, spearman, mahalanobis
+#
+# OUTPUT:
+# - Lower-triangular vector of the observation-by-observation
+#   dissimilarity matrix (length = (n^2 − n)/2)
+#
+# Example:
+# rdm_vec <- DDOS_vec(X, method = "cosine")
+
+DDOS_vec <- function(X, method, normalization = FALSE) {
+  
+  # Step 0) input hygiene checks
+  # # If X is a plain vector, treat it as a single-column matrix (n_observations x 1)
+  if (is.vector(X)) {
+    X <- matrix(X, ncol = 1)
+  }
+  # # Make sure X is numeric (fail early if not)
+  X <- as.matrix(X)
+  # # Store dimensions (readability)
+  n_obs  <- nrow(X)   # number of observations / stimuli (rows)
+  n_feat <- ncol(X)   # number of features / variables (cols)
+  
+  # Step 1.1) Special case: single-column input
+  # If there is only 1 feature, we can only compute distances between rows using that one variable.
+  if (n_feat == 1) {
+    # Need at least 2 observations to define any distance
+    if (n_obs < 2) {
+      warning("Too few rows to compute RDM for single-column input.")
+      return(NA_real_)
+    }
+    
+    # # Extract the single variable as a numeric vector
+    x <- as.numeric(X[, 1])
+    
+    # # If method is pearson/spearman, treat it as a rank/correlation concept:
+    # with 1D data, correlation-based dissimilarity is not meaningful as a matrix
+    # between rows, so we approximate with Euclidean distance:
+    # - Spearman: Euclidean on ranks
+    # - Pearson : Euclidean on raw values
+    if (method %in% c("pearson", "spearman")) {
+      x_use <- if (method == "spearman") rank(x) else x          # rank-transform only for Spearman
+      D     <- stats::dist(x_use, method = "euclidean")          # compute 1D pairwise Euclidean distances
+      return(as.vector(D))                                       # dist() already returns the lower triangle vector
+    }
+    
+    # # Otherwise: let dist() compute the requested metric (if supported)
+    D <- stats::dist(X, method = method)                         # for single-column, dist uses rows as items
+    return(as.vector(D))                                         # return lower triangle vector
+  }
+  
+  # Step 1.2) General case: matrix with >=2 rows and >=2 columns
+  # # If X is too small, distances/correlations are not meaningful
+  if (n_obs < 2 || n_feat < 2) {
+    warning("Matrix too small to compute full RDM. Returning NA.")
+    return(NA_real_)
+  }
+  
+  # # Optional standardisation:
+  # - always center (subtract column means)
+  # - optionally scale (divide by column sd) if normalization == TRUE
+  X <- scale(X, center = TRUE, scale = normalization)
+  
+  # Step 2) Compute distance matrix (n_obs x n_obs)
+  if (method == "mahalanobis") {
+    
+    # # Estimate covariance of the feature space across observations (columns = variables)
+    S <- stats::cov(X, use = "pairwise.complete.obs")
+    # Invert covariance matrix (needed for Mahalanobis). If S is singular/non-invertible, we return NA
+    S_inv <- tryCatch(
+      solve(S),
+      error = function(e) {
+        warning("Covariance matrix not invertible; returning NA.")
+        return(NA)
+      }
+    )
+    # If inversion failed, exit
+    if (is.na(S_inv)[1]) return(NA_real_)
+    # Allocate the full distance matrix
+    D <- matrix(0, n_obs, n_obs)
+    # Compute pairwise Mahalanobis distance for each pair of observations (i, j)
+    for (i in 1:(n_obs - 1)) {
+      for (j in (i + 1):n_obs) {
+        # Difference vector between the two observations (1 x n_feat)
+        d <- X[i, , drop = FALSE] - X[j, , drop = FALSE]
+        # Mahalanobis distance: sqrt( d %*% S_inv %*% t(d) )
+        D[i, j] <- sqrt(d %*% S_inv %*% t(d))                    # scalar result
+        D[j, i] <- D[i, j]                                       # symmetry
+      }
+    }
+    
+  } else {
+    
+    # # Other methods:
+    # - pearson/spearman: 1 - correlation between observations (rows)
+    # - euclidean: dist() on rows
+    # - cosine: 1 - cosine similarity (using simil() function)
+    D <- switch(
+      method,
+      pearson  = 1 - stats::cor(t(X), method = "pearson",  use = "pairwise.complete.obs"),
+      spearman = 1 - stats::cor(t(X), method = "spearman", use = "pairwise.complete.obs"),
+      euclidean = as.matrix(stats::dist(X, method = "euclidean")),
+      cosine    = 1 - as.matrix(simil(X, method = "cosine")),
+      stop("Unsupported method: ", method)
+    )
+  }
+  
+  # # Step 3) Return lower triangle as a vector (RDM vector form)
+  # Keep only strictly-lower-triangular entries and drop NA entries
+  return(as.vector(D[lower.tri(D) & !is.na(D)]))
+}
+```
+
+
+# Edoardo code fixed so that we can calculate also mahalanobis for values
+(It's the same as euclidean)
+```{r}
+# ----------- DDOS - Do Distance Or Similarity -----------
+# Computes a representational dissimilarity matrix (RDM) between observations.
+#
+# INPUT:
+# - X: observations-by-variables matrix
+#     rows    = stimuli / conditions
+#     columns = features (e.g., voxels, ratings)
+#
+# Distances:
+# - dist() operates on rows (used directly)
+# - cor() operates on columns, so X is transposed internally
+# - Mahalanobis distance computed as: sqrt((x_i − x_j)^T Σ^−1 (x_i − x_j)),
+#   where Σ is the feature covariance matrix estimated from X. (cf. Walther et al 2016)
+#
+# Supported methods:
+# - euclidean, cosine, pearson, spearman, mahalanobis
+#
+# OUTPUT:
+# - Lower-triangular vector of the observation-by-observation
+#   dissimilarity matrix (length = (n^2 − n)/2)
+#
+# Example:
+# rdm_vec <- DDOS_vec(X, method = "cosine")
+
+DDOS_vec <- function(X, method, normalization = FALSE) {
+  
+  # Step 0) Input hygiene checks
+  if (is.vector(X)) {
+    X <- matrix(X, ncol = 1)
+  }
+  X <- as.matrix(X)
+  n_obs  <- nrow(X)
+  n_feat <- ncol(X)
+  
+  # Step 1.1) Single-column input
+  if (n_feat == 1) {
+    if (n_obs < 2) {
+      warning("Too few rows to compute RDM for single-column input.")
+      return(NA_real_)
+    }
+    x <- as.numeric(X[, 1])
+    
+    # Correlation methods approximate with Euclidean
+    if (method %in% c("pearson", "spearman")) {
+      x_use <- if (method == "spearman") rank(x) else x
+      D <- stats::dist(x_use, method = "euclidean")
+      return(as.vector(D))
+    }
+    
+    # Mahalanobis for 1D = Euclidean / optionally standardized
+    if (method == "mahalanobis") {
+      D <- stats::dist(x, method = "euclidean")
+      D <- as.vector(D) / sd(x)  # optional standardization by variance
+      return(D)
+    }
+    
+    # Other methods use dist() directly
+    D <- stats::dist(X, method = method)
+    return(as.vector(D))
+  }
+  
+  # Step 1.2) General case: >=2 rows and >=2 columns
+  if (n_obs < 2 || n_feat < 2) {
+    warning("Matrix too small to compute full RDM. Returning NA.")
+    return(NA_real_)
+  }
+  
+  # Optional standardization
+  X <- scale(X, center = TRUE, scale = normalization)
+  
+  # Step 2) Compute distance matrix
+  if (method == "mahalanobis") {
+    S <- stats::cov(X, use = "pairwise.complete.obs")
+    S_inv <- tryCatch(
+      solve(S),
+      error = function(e) {
+        warning("Covariance matrix not invertible; returning NA.")
+        return(NA)
+      }
+    )
+    if (is.na(S_inv)[1]) return(NA_real_)
+    
+    D <- matrix(0, n_obs, n_obs)
+    for (i in 1:(n_obs - 1)) {
+      for (j in (i + 1):n_obs) {
+        d <- X[i, , drop = FALSE] - X[j, , drop = FALSE]
+        D[i, j] <- sqrt(d %*% S_inv %*% t(d))
+        D[j, i] <- D[i, j]
+      }
+    }
+    
+  } else {
+    # Other methods
+    D <- switch(
+      method,
+      pearson  = 1 - stats::cor(t(X), method = "pearson",  use = "pairwise.complete.obs"),
+      spearman = 1 - stats::cor(t(X), method = "spearman", use = "pairwise.complete.obs"),
+      euclidean = as.matrix(stats::dist(X, method = "euclidean")),
+      cosine    = 1 - as.matrix(simil(X, method = "cosine")),
+      stop("Unsupported method: ", method)
+    )
+  }
+  
+  # Step 3) Return lower-triangular vector
+  return(as.vector(D[lower.tri(D) & !is.na(D)]))
+}
+
+```
+
+
+
+
+```{r}
+
+# method = "euclidean"
+method = "mahalanobis"
+
+# Example for emotion data
+X_emotion <- df_emotion %>% select(starts_with("r_"))
+rdm_emotion <- DDOS_vec(X_emotion, method = method)
+
+# For arousal (single column r_arousal)
+X_arousal <- df_arousal %>% select(starts_with("r_"))
+rdm_arousal <- DDOS_vec(X_arousal, method = method)
+
+# For arousal + valence
+X_aroval <- df_aroval %>% select(starts_with("r_"))
+rdm_aroval <- DDOS_vec(X_aroval, method = method)
+
+```
+
+
+
+
+```{r}
+# Step 1: Combine RDM vectors into a single data frame
+rdm_df <- data.frame(
+  emotion = rdm_emotion,
+  arousal = rdm_arousal,
+  aroval  = rdm_aroval
+)
+
+# Step 2: Compute correlation matrix
+corr_mat <- cor(rdm_df, method = "pearson")  # you can use "spearman" if you prefer
+
+# Step 3: Convert to long format for ggplot
+corr_long <- as.data.frame(as.table(corr_mat))
+names(corr_long) <- c("Var1", "Var2", "Correlation")
+
+# Step 4: Plot using ggplot2
+ggplot(corr_long, aes(x = Var1, y = Var2, fill = Correlation)) +
+  geom_tile(color = "white") +
+  geom_text(aes(label = round(Correlation, 2)), size = 5) +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0) +
+  theme_minimal() +
+  labs(title = "Correlation Matrix of RDMs",
+       x = "", y = "") +
+  coord_fixed()
+
+```
+
+
+
+
+
+
+
+
+

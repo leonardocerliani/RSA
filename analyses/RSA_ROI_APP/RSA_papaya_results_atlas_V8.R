@@ -24,7 +24,13 @@ options(warn = -1)
 papaya_hide_toolbar = FALSE
 
 
-
+# V 8
+# ***** IMPORTANT ***** 
+# THIS NEW VERSION WILL DISPLAY THE OLD .RData FILES, HOWEVER
+# PREVIOUS VERSION OF THE APP WILL *NOT* DISPLAY NEW .RData FILES
+# - Added noise ceiling 
+# - Added BF01 in the single ttest for each model against 0
+#
 # V 7
 # - All the model names are NOT anymore hardcoded
 # - Added a selector for the models to display in the boxplot.
@@ -156,11 +162,11 @@ ui <- fluidPage(
                     radioButtons("MCP_correction_method", "Multiple Comparison Correction", c("fdr","none"), selected = "fdr", inline = TRUE )
                   ),
                   column(2,
-                    downloadButton("downloadPlot", "PDF"),
+                    shiny::downloadButton("downloadPlot", "PDF"),
                   )
                 ),
                 
-                 
+                # downloadButton("downloadPlot", "Download as PDF"),
                 plotOutput("models_boxplot"),
                 uiOutput("boxplot_model_selector")
                 
@@ -470,6 +476,30 @@ do_boxplot <- function(RSA, roi_numba, ttest_type, models_for_boxplot, MCP_corre
   
 }
 
+
+
+# ttest for != 0 for a specific ROI selected in the RSA_mean reactable table
+do_ttest_table <- function(RSA, roi_numba, models_to_ttest) {
+  
+  model <- function(val) t.test(val, mu = 0, alternative = "two.sided")
+  
+  RSA %>%
+    select(sub, roi, starts_with("rsa_")) %>%
+    filter(roi == roi_numba) %>%
+    select(starts_with("rsa_")) %>%
+    rename_with(~ str_replace(.x, "^rsa_rdm_", "")) %>%
+    select(any_of(models_to_ttest)) %>%
+    map_dfr(~ broom::tidy(model(.x)), .id = "rsa_model") %>%
+    mutate(
+      t = paste0("t= ", round(statistic, 2)),
+      p = paste0("p=", round(p.value, 3)),
+      res = paste0(t, ", ", p)
+    ) %>%
+    select(rsa_model, res) %>%
+    pivot_wider(names_from = rsa_model, values_from = res) %>%
+    mutate(roi = roi_numba) %>%
+    relocate(roi)
+}
 
 
 
