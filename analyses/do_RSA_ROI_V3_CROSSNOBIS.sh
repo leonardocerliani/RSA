@@ -1,5 +1,10 @@
 #!/bin/bash
 
+n=20
+export OPENBLAS_NUM_THREADS=$n
+export OMP_NUM_THREADS=$n
+export MKL_NUM_THREADS=$n
+
 # CROSSNOBIS VERSION - Uses leave-one-run-out Mahalanobis distance for fMRI RDMs
 # Based on V15 but uses first-level run-wise copes instead of 2nd-level copes
 

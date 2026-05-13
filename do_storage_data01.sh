@@ -1,5 +1,19 @@
 #!/bin/bash
 
+
+###################################################################
+#
+#       NB: THIS SCRIPT IS OUTDATED.
+#       THE STORAGE LOCATION IN /data01  IS NOW
+#
+#	/data01/7T_Emotion_Insula/Data_analysis/RSA/prep_data     
+#
+####################################################################
+
+
+
+
+
 # launch with
 # nohup cat sub_list.txt | xargs -P 8 -I{} ./do_storage_data01.sh {} &
 

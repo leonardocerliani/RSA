@@ -75,6 +75,31 @@ cat("Number of subjects:", length(subs), "\n")
 cat("Number of conditions:", nrow(ratings_list$emotion %>% filter(sub == subs[1])), "\n")
 ```
 
+
+# Correlations in the emotion ratings (justification for use of euclidean)
+
+For the behavioral representational dissimilarity matrices (RDMs), distances were computed from six emotion ratings (happy, disgust, sad, fear, anger, pain). The emotion dimensions showed modest correlations, with most off-diagonal correlations being small to moderate (|r| < 0.3). These correlations are expected given the near-mutual exclusivity of emotions across stimuli and do not indicate substantial redundancy among rating dimensions.
+
+Euclidean distance was used on z-scored ratings, reflecting absolute differences along each emotion dimension. This choice is appropriate when rating dimensions are psychologically meaningful and distinct, and when differences in magnitude are theoretically relevant. In this context, Euclidean distance provides a transparent and stable measure of dissimilarity without requiring estimation of a covariance structure.
+
+Although Mahalanobis distance can account for correlations between dimensions, it was not adopted here because the observed covariance structure primarily reflects constraints imposed by the stimulus set (e.g., limited co-occurrence of emotions) rather than measurement noise or unreliability. Using Mahalanobis distance in this case would therefore reweight dimensions based on stimulus design rather than on properties of the behavioral measurements themselves.
+
+Cosine distance was also not used, as it discards information about overall rating magnitude and emphasizes relative profiles, which was not aligned with the present hypotheses.
+
+Behavioral RDMs were computed using Euclidean distance on z-scored emotion ratings. Although emotion dimensions showed modest correlations, Mahalanobis distance was not used because covariance primarily reflected stimulus design constraints rather than measurement noise.
+
+```{r}
+corr_emotion <- ratings_list$emotion %>% 
+  select(starts_with("r_")) %>% 
+  cor
+
+corrplot::corrplot.mixed(corr_emotion)
+# corrplot::corrplot(corr_emotion, method = 'number')
+
+```
+
+
+
 # Calculate RDMs for each distance method
 ```{r}
 calculate_RDMs_all_methods <- function(rats, distance_methods, subs) {
@@ -150,6 +175,7 @@ condition_labels <- ratings_list$emotion %>%
   filter(sub == subs[1]) %>% 
   pull(emotion)
 ```
+
 
 # Plot comparison for each rating type
 ```{r, fig.width=15, fig.height=5}
